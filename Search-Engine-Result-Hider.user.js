@@ -8,6 +8,8 @@
 // @description:zh-CN  支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports uBlacklist rules.
 // @author       南雪莲
+// @homepageURL  https://greasyfork.org/zh-CN/scripts/552394
+// @homepageURL  https://github.com/SadYuyuko/Search-Engine-Result-Hider
 // @license      MIT
 // @match        https://www.bing.com/*
 // @match        https://cn.bing.com/*
