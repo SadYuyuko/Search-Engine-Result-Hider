@@ -2,7 +2,7 @@
 // @name         搜索引擎结果屏蔽器
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
-// @namespace    http://example.com
+// @namespace    https://github.com/SadYuyuko
 // @version      4.7
 // @description        支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:zh-CN  支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
@@ -21,8 +21,8 @@
 // @grant        GM_getValue
 // @grant        GM_addStyle
 // @run-at       document-idle
-// @downloadURL  https://github.com/SadYuyuko/Search-Engine-Result-Hider/raw/refs/heads/main/Search-Engine-Result-Hider.user.js
-// @updateURL    https://github.com/SadYuyuko/Search-Engine-Result-Hider/raw/refs/heads/main/Search-Engine-Result-Hider.user.js
+// @downloadURL  https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider.user.js
+// @updateURL    https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider.user.js
 // ==/UserScript==
 
 (function() {
