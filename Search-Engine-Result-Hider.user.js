@@ -4,6 +4,7 @@
 // @name:en      Search Engine Result Hider
 // @namespace    http://example.com
 // @version      4.7
+// @description        支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:zh-CN  支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports uBlacklist rules.
 // @author       南雪莲
