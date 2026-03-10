@@ -19,6 +19,8 @@
 // @grant        GM_getValue
 // @grant        GM_addStyle
 // @run-at       document-idle
+// @downloadURL  https://github.com/SadYuyuko/Search-Engine-Result-Hider/raw/refs/heads/main/Search-Engine-Result-Hider.user.js
+// @updateURL    https://github.com/SadYuyuko/Search-Engine-Result-Hider/raw/refs/heads/main/Search-Engine-Result-Hider.user.js
 // ==/UserScript==
 
 (function() {
