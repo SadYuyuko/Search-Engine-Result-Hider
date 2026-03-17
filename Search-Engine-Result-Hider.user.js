@@ -759,7 +759,7 @@
                 </div>
                 <textarea id="searchfilter-rules" placeholder="每行一个规则">${currentConfig.rules.join('\n')}</textarea>
                 <div style="font-size: 10px; color: #718096; margin-top: 3px; text-align: left;">
-                example.org/* 匹配域名 | title/.*文本.*/ 匹配标题 | text/.*文本.*/ 匹配内容<br>
+                title/.*文本.*/ 匹配标题 | text/.*文本.*/ 匹配内容<br>
                 title/.*AbC.*/i 加i忽略大小写 | title/.*A(B|C).*/ 同时匹配AB和AC
                 </div>
             </div>
