@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      4.7
+// @version      4.8
 // @description        支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:zh-CN  支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports uBlacklist rules.
@@ -28,12 +28,12 @@
 (function() {
     'use strict';
     
-    // 配置键
+    // 默认配置
     const CONFIG_KEY = 'searchfilter_blocker';
     let currentConfig = GM_getValue(CONFIG_KEY, {
         rules: ['*://*.example.com/*'],
         enabled: true,
-        showCount: true,
+        showCount: false,
         bubbleSize: 'large',
         bubblePosition: 'bottom-right',
         debug: false
@@ -217,11 +217,10 @@
         other: 'div.g, li.b_algo'
     };
     
-    // 规则转换正则（URL和标题规则）
+    // URL和标题规则转换正则
     function ruleToRegex(rule) {
-        // 标题规则
         if (rule.startsWith('title/')) {
-            let remaining = rule.substring(6); // 去掉 'title/'
+            let remaining = rule.substring(6);
             let pattern, flags = '';
 
             // 新格式
@@ -238,7 +237,6 @@
                 pattern = remaining;
             }
 
-            // 分隔符
             if (!flags && remaining.endsWith('/')) {
                 pattern = remaining.slice(0, -1);
             }
@@ -252,7 +250,7 @@
                 }
             }
 
-            // 处理 flags 中的 's'（将 . 替换为 [\s\S]）
+            // 处理flags中的s
             if (flags.includes('s')) {
                 pattern = pattern.replace(/\./g, '[\\s\\S]');
                 flags = flags.replace('s', '');
@@ -261,10 +259,8 @@
             return { pattern, flags };
         }
         
-        // URL规则处理
         let pattern = rule;
         
-        // 移除协议部分
         if (pattern.startsWith('*://')) {
             pattern = pattern.substring(4);
         }
@@ -285,7 +281,6 @@
                 }
             }).join('\\/');
         } else {
-            // 没有路径的情况
             pattern = pattern
                 .replace(/\*/g, '.*')
                 .replace(/\?/g, '\\?')
@@ -337,7 +332,6 @@
             pattern = remaining;
         }
 
-        // 去掉斜杠
         if (!flags && remaining.endsWith('/')) {
             pattern = remaining.slice(0, -1);
         }
@@ -351,7 +345,7 @@
             }
         }
 
-        // 处理 flags 中的 's'
+        // 处理flags中的s
         if (flags.includes('s')) {
             pattern = pattern.replace(/\./g, '[\\s\\S]');
             flags = flags.replace('s', '');
@@ -374,12 +368,10 @@
     
     // 检查规则匹配函数
     function checkRuleMatch(rule, url, domain, title, snippet) {
-        // 正文规则
         if (rule.startsWith('text/')) {
             return checkTextRule(rule, snippet);
         }
         
-        // 标题规则
         if (rule.startsWith('title/')) {
             try {
                 const { pattern, flags } = ruleToRegex(rule);
@@ -407,7 +399,6 @@
                 // 简单字符串匹配
                 try {
                     const simplePattern = rule.substring(6).replace(/^\(\?[ims]+\)/, '');
-                    // 大小写匹配
                     if (rule.includes('(?i)') || rule.includes('(?i)')) {
                         return title.toLowerCase().includes(simplePattern.toLowerCase());
                     }
@@ -534,7 +525,6 @@
     
     // 获取标题
     function getResultTitle(result, engine) {
-        // 各搜索引擎标题选择器
         const bingSelectors = ['h2 a', 'a h2', '.b_title'];
         const googleSelectors = ['h3', 'div[role="heading"]', '.LC20lb', '.DKV0Md', '.sXLaOe', '.c9DxTc', 'a h3'];
         const duckSelectors = ['a[data-testid="result-title-a"]', '.result__title', '.tile__title', '.tile--title__title', 'h2 a', 'a h2'];
@@ -545,7 +535,6 @@
         else if (engine === 'duckduckgo') selectors = duckSelectors;
         else return '';
 
-        // 遍历选择器
         for (let i = 0; i < selectors.length; i++) {
             const elem = result.querySelector(selectors[i]);
             if (elem && elem.textContent) {
@@ -788,10 +777,8 @@
                 const name = this.dataset.name;
                 const value = this.dataset.value;
                 
-                // 更新当前配置
                 currentConfig[name] = value;
                 
-                // 更新按钮状态
                 const buttons = panel.querySelectorAll(`[data-name="${name}"]`);
                 buttons.forEach(btn => {
                     btn.classList.toggle('active', btn.dataset.value === value);
@@ -799,7 +786,6 @@
             });
         });
         
-        // 点击外部关闭
         setTimeout(() => {
             document.addEventListener('click', function closePanel(e) {
                 if (!panel.contains(e.target) && e.target.id !== 'searchfilter-status') {
@@ -955,7 +941,6 @@
         testResultEl.innerHTML = resultHTML;
         testResultEl.style.display = 'block';
         
-        // 滚动
         setTimeout(() => {
             testResultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }, 100);
@@ -966,10 +951,18 @@
         const textarea = document.getElementById('searchfilter-rules');
         const importText = prompt('请粘贴规则（每行一个）:');
         if (importText !== null) {
-            textarea.value = importText.split('\n')
+            let rules = importText.split('\n')
                 .map(rule => rule.trim())
-                .filter(rule => rule.length > 0)
-                .join('\n');
+                .filter(rule => rule.length > 0);
+            if (rules.length === 0) {
+                // 空规则询问是否清空
+                const confirmClear = confirm('当前剪贴板为空，若继续导入将会清空规则');
+                if (confirmClear) {
+                    textarea.value = '';
+                }
+            } else {
+                textarea.value = rules.join('\n');
+            }
         }
     }
     
@@ -998,7 +991,6 @@
     function init() {
         blockResults();
         
-        // 观察DOM变化
         const observer = new MutationObserver(() => {
             setTimeout(blockResults, 500);
         });
