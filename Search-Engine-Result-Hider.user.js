@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      5.2
+// @version      5.3
 // @description        支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:zh-CN  支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports uBlacklist rules.
@@ -21,8 +21,8 @@
 // @grant        GM_getValue
 // @grant        GM_addStyle
 // @run-at       document-idle
-// @downloadURL  https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider.user.js
-// @updateURL    https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider.user.js
+// @homepageURL  https://greasyfork.org/zh-CN/scripts/552394
+// @homepageURL  https://github.com/SadYuyuko/Search-Engine-Result-Hider
 // ==/UserScript==
 
 (function() {
@@ -246,7 +246,10 @@
         [role="search"] .searchfilter-quick-block,
         g-scrolling-carousel .searchfilter-quick-block,
         #hdtb .searchfilter-quick-block,
-        #appbar .searchfilter-quick-block {
+        #appbar .searchfilter-quick-block
+        #searchform .searchfilter-quick-block,
+        #top_nav .searchfilter-quick-block,
+        #extabar .searchfilter-quick-block {
             display: none !important;
         }
     `);
@@ -488,8 +491,11 @@
     function injectBlockButton(result, engine, url, domain) {
         if (!domain) return;
         
-        // 防止注入到非搜索结果元素
-        if (result.closest('header, [role="navigation"], [role="tablist"], [role="search"], g-scrolling-carousel, #hdtb, #appbar')) {
+        if (result.closest('header, [role="navigation"], [role="tablist"], [role="search"], g-scrolling-carousel, #hdtb, #appbar, #searchform, #top_nav')) {
+            return;
+        }
+        
+        if (engine === 'google' && !result.closest('#center_col')) {
             return;
         }
         
@@ -813,10 +819,10 @@
         
         // 悬浮球大小
         const sizeOptions = [
-            { value: 'medium', label: '中' },
-            { value: 'large', label: '大' },
-            { value: 'larger', label: '更大' },
-            { value: 'xlarge', label: '超大' }
+            { value: 'medium', label: '中杯' },
+            { value: 'large', label: '大杯' },
+            { value: 'larger', label: '超大' },
+            { value: 'xlarge', label: '特大' }
         ];
         
         // 面板UI
@@ -865,8 +871,8 @@
                 <div class="compact-row">
                     <span style="font-size: 12px; color: #4a5568;">屏蔽规则:</span>
                     <div style="display: flex; gap: 4px;">
-                        <button id="searchfilter-import-file" class="searchfilter-button searchfilter-button-secondary" style="padding: 3px 8px; border: 1px solid transparent;" title="从 TX极文件导入">↓TXT</button>
-                        <button id="searchfilter-export-file" class="searchfilter-button searchfilter-button-success" style="padding: 3px 8px; border: 1px solid transparent;" title="导出为 TXT 文件">↑TXT</button>
+                        <button id="searchfilter-import-file" class="searchfilter-button searchfilter-button-secondary" style="padding: 3px 8px; border: 1px solid transparent;" title="从TXT文件导入">inTXT</button>
+                        <button id="searchfilter-export-file" class="searchfilter-button searchfilter-button-success" style="padding: 3px 8px; border: 1px solid transparent;" title="导出到TXT文件">toTXT</button>
                         <button id="searchfilter-import" class="searchfilter-button searchfilter-button-secondary" style="padding: 3px 8px; border: 1px solid transparent;" title="从剪贴板导入">导入</button>
                         <button id="searchfilter-export" class="searchfilter-button searchfilter-button-success" style="padding: 3px 8px; border: 1px solid transparent;" title="导出到剪贴板">导出</button>
                     </div>
@@ -901,7 +907,6 @@
         };
         document.getElementById('searchfilter-export-file').onclick = exportRulesToFile;
         
-        // 选项按钮事件处理
         panel.querySelectorAll('.option-button').forEach(button => {
             button.addEventListener('click', function() {
                 const name = this.dataset.name;
@@ -1078,7 +1083,7 @@
         }, 100);
     }
     
-    // 导入规则到剪贴板
+    // 从剪贴板导入规则
     function importRules() {
         const textarea = document.getElementById('searchfilter-rules');
         const importText = prompt('请粘贴规则（每行一个）:');
@@ -1117,7 +1122,7 @@
         alert('规则已复制到剪贴板');
     }
 
-    // 导入规则到TXT
+    // 从TXT导入规则
     function importRulesFromFile() {
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
@@ -1175,6 +1180,11 @@
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
+    
+    a.addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
+    
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
