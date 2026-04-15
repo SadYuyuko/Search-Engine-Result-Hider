@@ -1,10 +1,9 @@
-
 // ==UserScript==
 // @name         搜索引擎结果屏蔽器
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      5.0
+// @version      5.1
 // @description        支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:zh-CN  支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports uBlacklist rules.
@@ -228,6 +227,17 @@
         .searchfilter-quick-block:hover {
             transform: scale(1.1);
             opacity: 1;
+        }
+        
+        // 隐藏非正文区域屏蔽按钮
+        header .searchfilter-quick-block,
+        [role="navigation"] .searchfilter-quick-block,
+        [role="tablist"] .searchfilter-quick-block,
+        [role="search"] .searchfilter-quick-block,
+        g-scrolling-carousel .searchfilter-quick-block,
+        #hdtb .searchfilter-quick-block,
+        #appbar .searchfilter-quick-block {
+            display: none !important;
         }
     `);
     
@@ -467,6 +477,12 @@
     // 屏蔽按钮
     function injectBlockButton(result, engine, url, domain) {
         if (!domain) return;
+        
+        // 防止注入到非搜索结果元素
+        if (result.closest('header, [role="navigation"], [role="tablist"], [role="search"], g-scrolling-carousel, #hdtb, #appbar')) {
+            return;
+        }
+        
         if (result.querySelector('.searchfilter-quick-block')) return;
         
         const btn = document.createElement('div');
@@ -682,29 +698,29 @@
         let fontSize, padding, lineHeight;
         switch(currentConfig.bubbleSize) {
             case 'medium':
-                fontSize = '14px';
-                padding = '5px 5px';
-                lineHeight = '1.2';
-                break;
-            case 'large':
-                fontSize = '16px';
+                fontSize = '18px';
                 padding = '5px 5px';
                 lineHeight = '1.3';
                 break;
-            case 'larger':
-                fontSize = '18px';
+            case 'large':
+                fontSize = '20px';
                 padding = '5px 5px';
                 lineHeight = '1.4';
                 break;
-            case 'xlarge':
-                fontSize = '20px';
+            case 'larger':
+                fontSize = '22px';
                 padding = '5px 5px';
                 lineHeight = '1.5';
                 break;
-            default:
-                fontSize = '16px';
+            case 'xlarge':
+                fontSize = '26px';
                 padding = '5px 5px';
-                lineHeight = '1.3';
+                lineHeight = '1.6';
+                break;
+            default:
+                fontSize = '20px';
+                padding = '5px 5px';
+                lineHeight = '1.4';
         }
         
         element.style.fontSize = fontSize;
@@ -839,8 +855,10 @@
                 <div class="compact-row">
                     <span style="font-size: 12px; color: #4a5568;">屏蔽规则:</span>
                     <div style="display: flex; gap: 4px;">
-                        <button id="searchfilter-import" class="searchfilter-button searchfilter-button-secondary" style="padding: 3px 8px; border: 1px solid transparent;">导入</button>
-                        <button id="searchfilter-export" class="searchfilter-button searchfilter-button-success" style="padding: 3px 8px; border: 1px solid transparent;">导出</button>
+                        <button id="searchfilter-import-file" class="searchfilter-button searchfilter-button-secondary" style="padding: 3px 8px; border: 1px solid transparent;" title="从 TX极文件导入">↓TXT</button>
+                        <button id="searchfilter-export-file" class="searchfilter-button searchfilter-button-success" style="padding: 3px 8px; border: 1px solid transparent;" title="导出为 TXT 文件">↑TXT</button>
+                        <button id="searchfilter-import" class="searchfilter-button searchfilter-button-secondary" style="padding: 3px 8px; border: 1px solid transparent;" title="从剪贴板导入">导入</button>
+                        <button id="searchfilter-export" class="searchfilter-button searchfilter-button-success" style="padding: 3px 8px; border: 1px solid transparent;" title="导出到剪贴板">导出</button>
                     </div>
                 </div>
                 <textarea id="searchfilter-rules" placeholder="每行一个规则">${currentConfig.rules.join('\n')}</textarea>
@@ -867,6 +885,11 @@
         document.getElementById('searchfilter-close').onclick = () => panel.remove();
         document.getElementById('searchfilter-import').onclick = importRules;
         document.getElementById('searchfilter-export').onclick = exportRules;
+        document.getElementById('searchfilter-import-file').onclick = (e) => {
+           e.stopPropagation();
+           importRulesFromFile();
+        };
+        document.getElementById('searchfilter-export-file').onclick = exportRulesToFile;
         
         // 选项按钮事件处理
         panel.querySelectorAll('.option-button').forEach(button => {
@@ -901,7 +924,6 @@
         const showCount = document.getElementById('searchfilter-show-count').checked;
         const debug = document.getElementById('searchfilter-debug').checked;
         
-        // 新增配置项获取
         const showBlockBtn = document.getElementById('searchfilter-show-block-btn').checked;
         const blockDomain = document.getElementById('searchfilter-block-domain').checked;
         const blockConfirm = document.getElementById('searchfilter-block-confirm').checked;
@@ -941,7 +963,6 @@
         const engine = getSearchEngine();
         const results = document.querySelectorAll(selectors[engine]);
         
-        // 统计规则数量和错误
         const ruleStats = {};
         const ruleErrors = {};
         
@@ -977,7 +998,6 @@
             });
         });
         
-        // 统计结果
         const ruleStatsArray = Object.entries(ruleStats)
             .map(([rule, count]) => ({ rule, count }))
             .sort((a, b) => b.count - a.count);
@@ -988,13 +1008,11 @@
         const testResultEl = document.getElementById('searchfilter-test-result');
         const rulesTextarea = document.getElementById('searchfilter-rules');
         
-        // 重置容器初始样式
         testResultEl.style.maxHeight = 'none';
         testResultEl.style.overflowY = 'visible';
         testResultEl.style.paddingRight = '8px';
         testResultEl.style.boxSizing = 'border-box';
         
-        // 测试结果
         let resultHTML = '';
         
         if (ruleErrorsArray.length > 0) {
@@ -1016,7 +1034,6 @@
             
             resultHTML += `<div style="color: #2d3748; font-weight: bold; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #e2e8f0;">共匹配 ${totalMatches} 条结果</div>`;
             
-            // 显示数量
             ruleStatsArray.forEach(item => {
                 let ruleType = 'URL规则';
                 if (item.rule.startsWith('title/')) ruleType = '标题规则';
@@ -1033,7 +1050,6 @@
                 `;
             });
 
-            // 高度限制
             const maxHeight = Math.max(rulesTextarea.offsetHeight * 1.2, 150);
             testResultEl.style.maxHeight = maxHeight + 'px';
             testResultEl.style.overflowY = 'auto';
@@ -1052,7 +1068,7 @@
         }, 100);
     }
     
-    // 导入规则
+    // 导入规则到剪贴板
     function importRules() {
         const textarea = document.getElementById('searchfilter-rules');
         const importText = prompt('请粘贴规则（每行一个）:');
@@ -1071,7 +1087,7 @@
         }
     }
     
-    // 导出规则
+    // 导出规则到剪贴板
     function exportRules() {
         const textarea = document.getElementById('searchfilter-rules');
         const exportText = textarea.value;
@@ -1081,7 +1097,6 @@
             return;
         }
         
-        // 创建临时元素复制文本
         const temp = document.createElement('textarea');
         temp.value = exportText;
         document.body.appendChild(temp);
@@ -1090,6 +1105,70 @@
         document.body.removeChild(temp);
         
         alert('规则已复制到剪贴板');
+    }
+
+    // 导入规则到TXT
+    function importRulesFromFile() {
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '.txt,text/plain';
+        fileInput.style.display = 'none';
+        fileInput.addEventListener('click', e => e.stopPropagation());
+        document.body.appendChild(fileInput);
+        
+        fileInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) {
+                document.body.removeChild(fileInput);
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const content = event.target.result;
+                const textarea = document.getElementById('searchfilter-rules');
+                if (textarea) {
+                    textarea.value = content;
+                }
+                document.body.removeChild(fileInput);
+            };
+            reader.onerror = () => {
+                alert('读取文件失败');
+                document.body.removeChild(fileInput);
+            };
+            reader.readAsText(file, 'UTF-8');
+        };
+        
+        fileInput.click();
+    }
+
+    // 导出规则到TXT
+    function exportRulesToFile() {
+    const textarea = document.getElementById('searchfilter-rules');
+    const content = textarea.value;
+    
+    if (!content.trim()) {
+        alert('没有规则可导出');
+        return;
+    }
+    
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const filename = `rules-${month}-${day}-${hours}${minutes}${seconds}.txt`;
+    
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
     }
     
     // 初始化
@@ -1105,14 +1184,12 @@
             subtree: true
         });
         
-        // 处理滚动加载
         let timeout;
         window.addEventListener('scroll', () => {
             clearTimeout(timeout);
             timeout = setTimeout(blockResults, 300);
         });
         
-        // 处理搜索表单提交
         const searchForm = document.querySelector('form[role="search"], form[name="search"], form[action*="search"]');
         if (searchForm) {
             searchForm.addEventListener('submit', () => {
@@ -1126,7 +1203,6 @@
         }
     }
     
-    // 启动
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
