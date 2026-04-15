@@ -26,6 +26,8 @@
 **已知问题：**  
 1.永页机在加载页面时刚好第一页所有词条都被屏蔽会导致无限加载或页面空白，解决方法是启用翻页预读使其提前加载出后续页面  
 2.自动拼接页面后屏蔽数量显示为0，但不影响实际屏蔽功能  
+3.目前屏蔽按钮在Google顶栏有显示bug所以默认关闭此功能，后续修复  
 
-**效果截图：**    
- <img width="430" height="420" alt="Stitch_20260308_201100" src="https://github.com/user-attachments/assets/d44fdb4c-36c8-4372-b379-a1a09743896e" />  
+**效果截图：**  
+<img width="810" height="590" alt="1" src="https://github.com/user-attachments/assets/80912c3c-6928-44a9-8c64-4eac9b2b1c6a" />
+
