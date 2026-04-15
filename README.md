@@ -30,5 +30,5 @@
 
 **效果截图：**  
   
-<img width="810" height="590" alt="1" src="https://github.com/user-attachments/assets/80912c3c-6928-44a9-8c64-4eac9b2b1c6a" />
+<img width="405" height="295" alt="1" src="https://github.com/user-attachments/assets/80912c3c-6928-44a9-8c64-4eac9b2b1c6a" />
 
