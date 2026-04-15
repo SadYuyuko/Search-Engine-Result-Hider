@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      5.1
+// @version      5.2
 // @description        支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:zh-CN  支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports uBlacklist rules.
@@ -222,14 +222,24 @@
             background: transparent;
             transition: transform 0.2s, opacity 0.2s;
             user-select: none;
-            opacity: 0.6;
+            opacity: 0.8;
+            filter: grayscale(1) brightness(0);
         }
+        
+        /* 深色模式切换 */
+        @media (prefers-color-scheme: dark) {
+            .searchfilter-quick-block {
+                filter: grayscale(1) brightness(0) invert(1);
+                opacity: 0.9;
+            }
+        }
+        
         .searchfilter-quick-block:hover {
             transform: scale(1.1);
             opacity: 1;
         }
         
-        // 隐藏非正文区域屏蔽按钮
+        /* 隐藏非正文区域屏蔽按钮 */
         header .searchfilter-quick-block,
         [role="navigation"] .searchfilter-quick-block,
         [role="tablist"] .searchfilter-quick-block,
