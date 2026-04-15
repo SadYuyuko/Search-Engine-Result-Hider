@@ -21,8 +21,8 @@
 // @grant        GM_getValue
 // @grant        GM_addStyle
 // @run-at       document-idle
-// @homepageURL  https://greasyfork.org/zh-CN/scripts/552394
-// @homepageURL  https://github.com/SadYuyuko/Search-Engine-Result-Hider
+// @downloadURL  https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider.user.js
+// @updateURL    https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider.user.js
 // ==/UserScript==
 
 (function() {
