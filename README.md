@@ -29,4 +29,4 @@
 
 **效果截图：**  
   
-<img width="405" height="295" alt="1" src="https://github.com/user-attachments/assets/80912c3c-6928-44a9-8c64-4eac9b2b1c6a" />
+<img width="805" height="525" alt="1" src="https://github.com/user-attachments/assets/70fc482b-3c46-4eac-baa3-2290b919b431" />
