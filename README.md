@@ -29,5 +29,6 @@
 3.目前屏蔽按钮在Google顶栏有显示bug所以默认关闭此功能，后续修复  
 
 **效果截图：**  
+  
 <img width="810" height="590" alt="1" src="https://github.com/user-attachments/assets/80912c3c-6928-44a9-8c64-4eac9b2b1c6a" />
 
