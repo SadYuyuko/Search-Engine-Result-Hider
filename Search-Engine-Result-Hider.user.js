@@ -1,9 +1,10 @@
+
 // ==UserScript==
 // @name         搜索引擎结果屏蔽器
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      4.8
+// @version      5.0
 // @description        支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:zh-CN  支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports uBlacklist rules.
@@ -36,8 +37,16 @@
         showCount: false,
         bubbleSize: 'large',
         bubblePosition: 'bottom-right',
-        debug: false
+        debug: false,
+        showBlockBtn: false,
+        blockDomain: false,
+        blockConfirm: true
     });
+
+    // 兼容旧配置
+    if (currentConfig.showBlockBtn === undefined) currentConfig.showBlockBtn = false;
+    if (currentConfig.blockDomain === undefined) currentConfig.blockDomain = false;
+    if (currentConfig.blockConfirm === undefined) currentConfig.blockConfirm = false;
     
     // 添加样式
     GM_addStyle(`
@@ -198,6 +207,28 @@
         #searchfilter-test-result::-webkit-scrollbar-thumb:hover {
             background: #a8a8a8;
         }
+
+        .searchfilter-quick-block {
+            position: absolute;
+            cursor: pointer;
+            font-size: 16px;
+            color: #000;
+            z-index: 99;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: transparent;
+            transition: transform 0.2s, opacity 0.2s;
+            user-select: none;
+            opacity: 0.6;
+        }
+        .searchfilter-quick-block:hover {
+            transform: scale(1.1);
+            opacity: 1;
+        }
     `);
     
     // 搜索引擎检测
@@ -223,7 +254,6 @@
             let remaining = rule.substring(6);
             let pattern, flags = '';
 
-            // 新格式
             const lastSlashIndex = remaining.lastIndexOf('/');
             if (lastSlashIndex !== -1 && lastSlashIndex < remaining.length - 1) {
                 const possibleFlags = remaining.substring(lastSlashIndex + 1);
@@ -241,7 +271,6 @@
                 pattern = remaining.slice(0, -1);
             }
 
-            // 旧格式
             if (!flags) {
                 const oldFlagMatch = pattern.match(/^\(\?([ims]+)\)/);
                 if (oldFlagMatch) {
@@ -250,7 +279,6 @@
                 }
             }
 
-            // 处理flags中的s
             if (flags.includes('s')) {
                 pattern = pattern.replace(/\./g, '[\\s\\S]');
                 flags = flags.replace('s', '');
@@ -318,7 +346,6 @@
         let remaining = rule.substring(5);
         let pattern, flags = '';
 
-        // 新格式
         const lastSlashIndex = remaining.lastIndexOf('/');
         if (lastSlashIndex !== -1 && lastSlashIndex < remaining.length - 1) {
             const possibleFlags = remaining.substring(lastSlashIndex + 1);
@@ -336,7 +363,6 @@
             pattern = remaining.slice(0, -1);
         }
 
-        // 旧格式
         if (!flags) {
             const oldFlagMatch = pattern.match(/^\(\?([ims]+)\)/);
             if (oldFlagMatch) {
@@ -345,7 +371,6 @@
             }
         }
 
-        // 处理flags中的s
         if (flags.includes('s')) {
             pattern = pattern.replace(/\./g, '[\\s\\S]');
             flags = flags.replace('s', '');
@@ -357,7 +382,6 @@
         } catch (e) {
             console.error('正文规则解析错误:', e, '规则:', rule);
 
-            // 回退到简单包含匹配
             const simplePattern = pattern.replace(/^\(\?[ims]+\)/, '');
             if (flags.includes('i')) {
                 return snippet.toLowerCase().includes(simplePattern.toLowerCase());
@@ -378,11 +402,9 @@
                 
                 if (!title || title.trim() === '') return false;
                 
-                // 创建正则表达式
                 const regex = new RegExp(pattern, flags);
                 const matches = regex.test(title);
                 
-                // 调试输出
                 if (currentConfig.debug && matches && Math.random() < 0.1) {
                     console.log('标题匹配成功:', {
                         rule: rule,
@@ -396,7 +418,6 @@
             } catch (e) {
                 console.error('标题规则解析错误:', e, '规则:', rule);
                 
-                // 简单字符串匹配
                 try {
                     const simplePattern = rule.substring(6).replace(/^\(\?[ims]+\)/, '');
                     if (rule.includes('(?i)') || rule.includes('(?i)')) {
@@ -418,7 +439,6 @@
             const fullMatch = regex.test(url);
             const domainMatch = regex.test(domain);
             
-            // 调试输出
             if (currentConfig.debug && (fullMatch || domainMatch) && Math.random() < 0.1) {
                 console.log('URL规则匹配检查:', {
                     rule: rule,
@@ -434,7 +454,6 @@
         } catch (e) {
             console.error('URL规则解析错误:', e, '规则:', rule);
             
-            // 简单包含匹配
             try {
                 const simpleRule = rule.replace('*://', '').replace(/\*/g, '');
                 return url.includes(simpleRule) || domain.includes(simpleRule);
@@ -445,6 +464,68 @@
         }
     }
     
+    // 屏蔽按钮
+    function injectBlockButton(result, engine, url, domain) {
+        if (!domain) return;
+        if (result.querySelector('.searchfilter-quick-block')) return;
+        
+        const btn = document.createElement('div');
+        btn.className = 'searchfilter-quick-block';
+        btn.innerHTML = '🚫';
+        btn.title = '屏蔽此词条';
+        
+        if (window.getComputedStyle(result).position === 'static') {
+            result.style.position = 'relative';
+        }
+        
+        if (engine === 'bing') {
+            btn.style.right = '5px';
+            btn.style.top = '10px';
+        } else {
+            btn.style.right = '35px';
+            btn.style.top = '10px';
+        }
+        
+        btn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            let newRule = '';
+            if (currentConfig.blockDomain) {
+                let baseDomain = domain.startsWith('www.') ? domain.substring(4) : domain;
+                newRule = baseDomain + '/*';
+            } else {
+                newRule = domain;
+            }
+            
+            if (currentConfig.blockConfirm) {
+                if (!confirm(`确定要屏蔽并添加规则 [ ${newRule} ] 吗？`)) {
+                    return;
+                }
+            }
+            
+            if (!currentConfig.rules.includes(newRule)) {
+                currentConfig.rules.push(newRule);
+                GM_setValue(CONFIG_KEY, currentConfig);
+                
+                const textarea = document.getElementById('searchfilter-rules');
+                if (textarea) {
+                    textarea.value = currentConfig.rules.join('\n');
+                }
+                
+                document.querySelectorAll('.searchfilter-quick-block').forEach(b => b.remove());
+                document.querySelectorAll('[data-blocker-processed]').forEach(el => {
+                    el.removeAttribute('data-blocker-processed');
+                });
+                blockResults();
+            } else {
+                result.style.display = 'none';
+            }
+        };
+        
+        result.appendChild(btn);
+    }
+
     // 屏蔽结果
     function blockResults() {
         if (!currentConfig.enabled) {
@@ -464,7 +545,6 @@
         results.forEach(result => {
             if (result.hasAttribute('data-blocker-processed')) return;
             
-            // 获取链接
             const link = getResultLink(result, engine);
             if (!link || !link.href) return;
             
@@ -488,7 +568,6 @@
                 blocked++;
                 result.setAttribute('data-blocker-processed', 'true');
                 
-                // 调试输出
                 if (currentConfig.debug) {
                     console.log('屏蔽结果:', {
                         engine: engine,
@@ -501,6 +580,9 @@
                 }
             } else {
                 result.setAttribute('data-blocker-processed', 'true');
+                if (currentConfig.showBlockBtn) {
+                    injectBlockButton(result, engine, url, domain);
+                }
             }
         });
         
@@ -576,7 +658,7 @@
         status.title = '点击配置屏蔽规则';
     }
     
-    // 应用悬浮球样式
+    // 悬浮球样式
     function applyBubbleStyle(element) {
         element.style.cssText = `
             position: fixed;
@@ -595,33 +677,33 @@
         `;
     }
     
-    // 应用悬浮球大小
+    // 悬浮球大小
     function applyBubbleSize(element) {
         let fontSize, padding, lineHeight;
         switch(currentConfig.bubbleSize) {
             case 'medium':
                 fontSize = '14px';
-                padding = '8px 12px';
+                padding = '5px 5px';
                 lineHeight = '1.2';
                 break;
             case 'large':
                 fontSize = '16px';
-                padding = '10px 14px';
+                padding = '5px 5px';
                 lineHeight = '1.3';
                 break;
             case 'larger':
                 fontSize = '18px';
-                padding = '12px 16px';
+                padding = '5px 5px';
                 lineHeight = '1.4';
                 break;
             case 'xlarge':
                 fontSize = '20px';
-                padding = '14px 18px';
+                padding = '5px 5px';
                 lineHeight = '1.5';
                 break;
             default:
                 fontSize = '16px';
-                padding = '10px 14px';
+                padding = '5px 5px';
                 lineHeight = '1.3';
         }
         
@@ -630,7 +712,7 @@
         element.style.lineHeight = lineHeight;
     }
     
-    // 应用悬浮球位置
+    // 悬浮球位置
     function applyBubblePosition(element) {
         element.style.top = 'auto';
         element.style.bottom = 'auto';
@@ -639,20 +721,20 @@
         
         switch(currentConfig.bubblePosition) {
             case 'top-left':
-                element.style.top = '15px';
-                element.style.left = '15px';
+                element.style.top = '5px';
+                element.style.left = '5px';
                 break;
             case 'top-right':
-                element.style.top = '15px';
-                element.style.right = '15px';
+                element.style.top = '5px';
+                element.style.right = '5px';
                 break;
             case 'bottom-left':
-                element.style.bottom = '15px';
-                element.style.left = '15px';
+                element.style.bottom = '5px';
+                element.style.left = '5px';
                 break;
             default:
-                element.style.bottom = '15px';
-                element.style.right = '15px';
+                element.style.bottom = '5px';
+                element.style.right = '5px';
         }
     }
     
@@ -713,18 +795,33 @@
         
         // 面板UI
         panel.innerHTML = `
-            <div style="display: flex; gap: 8px; margin-top: 10px; margin-bottom: 12px;">
+            <div style="display: flex; gap: 8px; margin-top: 10px; margin-bottom: 8px;">
                 <label style="display: flex; align-items: center; flex: 1; justify-content: flex-start; white-space: nowrap;">
                     <input type="checkbox" id="searchfilter-enabled" ${currentConfig.enabled ? 'checked' : ''} style="margin-right: 4px;">
                     <span>启用屏蔽</span>
                 </label>
                 <label style="display: flex; align-items: center; flex: 1; justify-content: center; white-space: nowrap;">
                     <input type="checkbox" id="searchfilter-show-count" ${currentConfig.showCount ? 'checked' : ''} style="margin-right: 4px;">
-                    <span>显示屏蔽数量</span>
+                    <span>显示数量</span>
                 </label>
                 <label style="display: flex; align-items: center; flex: 1; justify-content: flex-end; white-space: nowrap;">
                     <input type="checkbox" id="searchfilter-debug" ${currentConfig.debug ? 'checked' : ''} style="margin-right: 4px;">
                     <span>调试模式</span>
+                </label>
+            </div>
+            
+            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                <label style="display: flex; align-items: center; flex: 1; justify-content: flex-start; white-space: nowrap;">
+                    <input type="checkbox" id="searchfilter-show-block-btn" ${currentConfig.showBlockBtn ? 'checked' : ''} style="margin-right: 4px;">
+                    <span>屏蔽按钮</span>
+                </label>
+                <label style="display: flex; align-items: center; flex: 1; justify-content: center; white-space: nowrap;">
+                    <input type="checkbox" id="searchfilter-block-domain" ${currentConfig.blockDomain ? 'checked' : ''} style="margin-right: 4px;">
+                    <span>屏蔽域名</span>
+                </label>
+                <label style="display: flex; align-items: center; flex: 1; justify-content: flex-end; white-space: nowrap;">
+                    <input type="checkbox" id="searchfilter-block-confirm" ${currentConfig.blockConfirm ? 'checked' : ''} style="margin-right: 4px;">
+                    <span>屏蔽确认</span>
                 </label>
             </div>
             
@@ -804,17 +901,26 @@
         const showCount = document.getElementById('searchfilter-show-count').checked;
         const debug = document.getElementById('searchfilter-debug').checked;
         
+        // 新增配置项获取
+        const showBlockBtn = document.getElementById('searchfilter-show-block-btn').checked;
+        const blockDomain = document.getElementById('searchfilter-block-domain').checked;
+        const blockConfirm = document.getElementById('searchfilter-block-confirm').checked;
+        
         currentConfig.rules = rulesText.split('\n')
             .map(rule => rule.trim())
             .filter(rule => rule.length > 0);
         currentConfig.enabled = enabled;
         currentConfig.showCount = showCount;
         currentConfig.debug = debug;
+        currentConfig.showBlockBtn = showBlockBtn;
+        currentConfig.blockDomain = blockDomain;
+        currentConfig.blockConfirm = blockConfirm;
         
         GM_setValue(CONFIG_KEY, currentConfig);
         panel.remove();
         
-        // 重置并重新屏蔽
+        document.querySelectorAll('.searchfilter-quick-block').forEach(btn => btn.remove());
+        
         document.querySelectorAll('[data-blocker-processed]').forEach(el => {
             el.removeAttribute('data-blocker-processed');
         });
@@ -910,7 +1016,7 @@
             
             resultHTML += `<div style="color: #2d3748; font-weight: bold; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #e2e8f0;">共匹配 ${totalMatches} 条结果</div>`;
             
-            // 显示匹配规则数量
+            // 显示数量
             ruleStatsArray.forEach(item => {
                 let ruleType = 'URL规则';
                 if (item.rule.startsWith('title/')) ruleType = '标题规则';
@@ -927,7 +1033,7 @@
                 `;
             });
 
-            // 有结果或错误时应用高度限制
+            // 高度限制
             const maxHeight = Math.max(rulesTextarea.offsetHeight * 1.2, 150);
             testResultEl.style.maxHeight = maxHeight + 'px';
             testResultEl.style.overflowY = 'auto';
@@ -955,7 +1061,6 @@
                 .map(rule => rule.trim())
                 .filter(rule => rule.length > 0);
             if (rules.length === 0) {
-                // 空规则询问是否清空
                 const confirmClear = confirm('当前剪贴板为空，若继续导入将会清空规则');
                 if (confirmClear) {
                     textarea.value = '';
@@ -1012,6 +1117,7 @@
         if (searchForm) {
             searchForm.addEventListener('submit', () => {
                 setTimeout(() => {
+                    document.querySelectorAll('.searchfilter-quick-block').forEach(btn => btn.remove());
                     document.querySelectorAll('[data-blocker-processed]').forEach(el => {
                         el.removeAttribute('data-blocker-processed');
                     });
