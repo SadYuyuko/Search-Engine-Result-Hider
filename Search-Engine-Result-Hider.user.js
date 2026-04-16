@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      5.3
+// @version      5.4
 // @description        支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:zh-CN  支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports uBlacklist rules.
@@ -239,14 +239,20 @@
             opacity: 1;
         }
         
-        /* 隐藏非正文区域屏蔽按钮 */
+        /* 非正文区域隐藏按钮 */
+        .isv-r .searchfilter-quick-block, 
+        .image-section .searchfilter-quick-block,
+        g-img .searchfilter-quick-block,
+        .is-extra-container .searchfilter-quick-block {
+            display: none !important;
+        }
         header .searchfilter-quick-block,
         [role="navigation"] .searchfilter-quick-block,
         [role="tablist"] .searchfilter-quick-block,
         [role="search"] .searchfilter-quick-block,
         g-scrolling-carousel .searchfilter-quick-block,
         #hdtb .searchfilter-quick-block,
-        #appbar .searchfilter-quick-block
+        #appbar .searchfilter-quick-block,
         #searchform .searchfilter-quick-block,
         #top_nav .searchfilter-quick-block,
         #extabar .searchfilter-quick-block {
@@ -495,9 +501,16 @@
             return;
         }
         
-        if (engine === 'google' && !result.closest('#center_col')) {
-            return;
+        // 跳过Google图片
+        if (engine === 'google') {
+            if (result.classList.contains('isv-r') || result.querySelector('g-img')) {
+                if (!result.querySelector('h3')) return;
+            }
+            if (!result.closest('#center_col')) return;
         }
+
+        const title = getResultTitle(result, engine);
+        if (!title) return;
         
         if (result.querySelector('.searchfilter-quick-block')) return;
         
@@ -557,6 +570,7 @@
         
         result.appendChild(btn);
     }
+
 
     // 屏蔽结果
     function blockResults() {
@@ -793,10 +807,27 @@
         
         const panel = document.createElement('div');
         panel.id = 'searchfilter-panel';
+
+        // 动态计算面板位置
+        let positionCSS = '';
+        switch(currentConfig.bubblePosition) {
+            case 'top-left':
+                positionCSS = 'top: 60px; left: 10px;';
+                break;
+            case 'top-right':
+                positionCSS = 'top: 60px; right: 10px;';
+                break;
+            case 'bottom-left':
+                positionCSS = 'bottom: 60px; left: 10px;';
+                break;
+            case 'bottom-right':
+            default:
+                positionCSS = 'bottom: 60px; right: 10px;';
+        }
+        
         panel.style.cssText = `
             position: fixed;
-            bottom: 60px;
-            right: 10px;
+            ${positionCSS}
             width: 325px;
             max-width: 90vw;
             background: white;
@@ -807,6 +838,7 @@
             z-index: 10001;
             font-size: 13px;
             box-sizing: border-box;
+            transition: all 0.3s ease;
         `;
         
         // 悬浮球位置
@@ -918,6 +950,35 @@
                 buttons.forEach(btn => {
                     btn.classList.toggle('active', btn.dataset.value === value);
                 });
+
+                if (name === 'bubblePosition') {
+                    panel.style.top = 'auto';
+                    panel.style.bottom = 'auto';
+                    panel.style.left = 'auto';
+                    panel.style.right = 'auto';
+                    
+                    switch(value) {
+                        case 'top-left':
+                            panel.style.top = '60px';
+                            panel.style.left = '10px';
+                            break;
+                        case 'top-right':
+                            panel.style.top = '60px';
+                            panel.style.right = '10px';
+                            break;
+                        case 'bottom-left':
+                            panel.style.bottom = '60px';
+                            panel.style.left = '10px';
+                            break;
+                        case 'bottom-right':
+                        default:
+                            panel.style.bottom = '60px';
+                            panel.style.right = '10px';
+                    }
+                    
+                    const statusBtn = document.getElementById('searchfilter-status');
+                    if (statusBtn) applyBubblePosition(statusBtn);
+                }
             });
         });
         
