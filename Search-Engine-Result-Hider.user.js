@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      5.5
+// @version      5.6
 // @description        支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:zh-CN  支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports uBlacklist rules.
@@ -11,12 +11,15 @@
 // @homepageURL  https://greasyfork.org/zh-CN/scripts/552394
 // @homepageURL  https://github.com/SadYuyuko/Search-Engine-Result-Hider
 // @license      MIT
-// @match        https://www.bing.com/*
-// @match        https://cn.bing.com/*
-// @match        https://www.google.com/*
-// @match        https://www.google.com.*/*
-// @match        https://duckduckgo.com/*
+// @match        https://*.bing.com/*
 // @match        https://*.duckduckgo.com/*
+// @match        https://duckduckgo.com/*
+// @match        https://*.google.com/*
+// @match        https://*.google.com.hk/*
+// @match        https://*.google.com.tw/*
+// @match        https://*.google.co.jp/*
+// @match        https://*.google.com.sg/*
+// @include      /^https?:\/\/([\w-]+\.)?google\.[a-z.]{2,6}\/.*$/
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_addStyle
