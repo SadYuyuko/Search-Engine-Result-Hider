@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      5.4
+// @version      5.5
 // @description        支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:zh-CN  支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports uBlacklist rules.
@@ -20,6 +20,7 @@
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_addStyle
+// @grant        GM_registerMenuCommand
 // @run-at       document-idle
 // @downloadURL  https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider.user.js
 // @updateURL    https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider.user.js
@@ -39,13 +40,15 @@
         debug: false,
         showBlockBtn: false,
         blockDomain: false,
-        blockConfirm: true
+        blockConfirm: true,
+        showBubble: true
     });
 
-    // 兼容旧配置
+    // 兼容
     if (currentConfig.showBlockBtn === undefined) currentConfig.showBlockBtn = false;
     if (currentConfig.blockDomain === undefined) currentConfig.blockDomain = false;
     if (currentConfig.blockConfirm === undefined) currentConfig.blockConfirm = false;
+    if (currentConfig.showBubble === undefined) currentConfig.showBubble = true;
     
     // 添加样式
     GM_addStyle(`
@@ -570,8 +573,7 @@
         
         result.appendChild(btn);
     }
-
-
+    
     // 屏蔽结果
     function blockResults() {
         if (!currentConfig.enabled) {
@@ -579,6 +581,7 @@
             document.querySelectorAll('[data-blocker-processed]').forEach(result => {
                 result.style.display = '';
                 result.removeAttribute('data-blocker-processed');
+                result.removeAttribute('data-is-blocked');
             });
             return;
         }
@@ -587,7 +590,6 @@
         const selector = selectors[engine];
         const results = document.querySelectorAll(selector);
         
-        let blocked = 0;
         results.forEach(result => {
             if (result.hasAttribute('data-blocker-processed')) return;
             
@@ -611,8 +613,8 @@
             
             if (shouldBlock) {
                 result.style.display = 'none';
-                blocked++;
                 result.setAttribute('data-blocker-processed', 'true');
+                result.setAttribute('data-is-blocked', 'true');
                 
                 if (currentConfig.debug) {
                     console.log('屏蔽结果:', {
@@ -632,7 +634,8 @@
             }
         });
         
-        updateStatus(blocked);
+        const totalBlocked = document.querySelectorAll('[data-is-blocked="true"]').length;
+        updateStatus(totalBlocked);
     }
     
     // 获取链接
@@ -674,6 +677,11 @@
     
     // 更新状态显示
     function updateStatus(blocked) {
+        if (!currentConfig.showBubble) {
+        const status = document.getElementById('searchfilter-status');
+        if (status) status.remove();
+        return;
+    }
         let status = document.getElementById('searchfilter-status');
         if (!status) {
             status = document.createElement('div');
@@ -1252,8 +1260,23 @@
     URL.revokeObjectURL(url);
     }
     
+    // 管理器菜单
+    function registerMenu() {
+        const toggleLabel = currentConfig.showBubble ? "🔴 隐藏悬浮球" : "🟢 显示悬浮球";
+        GM_registerMenuCommand(toggleLabel, () => {
+            currentConfig.showBubble = !currentConfig.showBubble;
+            GM_setValue(CONFIG_KEY, currentConfig);
+            location.reload(); 
+        });
+        
+        GM_registerMenuCommand("⚙️ 打开配置面板", () => {
+            showConfigPanel();
+        });
+    }
+    
     // 初始化
     function init() {
+        registerMenu();
         blockResults();
         
         const observer = new MutationObserver(() => {
