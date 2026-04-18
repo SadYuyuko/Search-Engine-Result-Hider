@@ -3,9 +3,9 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      5.6
-// @description        支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
-// @description:zh-CN  支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
+// @version      5.7
+// @description        支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具 (修复Google翻页及空白Bug)
+// @description:zh-CN  支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具 (修复Google翻页及空白Bug)
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports uBlacklist rules.
 // @author       南雪莲
 // @homepageURL  https://greasyfork.org/zh-CN/scripts/552394
@@ -46,7 +46,7 @@
         blockConfirm: true,
         showBubble: true
     });
-
+    
     // 兼容
     if (currentConfig.showBlockBtn === undefined) currentConfig.showBlockBtn = false;
     if (currentConfig.blockDomain === undefined) currentConfig.blockDomain = false;
@@ -55,6 +55,10 @@
     
     // 添加样式
     GM_addStyle(`
+        /* 预留高度用于翻页 */
+        body { min-height: 101vh !important; }
+        #rcnt, #rso { min-height: 60vh; }
+        
         #searchfilter-panel {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             font-size: 13px;
@@ -212,7 +216,7 @@
         #searchfilter-test-result::-webkit-scrollbar-thumb:hover {
             background: #a8a8a8;
         }
-
+        
         .searchfilter-quick-block {
             position: absolute;
             cursor: pointer;
@@ -278,17 +282,17 @@
     // 选择器
     const selectors = {
         bing: 'li.b_algo, div.b_algo',
-        google: 'div.g, div[data-snf], div[data-hveid]',
+        google: 'div.g, div.MjjYud', 
         duckduckgo: '[data-testid="result"], .result, .web-result, .tile, .tile--ad',
         other: 'div.g, li.b_algo'
     };
     
-    // URL和标题规则转换正则
+    // 处理URL和标题规则
     function ruleToRegex(rule) {
         if (rule.startsWith('title/')) {
             let remaining = rule.substring(6);
             let pattern, flags = '';
-
+            
             const lastSlashIndex = remaining.lastIndexOf('/');
             if (lastSlashIndex !== -1 && lastSlashIndex < remaining.length - 1) {
                 const possibleFlags = remaining.substring(lastSlashIndex + 1);
@@ -301,7 +305,7 @@
             } else {
                 pattern = remaining;
             }
-
+            
             if (!flags && remaining.endsWith('/')) {
                 pattern = remaining.slice(0, -1);
             }
@@ -313,12 +317,12 @@
                     pattern = pattern.substring(oldFlagMatch[0].length);
                 }
             }
-
+            
             if (flags.includes('s')) {
                 pattern = pattern.replace(/\./g, '[\\s\\S]');
                 flags = flags.replace('s', '');
             }
-
+            
             return { pattern, flags };
         }
         
@@ -364,7 +368,7 @@
         else if (engine === 'google') selectors = googleSnippetSelectors;
         else if (engine === 'duckduckgo') selectors = duckSnippetSelectors;
         else return '';
-
+        
         for (let selector of selectors) {
             const elem = result.querySelector(selector);
             if (elem && elem.textContent) {
@@ -373,14 +377,14 @@
         }
         return '';
     }
-
+    
     // 处理正文规则
     function checkTextRule(rule, snippet) {
         if (!snippet) return false;
 
         let remaining = rule.substring(5);
         let pattern, flags = '';
-
+        
         const lastSlashIndex = remaining.lastIndexOf('/');
         if (lastSlashIndex !== -1 && lastSlashIndex < remaining.length - 1) {
             const possibleFlags = remaining.substring(lastSlashIndex + 1);
@@ -393,11 +397,11 @@
         } else {
             pattern = remaining;
         }
-
+        
         if (!flags && remaining.endsWith('/')) {
             pattern = remaining.slice(0, -1);
         }
-
+        
         if (!flags) {
             const oldFlagMatch = pattern.match(/^\(\?([ims]+)\)/);
             if (oldFlagMatch) {
@@ -405,12 +409,12 @@
                 pattern = pattern.substring(oldFlagMatch[0].length);
             }
         }
-
+        
         if (flags.includes('s')) {
             pattern = pattern.replace(/\./g, '[\\s\\S]');
             flags = flags.replace('s', '');
         }
-
+        
         try {
             const regex = new RegExp(pattern, flags);
             return regex.test(snippet);
@@ -514,7 +518,7 @@
             }
             if (!result.closest('#center_col')) return;
         }
-
+        
         const title = getResultTitle(result, engine);
         if (!title) return;
         
@@ -546,7 +550,7 @@
                 let baseDomain = domain.startsWith('www.') ? domain.substring(4) : domain;
                 newRule = baseDomain + '/*';
             } else {
-                newRule = domain;
+                newRule = domain + '/*';
             }
             
             if (currentConfig.blockConfirm) {
@@ -577,7 +581,7 @@
         result.appendChild(btn);
     }
     
-    // 屏蔽结果
+    // 屏蔽结果逻辑
     function blockResults() {
         if (!currentConfig.enabled) {
             updateStatus(0);
@@ -594,7 +598,10 @@
         const results = document.querySelectorAll(selector);
         
         results.forEach(result => {
-            if (result.hasAttribute('data-blocker-processed')) return;
+            const isProcessed = result.hasAttribute('data-blocker-processed');
+            const isBlocked = result.hasAttribute('data-is-blocked');
+            
+            if (isBlocked) return;
             
             const link = getResultLink(result, engine);
             if (!link || !link.href) return;
@@ -605,6 +612,13 @@
                 domain = new URL(url).hostname;
             } catch (e) {
                 domain = '';
+            }
+            
+            if (isProcessed) {
+                if (currentConfig.showBlockBtn && !result.querySelector('.searchfilter-quick-block')) {
+                    injectBlockButton(result, engine, url, domain);
+                }
+                return;
             }
             
             const title = getResultTitle(result, engine);
@@ -657,7 +671,7 @@
         return result.querySelector('a[href]');
     }
     
-    // 获取标题
+    // 标题选择器
     function getResultTitle(result, engine) {
         const bingSelectors = ['h2 a', 'a h2', '.b_title'];
         const googleSelectors = ['h3', 'div[role="heading"]', '.LC20lb', '.DKV0Md', '.sXLaOe', '.c9DxTc', 'a h3'];
@@ -818,8 +832,7 @@
         
         const panel = document.createElement('div');
         panel.id = 'searchfilter-panel';
-
-        // 动态计算面板位置
+        
         let positionCSS = '';
         switch(currentConfig.bubblePosition) {
             case 'top-left':
@@ -961,7 +974,7 @@
                 buttons.forEach(btn => {
                     btn.classList.toggle('active', btn.dataset.value === value);
                 });
-
+                
                 if (name === 'bubblePosition') {
                     panel.style.top = 'auto';
                     panel.style.bottom = 'auto';
@@ -1136,7 +1149,7 @@
                     </div>
                 `;
             });
-
+            
             const maxHeight = Math.max(rulesTextarea.offsetHeight * 1.2, 150);
             testResultEl.style.maxHeight = maxHeight + 'px';
             testResultEl.style.overflowY = 'auto';
@@ -1193,7 +1206,7 @@
         
         alert('规则已复制到剪贴板');
     }
-
+    
     // 从TXT导入规则
     function importRulesFromFile() {
         const fileInput = document.createElement('input');
@@ -1228,7 +1241,7 @@
         
         fileInput.click();
     }
-
+    
     // 导出规则到TXT
     function exportRulesToFile() {
     const textarea = document.getElementById('searchfilter-rules');
