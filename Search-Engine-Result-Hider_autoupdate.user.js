@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      5.7.1
+// @version      5.7.2
 // @description        支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:zh-CN  支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports uBlacklist rules.
@@ -984,7 +984,7 @@
         };
         document.getElementById('searchfilter-export-file').onclick = exportRulesToFile;
         
-        // 绑定滚动事件
+        // 滚动事件
         document.getElementById('searchfilter-scroll-top').onclick = () => {
             const ta = document.getElementById('searchfilter-rules');
             ta.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1309,15 +1309,29 @@
     
     // 管理器菜单
     function registerMenu() {
-        const toggleLabel = currentConfig.showBubble ? "🔴 隐藏悬浮球" : "🟢 显示悬浮球";
-        GM_registerMenuCommand(toggleLabel, () => {
-            currentConfig.showBubble = !currentConfig.showBubble;
+        GM_registerMenuCommand("⚙️ 打开配置面板", () => {
+            showConfigPanel();
+        });
+        
+        const enabledLabel = currentConfig.enabled ? "🟢 屏蔽功能：启用" : "🔴 屏蔽功能：关闭";
+        GM_registerMenuCommand(enabledLabel, () => {
+            currentConfig.enabled = !currentConfig.enabled;
+            GM_setValue(CONFIG_KEY, currentConfig);
+            location.reload();
+        });
+        
+        const confirmLabel = currentConfig.blockConfirm ? "🟢 屏蔽确认：启用" : "🔴 屏蔽确认：关闭";
+        GM_registerMenuCommand(confirmLabel, () => {
+            currentConfig.blockConfirm = !currentConfig.blockConfirm;
             GM_setValue(CONFIG_KEY, currentConfig);
             location.reload(); 
         });
         
-        GM_registerMenuCommand("⚙️ 打开配置面板", () => {
-            showConfigPanel();
+        const bubbleLabel = currentConfig.showBubble ? "🟢 悬浮球状态：显示" : "🔴 悬浮球状态：隐藏";
+        GM_registerMenuCommand(bubbleLabel, () => {
+            currentConfig.showBubble = !currentConfig.showBubble;
+            GM_setValue(CONFIG_KEY, currentConfig);
+            location.reload(); 
         });
     }
     
