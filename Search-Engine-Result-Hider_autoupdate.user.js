@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      5.7
+// @version      5.7.1
 // @description        支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:zh-CN  支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports uBlacklist rules.
@@ -53,7 +53,7 @@
     if (currentConfig.blockConfirm === undefined) currentConfig.blockConfirm = false;
     if (currentConfig.showBubble === undefined) currentConfig.showBubble = true;
     
-    // 添加样式
+    // 样式
     GM_addStyle(`
         /* 预留高度用于翻页 */
         body { min-height: 101vh !important; }
@@ -236,6 +236,23 @@
             filter: grayscale(1) brightness(0);
         }
         
+        /* 快速滑动按钮 */
+        .searchfilter-scroll-btn {
+            position: absolute;
+            right: 7px;
+            cursor: pointer;
+            opacity: 0.5;
+            font-size: 14px;
+            user-select: none;
+            transition: opacity 0.2s, transform 0.2s;
+            background: transparent;
+            z-index: 10;
+        }
+        .searchfilter-scroll-btn:hover {
+            opacity: 1;
+            transform: scale(1.2);
+        }
+
         /* 深色模式切换 */
         @media (prefers-color-scheme: dark) {
             .searchfilter-quick-block {
@@ -933,7 +950,11 @@
                         <button id="searchfilter-export" class="searchfilter-button searchfilter-button-success" style="padding: 3px 8px; border: 1px solid transparent;" title="导出到剪贴板">导出</button>
                     </div>
                 </div>
-                <textarea id="searchfilter-rules" placeholder="每行一个规则">${currentConfig.rules.join('\n')}</textarea>
+                <div style="position: relative;">
+                    <textarea id="searchfilter-rules" placeholder="每行一个规则">${currentConfig.rules.join('\n')}</textarea>
+                    <div id="searchfilter-scroll-top" class="searchfilter-scroll-btn" style="top: 2px;" title="回到顶部">⬆️</div>
+                    <div id="searchfilter-scroll-bottom" class="searchfilter-scroll-btn" style="bottom: 8px;" title="回到底部">⬇️</div>
+                </div>
                 <div style="font-size: 10px; color: #718096; margin-top: 3px; text-align: left;">
                 title/.*文本.*/ 匹配标题 | text/.*文本.*/ 匹配内容<br>
                 title/.*AbC.*/i 加i忽略大小写 | title/.*A(B|C).*/ 同时匹配AB和AC
@@ -962,6 +983,16 @@
            importRulesFromFile();
         };
         document.getElementById('searchfilter-export-file').onclick = exportRulesToFile;
+        
+        // 绑定滚动事件
+        document.getElementById('searchfilter-scroll-top').onclick = () => {
+            const ta = document.getElementById('searchfilter-rules');
+            ta.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+        document.getElementById('searchfilter-scroll-bottom').onclick = () => {
+            const ta = document.getElementById('searchfilter-rules');
+            ta.scrollTo({ top: ta.scrollHeight, behavior: 'smooth' });
+        };
         
         panel.querySelectorAll('.option-button').forEach(button => {
             button.addEventListener('click', function() {
