@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      5.8.0
+// @version      5.8.1
 // @description        支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:zh-CN  支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports uBlacklist rules.
@@ -169,12 +169,12 @@
             font-family: 'Consolas', 'Monaco', monospace;
             line-height: 1.4;
             white-space: pre;
-            overflow-x: hidden;
+            overflow-x: auto;
             overflow-y: auto;
             outline: none;
         }
         
-        #searchfilter-rules::-webkit-scrollbar { width: 6px; height: 6px; }
+        #searchfilter-rules::-webkit-scrollbar { width: 6px; height: 0px; }
         #searchfilter-rules::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
         #searchfilter-rules::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
         #searchfilter-rules::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
@@ -192,11 +192,10 @@
         #searchfilter-test-result::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
         #searchfilter-test-result::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
         
+        /* 屏蔽按钮 */
         .searchfilter-quick-block {
             position: absolute;
             cursor: pointer;
-            font-size: 16px;
-            color: #000;
             z-index: 99;
             width: 24px;
             height: 24px;
@@ -205,12 +204,21 @@
             justify-content: center;
             border-radius: 50%;
             background: transparent;
-            transition: transform 0.2s, opacity 0.2s;
             user-select: none;
-            opacity: 0.8;
-            filter: grayscale(1) brightness(0);
+            color: #000000; 
+            transition: transform 0.2s;
         }
         
+        .searchfilter-quick-block:hover {
+            transform: scale(1.1);
+        }
+        
+        @media (prefers-color-scheme: dark) {
+        .searchfilter-quick-block {
+            color: #ffffff;
+        }
+    }
+    
         /* 快速滑动按钮 */
         .searchfilter-scroll-btn {
             position: absolute;
@@ -223,15 +231,8 @@
             background: transparent;
             z-index: 10;
         }
-        .searchfilter-scroll-btn:hover { opacity: 1; transform: scale(1.2); }
         
-        /* 深色模式切换 */
-        @media (prefers-color-scheme: dark) {
-            .searchfilter-quick-block {
-                filter: grayscale(1) brightness(0) invert(1);
-                opacity: 0.9;
-            }
-        }
+        .searchfilter-scroll-btn:hover { opacity: 1; transform: scale(1.2); }
         
         .searchfilter-quick-block:hover { transform: scale(1.1); opacity: 1; }
         
@@ -559,7 +560,6 @@
             return;
         }
         
-        // 跳过Google图片
         if (engine === 'google') {
             if (result.classList.contains('isv-r') || result.querySelector('g-img')) {
                 if (!result.querySelector('h3')) return;
@@ -574,7 +574,11 @@
         
         const btn = document.createElement('div');
         btn.className = 'searchfilter-quick-block';
-        btn.innerHTML = '🚫';
+        btn.innerHTML = `
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+        </svg>`;
         btn.title = '屏蔽此词条';
         
         if (window.getComputedStyle(result).position === 'static') {
@@ -884,7 +888,7 @@
             const rule = lines[i];
             const isValid = validateRule(rule);
             
-            const warnIcon = isValid ? '' : '<span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 10px; cursor: help; background: #edf2f7; z-index: 1;" title="语法错误 (可能降级为普通字符匹配)">⚠️</span>';
+            const warnIcon = isValid ? '' : '<span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 10px; cursor: help; background: #edf2f7; z-index: 1;" title="语法错误">⚠️</span>';
             
             html += `<div style="position: relative; color: #a0aec0;">${i + 1}${warnIcon}</div>`;
         }
