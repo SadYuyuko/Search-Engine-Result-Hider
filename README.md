@@ -2,7 +2,7 @@
 ## 搜索引擎结果屏蔽器
 [Github](https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js) | [Greasy Fork](https://greasyfork.org/zh-CN/scripts/552394)(推荐) 使用任意脚本管理器安装  
 
-在搜索引擎中屏蔽搜索结果词条，适用于Bing、Google、DuckDuckGo。支持包括ublacklist规则在内的正则匹配URL、标题匹配、正文内容匹配，可测试规则和调试输出，导入导出规则到剪贴板或时间戳命名的TXT文件，以及隐藏面板菜单  
+在搜索引擎中屏蔽搜索结果词条，适用于Bing、Google、DuckDuckGo。支持包括ublacklist规则在内的正则匹配URL、标题匹配、正文内容匹配，可测试规则和调试输出，导入导出规则到剪贴板或时间戳命名的TXT文件，以及隐藏面板菜单等  
   
 适用于仅支持安装脚本的移动端浏览器(如Via、X等)，其他支持安装扩展的移动端和PC端也可用但更推荐直接使用[ublacklist](https://addons.mozilla.org/zh-CN/firefox/addon/ublacklist)  
 
