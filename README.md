@@ -29,4 +29,4 @@
   
 <img width="811" height="495" alt="1" src="https://github.com/user-attachments/assets/83ce809d-25d9-4159-9104-9898fada1d91" />  
 ---  
-<img width="255" height="130" alt="2" src="https://github.com/user-attachments/assets/95fdadb6-5f59-410f-a035-72789cb86f8f" />  
+<img width="256" height="151" alt="2" src="https://github.com/user-attachments/assets/e18a99ed-cc42-4d0a-ba4a-5505a195759f" />  
