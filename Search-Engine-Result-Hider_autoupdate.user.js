@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.0.0
+// @version      6.0.1
 // @description        支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:zh-CN  支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports regular expressions.
@@ -44,6 +44,7 @@
 	const SUBSCRIPTION_RULES_KEY = 'searchfilter_subscription_rules';
 	const SUBSCRIPTIONS_KEY = 'searchfilter_subscriptions';
 	const WEBDAV_LAST_SYNC_KEY = 'searchfilter_webdav_last_sync';
+	const LOCAL_LAST_MODIFIED_KEY = 'searchfilter_local_last_modified'; // 新增：记录本地最后修改时间
 
 	// 默认配置
 	let currentConfig = GM_getValue(CONFIG_KEY, {
@@ -839,6 +840,7 @@
 			if (!currentConfig.rules.includes(newRule)) {
 				currentConfig.rules.push(newRule);
 				GM_setValue(CONFIG_KEY, currentConfig);
+				GM_setValue(LOCAL_LAST_MODIFIED_KEY, Date.now());
 				const textarea = document.getElementById('searchfilter-rules');
 				if (textarea) {
 					textarea.value = currentConfig.rules.join('\n');
@@ -1522,6 +1524,7 @@
 		currentConfig.blockConfirm = blockConfirm;
 
 		GM_setValue(CONFIG_KEY, currentConfig);
+		GM_setValue(LOCAL_LAST_MODIFIED_KEY, Date.now());
 
 		const existingStatus = document.getElementById('searchfilter-status');
 		if (existingStatus) existingStatus.remove();
@@ -2030,10 +2033,81 @@
 		} else {
 			currentConfig.rules = newRules;
 			GM_setValue(CONFIG_KEY, currentConfig);
+			GM_setValue(LOCAL_LAST_MODIFIED_KEY, Date.now());
 			forceReprocessAll();
 		}
 		GM_setValue(WEBDAV_LAST_SYNC_KEY, Date.now());
-		if (!showAlerts) console.log('[自动 WebDAV] 同步成功');
+		if (!showAlerts) console.log('[WebDAV] 覆盖同步成功');
+	}
+
+    // 去重合并同步
+	async function performAutoWebDAVSync(config) {
+		const fullUrl = config.url.replace(/\/$/, '') + '/' + config.filename;
+		const headers = {};
+		if (config.username) {
+			headers['Authorization'] = 'Basic ' + btoa(`${config.username}:${config.password}`);
+		}
+		
+		const resp = await new Promise((resolve, reject) => {
+			GM_xmlhttpRequest({
+				method: 'GET',
+				url: fullUrl,
+				headers: headers,
+				onload: (r) => {
+					if (r.status >= 200 && r.status < 300) resolve(r);
+					else if (r.status === 404) resolve(r);
+					else reject(new Error(`HTTP ${r.status}`));
+				},
+				onerror: (err) => reject(new Error('网络错误')),
+				ontimeout: () => reject(new Error('请求超时'))
+			});
+		});
+
+		let cloudRules = [];
+		let cloudTime = 0;
+		
+		if (resp.status !== 404) {
+			const content = resp.responseText;
+			cloudRules = content.split('\n').map(r => r.trim()).filter(r => r);
+			
+			const lastModMatch = resp.responseHeaders.match(/last-modified:\s*(.*)/i);
+			if (lastModMatch) {
+				cloudTime = Date.parse(lastModMatch[1]);
+			}
+			if (isNaN(cloudTime)) cloudTime = 0;
+		}
+
+		const localTime = GM_getValue(LOCAL_LAST_MODIFIED_KEY, 0);
+		const localRules = currentConfig.rules || [];
+		
+		// 去重合并
+		const mergedRules = [...new Set([...localRules, ...cloudRules])];
+		
+		if (localTime > cloudTime) {
+			console.log('[自动 WebDAV] 本地规则较新，合并后上传...');
+			await new Promise((resolve, reject) => {
+				GM_xmlhttpRequest({
+					method: 'PUT',
+					url: fullUrl,
+					headers: headers,
+					data: mergedRules.join('\n'),
+					onload: (r) => {
+						if (r.status >= 200 && r.status < 300) resolve(r);
+						else reject(new Error(`HTTP ${r.status}`));
+					},
+					onerror: reject
+				});
+			});
+		} else {
+			console.log('[自动 WebDAV] 云端规则较新或一致，合并并保存至本地...');
+		}
+
+		// 同步到本地
+		currentConfig.rules = mergedRules;
+		GM_setValue(CONFIG_KEY, currentConfig);
+		forceReprocessAll();
+
+		GM_setValue(WEBDAV_LAST_SYNC_KEY, Date.now());
 	}
 
 	function checkAutoWebDAV() {
@@ -2041,10 +2115,10 @@
 		if (!config || !config.url) return;
 		const lastSync = GM_getValue(WEBDAV_LAST_SYNC_KEY, 0);
 		const now = Date.now();
-		if (now - lastSync < 2 * 60 * 60 * 1000) return;
+		if (now - lastSync < 1 * 60 * 60 * 1000) return;
 		if (document.getElementById('searchfilter-panel')) return;
-		console.log('[自动 WebDAV] 开始同步...');
-		performWebDAVDownload(config, false).catch(err => console.error('[自动 WebDAV] 同步失败:', err.message));
+		console.log('[自动 WebDAV] 开始同步合并...');
+		performAutoWebDAVSync(config).catch(err => console.error('[自动 WebDAV] 同步失败:', err.message));
 	}
 
 	// 从TXT导入规则
@@ -2188,8 +2262,9 @@
 			});
 		}
 
+		// 同步间隔
 		setInterval(checkAutoSubscription, 60 * 60 * 1000);
-		setInterval(checkAutoWebDAV, 2 * 60 * 60 * 1000);
+		setInterval(checkAutoWebDAV, 1 * 60 * 60 * 1000);
 		setTimeout(() => {
 			checkAutoSubscription();
 			checkAutoWebDAV();
