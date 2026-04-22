@@ -3,11 +3,11 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.1.0
+// @version      6.2.0
 // @description        支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:zh-CN  支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports regular expressions.
-// @icon         data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAMAAACdt4HsAAACSVBMVEUAAAAdAAAhAAA5AAA9AABSAANBAABPAABaAASzAAJpAABMAANOAANJAAJoAANaAgRLAARcAANhAANNAAZkAwVLAAZlAANHAAV7AAJmAANaAANIAAVVAARwBwljAARRAAZvAANXAAVtAANNAAXhAAC+AACWCwx4AQRgAANsAANNAAVPAAZrAAOPEhNpAANmAANZAAVRAAVVAAZbAQVoAANNAAVXAAbPAACMCgxyAARgAAWbAAKkGRltAAJOAAWXAAFkAAVsAAOhAAF8AwaoGxtYAAebAABvAAOrAAGlAABpAAVVAAVzAARcAAVWAAZRAAX9Wlb9SkfsUE34Skf9Qz78Pzv8PDn8Ojb5Ozf7NzP4NzTvODXnODXbOjXoMzDbMzH1JiTlJSPTKifyHBntHRrZIiDxFRLNJCPEKCbeGxnwEA3TGhfFHx3pDQq7Hx/WExHhDQvMExGvHB22GRnEEhHsAADrAADqAADmAADgAACpFRe1Dw/UAAChFRbKAACtCwvDAACgDA2UERG7AACRERK4AACyAACRCw2pAACiAACICgufAACcAAGZAAGSAACPAAKMAAOJAAOFAAKAAAN9AAR6AAR4AAR2AAV0AARvAAVtAAZpAAZmAAZhAAdcAAb6MS72MS71LSr3KSX0JSH1IR70HRnyGBXuFBLtDw3tCgnrCAftBATqBATtAADrAADqAADpAADjAADdAADbAADYAADQAADNAADHAADAAAC9AAC2AAGwAAGuAAGsAACmAAGVAAGCAANxAAVZAAeYwP/6AAAAw3RSTlMABAoYIy00PEFGRkZNUlVZXV9kZ21tdXZ5e3t/gYKIiYqPk5ifoKChoaepsrS3t7e4ubzBwsLIzMzR0dPX29rd4eTm6Ovq7e3w9Pb2+fn7+/39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f3+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7nrWDnAAAID0lEQVR42o2ViV9TVxaAE0HoDNSFUaxLVWRGZdTWuo3bWLXTsRVEbVkCzGhqNNaoyKj3vkRDVGJSEEL2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
+// @icon         data:image/png;base64,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
 // @author       南雪莲
 // @homepageURL  https://greasyfork.org/zh-CN/scripts/552394
 // @homepageURL  https://github.com/SadYuyuko/Search-Engine-Result-Hider
@@ -44,7 +44,7 @@
   const SUBSCRIPTION_RULES_KEY = 'searchfilter_subscription_rules';
   const SUBSCRIPTIONS_KEY = 'searchfilter_subscriptions';
   const WEBDAV_LAST_SYNC_KEY = 'searchfilter_webdav_last_sync';
-  const LOCAL_LAST_MODIFIED_KEY = 'searchfilter_local_last_modified'; // 新增：记录本地最后修改时间
+  const LOCAL_LAST_MODIFIED_KEY = 'searchfilter_local_last_modified';
 
   // 默认配置
   let currentConfig = GM_getValue(CONFIG_KEY, {
@@ -85,7 +85,7 @@
         /* 预留高度用于翻页 */
         body { min-height: 101vh !important; }
         #rcnt, #rso { min-height: 60vh; }
-        
+
         #searchfilter-panel, #searchfilter-webdav-panel, #searchfilter-subscription-panel {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             font-size: 13px;
@@ -96,7 +96,7 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
             transition: all 0.3s ease;
         }
-        
+
         .searchfilter-button {
             border: none;
             border-radius: 4px;
@@ -114,7 +114,7 @@
         .searchfilter-button-success:hover { background: #22543d; }
         .searchfilter-button-danger { background: #c53030; color: white; }
         .searchfilter-button-danger:hover { background: #9b2c2c; }
-        
+
         .option-row {
             display: flex;
             align-items: center;
@@ -160,7 +160,7 @@
             font-weight: 500;
             box-sizing: border-box;
         }
-        
+
         /* 面板高度 */
         .rules-container {
             display: flex;
@@ -394,29 +394,33 @@
             margin-bottom: 16px;
         }
 
-        /* 被屏蔽结果灰底 */
-        .searchfilter-blocked-visible {
-            background: #d1d5db !important;
-            border-radius: 4px;
+        /* 屏蔽结果灰底 */
+        .searchfilter-blocked-visible,
+        .g.searchfilter-blocked-visible,
+        .MjjYud.searchfilter-blocked-visible {
+            background-color: #d1d5db !important;
+            border-radius: 8px !important;
+            padding: 8px !important;
             transition: background 0.2s;
         }
 
-        /* Google强制背景色 */
+        @media (prefers-color-scheme: dark) {
+            .searchfilter-blocked-visible,
+            .g.searchfilter-blocked-visible,
+            .MjjYud.searchfilter-blocked-visible {
+                background-color: #374151 !important; 
+            }
+        }
+
+        .searchfilter-blocked-visible div,
         .searchfilter-blocked-visible .yuRUbf,
-        .searchfilter-blocked-visible .g,
-        .searchfilter-blocked-visible .MjjYud,
         .searchfilter-blocked-visible div[data-sokoban-container],
         .searchfilter-blocked-visible div[data-snc] {
-        background: transparent !important;
+            background-color: transparent !important;
+            background: transparent !important;
+            background-image: none !important;
         }
 
-        /* 覆盖Google背景卡片 */
-        .MjjYud .searchfilter-blocked-visible,
-        .g .searchfilter-blocked-visible {
-        background: #d1d5db !important;
-        }
-
-        /* 屏蔽数量 */
         .bubble-number {
         color: #000000 !important;
         }
@@ -621,7 +625,7 @@
     };
   }
 
-  // 规则预编译索引
+  // 预编译规则索引
   function buildRuleIndex() {
     compiledRules = {
       domains: new Set(),
@@ -841,10 +845,14 @@
     if (!title) return;
     if (result.querySelector('.searchfilter-quick-block')) return;
 
+    const isBlocked = result.getAttribute('data-is-blocked') === 'true';
     const btn = document.createElement('div');
     btn.className = 'searchfilter-quick-block';
-    btn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>`;
-    btn.title = '屏蔽此词条';
+
+    // 切换屏蔽按钮颜色
+    const iconColor = isBlocked ? '#3182ce' : 'currentColor';
+    btn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>`;
+    btn.title = isBlocked ? '取消屏蔽此域名规则' : '屏蔽此词条';
 
     if (window.getComputedStyle(result).position === 'static') result.style.position = 'relative';
     if (engine === 'bing') {
@@ -858,31 +866,62 @@
     btn.onclick = (e) => {
       e.preventDefault();
       e.stopPropagation();
-      let newRule = '';
-      if (currentConfig.blockDomain) {
-        let baseDomain = domain.startsWith('www.') ? domain.substring(4) : domain;
-        newRule = baseDomain + '/*';
-      } else {
-        newRule = domain + '/*';
-      }
-      if (currentConfig.blockConfirm) {
-        if (!confirm(`确定要屏蔽并添加规则 [ ${newRule} ] 吗？`)) return;
-      }
-      if (!currentConfig.rules.includes(newRule)) {
-        currentConfig.rules.push(newRule);
-        GM_setValue(CONFIG_KEY, currentConfig);
-        GM_setValue(LOCAL_LAST_MODIFIED_KEY, Date.now());
-        const textarea = document.getElementById('searchfilter-rules');
-        if (textarea) {
-          textarea.value = currentConfig.rules.join('\n');
-          updateLineNumbers();
+
+      // 移除屏蔽
+      if (isBlocked) {
+        let baseDomain = domain.replace(/^www\./, '');
+        let ruleRemoved = false;
+
+        const newRules = currentConfig.rules.filter(rule => {
+          let cleanRule = rule.replace(/^\*:\/\//, '');
+          const domainPattern1 = `${domain}/*`;
+          const domainPattern2 = `*.${baseDomain}/*`;
+          const matches = (cleanRule === domainPattern1 || cleanRule === domainPattern2);
+          if (matches) ruleRemoved = true;
+          return !matches;
+        });
+
+        if (ruleRemoved) {
+          currentConfig.rules = newRules;
+          GM_setValue(CONFIG_KEY, currentConfig);
+          GM_setValue(LOCAL_LAST_MODIFIED_KEY, Date.now());
+          const textarea = document.getElementById('searchfilter-rules');
+          if (textarea) {
+            textarea.value = currentConfig.rules.join('\n');
+            updateLineNumbers();
+          }
+          forceReprocessAll();
         }
-        forceReprocessAll();
+        return;
       } else {
-        result.style.display = 'none';
-        result.setAttribute('data-is-blocked', 'true');
-        const totalBlocked = document.querySelectorAll('[data-is-blocked="true"]').length;
-        updateStatus(totalBlocked);
+
+        // 添加屏蔽
+        let newRule = '';
+        if (currentConfig.blockDomain) {
+          let baseDomain = domain.startsWith('www.') ? domain.substring(4) : domain;
+          newRule = baseDomain + '/*';
+        } else {
+          newRule = domain + '/*';
+        }
+        if (currentConfig.blockConfirm) {
+          if (!confirm(`确定要屏蔽并添加规则 [ ${newRule} ] 吗？`)) return;
+        }
+        if (!currentConfig.rules.includes(newRule)) {
+          currentConfig.rules.push(newRule);
+          GM_setValue(CONFIG_KEY, currentConfig);
+          GM_setValue(LOCAL_LAST_MODIFIED_KEY, Date.now());
+          const textarea = document.getElementById('searchfilter-rules');
+          if (textarea) {
+            textarea.value = currentConfig.rules.join('\n');
+            updateLineNumbers();
+          }
+          forceReprocessAll();
+        } else {
+          result.style.display = 'none';
+          result.setAttribute('data-is-blocked', 'true');
+          const totalBlocked = document.querySelectorAll('[data-is-blocked="true"]').length;
+          updateStatus(totalBlocked);
+        }
       }
     };
     result.appendChild(btn);
@@ -937,7 +976,10 @@
       result.style.display = showHiddenResults ? '' : 'none';
       result.setAttribute('data-blocker-processed', 'true');
       result.setAttribute('data-is-blocked', 'true');
-      if (showHiddenResults) result.classList.add('searchfilter-blocked-visible');
+      if (showHiddenResults) {
+        result.classList.add('searchfilter-blocked-visible');
+        if (currentConfig.showBlockBtn) injectBlockButton(result, engine, url, domain);
+      }
       return true;
     } else {
       result.setAttribute('data-blocker-processed', 'true');
@@ -1268,6 +1310,17 @@
       el.style.display = showHiddenResults ? '' : 'none';
       if (showHiddenResults) {
         el.classList.add('searchfilter-blocked-visible');
+        const engine = getSearchEngine();
+        const link = getResultLink(el, engine);
+        if (link && link.href && currentConfig.showBlockBtn) {
+          let domain = '';
+          try {
+            domain = new URL(link.href).hostname;
+          } catch (e) {}
+          if (!el.querySelector('.searchfilter-quick-block')) {
+            injectBlockButton(el, engine, link.href, domain);
+          }
+        }
       } else {
         el.classList.remove('searchfilter-blocked-visible');
       }
@@ -1991,7 +2044,7 @@
       setStatus('正在下载...');
       try {
         await performWebDAVDownload(config, true, setStatus);
-        setStatus('下载成功！规则已加载到编辑区，点击“保存”生效。');
+        setStatus('下载成功！规则已加载到编辑区，保存生效');
       } catch (err) {
         setStatus(`下载失败：${err.message}`, true);
       }
@@ -2146,7 +2199,8 @@
       return;
     }
     const now = new Date();
-    const filename = `rules-${now.getMonth()+1}-${now.getDate()}-${now.getHours()}${now.getMinutes()}${now.getSeconds()}.txt`;
+    const pad = (n) => String(n).padStart(2, '0');
+    const filename = `rules-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.txt`;
     const blob = new Blob([content], {
       type: 'text/plain;charset=utf-8'
     });
