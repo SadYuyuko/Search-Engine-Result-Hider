@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.3.0
+// @version      6.3.1
 // @description        支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:zh-CN  支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports regular expressions.
@@ -26,9 +26,9 @@
 // @grant        GM_addStyle
 // @grant        GM_registerMenuCommand
 // @grant        GM_xmlhttpRequest
+// @homepageURL  https://greasyfork.org/zh-CN/scripts/552394
+// @homepageURL  https://github.com/SadYuyuko/Search-Engine-Result-Hider
 // @run-at       document-idle
-// @downloadURL  https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js
-// @updateURL    https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js
 // ==/UserScript==
 
 (function() {
@@ -166,6 +166,10 @@
       webdavDownloading: '正在下载...',
       webdavUploadFailed: '上传失败：',
       webdavDownloadFailed: '下载失败：',
+      webdavHttpsRequired: '安全起见，WebDAV服务器地址必须使用https',
+      syntaxError: '语法错误',
+      networkError: '网络错误',
+      requestTimeout: '请求超时',
     },
     'en': {
       enableBlock: 'Enable Block',
@@ -215,7 +219,7 @@
       whitelistRules: 'Whitelist Rules',
       ruleErrors: 'rule errors',
       menuOpenPanel: '⚙️ Open Panel',
-      menuEnable: 'Blocking',
+      menuEnable: 'Block',
       menuConfirm: 'Confirm',
       menuCenter: 'Center Panel',
       menuBubble: 'Bubble',
@@ -257,6 +261,39 @@
       webdavDownloading: 'Downloading...',
       webdavUploadFailed: 'Upload failed: ',
       webdavDownloadFailed: 'Download failed: ',
+      webdavHttpsRequired: 'For security, WebDAV server must use HTTPS',
+      syntaxError: 'Syntax error',
+      networkError: 'Network error',
+      requestTimeout: 'Request timeout',
+    }
+  };
+
+  // 选择器
+  const SELECTORS = {
+    // 容器选择器
+    containers: {
+      bing: 'li.b_algo, div.b_algo',
+      google: 'div.g, div.MjjYud',
+      duckduckgo: '[data-testid="result"], .result, .web-result, .tile, .tile--ad',
+      other: 'div.g, li.b_algo'
+    },
+    // 标题选择器
+    titles: {
+      bing: ['h2 a', 'a h2', '.b_title'],
+      google: ['h3', 'div[role="heading"]', '.LC20lb', '.DKV0Md', '.sXLaOe', '.c9DxTc', 'a h3'],
+      duckduckgo: ['a[data-testid="result-title-a"]', '.result__title', '.tile__title', '.tile--title__title', 'h2 a', 'a h2']
+    },
+    // 正文选择器
+    snippets: {
+      bing: ['.b_caption p', '.b_snippet', '.b_paractl p', '.b_lineclamp2'],
+      google: ['.st', '.VwiC3b', '.s3v9rd', '.IsZvec', '.lyLwlc', '.yXK7lf'],
+      duckduckgo: ['[data-testid="result-snippet"]', '[data-result="snippet"]', '.result__snippet']
+    },
+    // URL选择器
+    links: {
+      bing: 'a[href]',
+      google: 'a[href]',
+      duckduckgo: ['a[data-testid="result-extras-url-link"]', 'a[data-testid="result-title-a"]', '.result__url', '.tile--title__domain', 'a[href]']
     }
   };
 
@@ -265,7 +302,7 @@
     const texts = LANG_TEXTS[lang] || LANG_TEXTS['zh-CN'];
     let text = texts[key] || key;
     for (const [k, v] of Object.entries(params)) {
-      text = text.replace(new RegExp(`{${k}}`, 'g'), v);
+      text = text.replaceAll(`{${k}}`, v);
     }
     return text;
   }
@@ -698,13 +735,9 @@
     return 'other';
   }
 
-  // 选择器
-  const selectors = {
-    bing: 'li.b_algo, div.b_algo',
-    google: 'div.g, div.MjjYud',
-    duckduckgo: '[data-testid="result"], .result, .web-result, .tile, .tile--ad',
-    other: 'div.g, li.b_algo'
-  };
+  function getContainerSelector(engine) {
+    return SELECTORS.containers[engine] || SELECTORS.containers.other;
+  }
 
   // 语法检查
   function validateRule(rule) {
@@ -1066,14 +1099,7 @@
 
   // 正文选择器
   function getResultSnippet(result, engine) {
-    const bingSnippetSelectors = ['.b_caption p', '.b_snippet', '.b_paractl p', '.b_lineclamp2'];
-    const googleSnippetSelectors = ['.st', '.VwiC3b', '.s3v9rd', '.IsZvec', '.lyLwlc', '.yXK7lf'];
-    const duckSnippetSelectors = ['[data-testid="result-snippet"]', '[data-result="snippet"]', '.result__snippet'];
-    let selectors;
-    if (engine === 'bing') selectors = bingSnippetSelectors;
-    else if (engine === 'google') selectors = googleSnippetSelectors;
-    else if (engine === 'duckduckgo') selectors = duckSnippetSelectors;
-    else return '';
+    const selectors = SELECTORS.snippets[engine] || SELECTORS.snippets.bing;
     for (let selector of selectors) {
       const elem = result.querySelector(selector);
       if (elem && elem.textContent) return elem.textContent.trim();
@@ -1182,6 +1208,30 @@
     return lines
       .map(line => line.trim())
       .filter(line => line.length > 0 && !line.startsWith('#'));
+  }
+
+  // 选择器链接
+  function getResultLink(result, engine) {
+    const linkSelectors = SELECTORS.links[engine];
+    if (Array.isArray(linkSelectors)) {
+      for (let selector of linkSelectors) {
+        const el = result.querySelector(selector);
+        if (el && el.href) return el;
+      }
+    } else if (typeof linkSelectors === 'string') {
+      return result.querySelector(linkSelectors);
+    }
+    return result.querySelector('a[href]');
+  }
+
+  // 标题选择器
+  function getResultTitle(result, engine) {
+    const selectors = SELECTORS.titles[engine] || SELECTORS.titles.google;
+    for (let selector of selectors) {
+      const elem = result.querySelector(selector);
+      if (elem && elem.textContent) return elem.textContent.trim();
+    }
+    return '';
   }
 
   // 一键屏蔽
@@ -1382,7 +1432,7 @@
     }
 
     const engine = getSearchEngine();
-    const selector = selectors[engine];
+    const selector = getContainerSelector(engine);
     const newResults = document.querySelectorAll(`${selector}:not([data-observed])`);
 
     newResults.forEach(result => {
@@ -1396,7 +1446,7 @@
     buildRuleIndex();
 
     const engine = getSearchEngine();
-    const selector = selectors[engine];
+    const selector = getContainerSelector(engine);
 
     document.querySelectorAll('[data-observed]').forEach(el => {
       resultObserver.unobserve(el);
@@ -1420,38 +1470,6 @@
     });
 
     updateStatus(totalBlocked);
-
-  }
-
-  // 获取链接
-  function getResultLink(result, engine) {
-    if (engine === 'bing') return result.querySelector('a[href]');
-    if (engine === 'google') return result.querySelector('a[href]');
-    if (engine === 'duckduckgo') {
-      return result.querySelector('a[data-testid="result-extras-url-link"]') ||
-        result.querySelector('a[data-testid="result-title-a"]') ||
-        result.querySelector('.result__url') ||
-        result.querySelector('.tile--title__domain') ||
-        result.querySelector('a[href]');
-    }
-    return result.querySelector('a[href]');
-  }
-
-  // 标题选择器
-  function getResultTitle(result, engine) {
-    const bingSelectors = ['h2 a', 'a h2', '.b_title'];
-    const googleSelectors = ['h3', 'div[role="heading"]', '.LC20lb', '.DKV0Md', '.sXLaOe', '.c9DxTc', 'a h3'];
-    const duckSelectors = ['a[data-testid="result-title-a"]', '.result__title', '.tile__title', '.tile--title__title', 'h2 a', 'a h2'];
-    let selectors;
-    if (engine === 'bing') selectors = bingSelectors;
-    else if (engine === 'google') selectors = googleSelectors;
-    else if (engine === 'duckduckgo') selectors = duckSelectors;
-    else return '';
-    for (let i = 0; i < selectors.length; i++) {
-      const elem = result.querySelector(selectors[i]);
-      if (elem && elem.textContent) return elem.textContent.trim();
-    }
-    return '';
   }
 
   // 悬浮球样式
@@ -1747,7 +1765,7 @@
       for (let i = 0; i < lines.length; i++) {
         const rule = lines[i];
         const isValid = cachedValidateRule(rule);
-        const warnIcon = isValid ? '' : `<span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 10px; cursor: help; background: #edf2f7; z-index: 1;" title="语法错误">⚠️</span>`;
+        const warnIcon = isValid ? '' : `<span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 10px; cursor: help; background: #edf2f7; z-index: 1;" title="${t('syntaxError')}">⚠️</span>`;
         html += `<div style="position: relative; color: #a0aec0;">${i + 1}${warnIcon}</div>`;
       }
       lineNums.innerHTML = html;
@@ -1767,7 +1785,7 @@
     for (let i = 0; i < lines.length; i++) {
       const rule = lines[i];
       const isValid = cachedValidateRule(rule);
-      const warnIcon = isValid ? '' : `<span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 10px; cursor: help; background: #edf2f7; z-index: 1;" title="语法错误">⚠️</span>`;
+      const warnIcon = isValid ? '' : `<span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 10px; cursor: help; background: #edf2f7; z-index: 1;" title="${t('syntaxError')}">⚠️</span>`;
       children[i].innerHTML = `${i + 1}${warnIcon}`;
     }
   }
@@ -1828,7 +1846,8 @@
 
     // 遍历已处理结果
     const engine = getSearchEngine();
-    const results = document.querySelectorAll(selectors[engine]);
+    const selector = getContainerSelector(engine);
+    const results = document.querySelectorAll(selector);
     const statsBySource = new Map();
 
     results.forEach(result => {
@@ -2407,7 +2426,7 @@
         return;
       }
       if (!url.toLowerCase().startsWith('https://')) {
-        alert('安全起见，WebDAV服务器地址必须使用https');
+        alert(t('webdavHttpsRequired'));
         return;
       }
       const config = saveWebDAVConfig();
@@ -2428,8 +2447,8 @@
               if (resp.status >= 200 && resp.status < 300) resolve(resp);
               else reject(new Error(`HTTP ${resp.status}`));
             },
-            onerror: (err) => reject(new Error('网络错误')),
-            ontimeout: () => reject(new Error('请求超时'))
+            onerror: (err) => reject(new Error(t('networkError'))),
+            ontimeout: () => reject(new Error(t('requestTimeout')))
           });
         });
         setStatus(t('uploadSuccess'));
@@ -2445,7 +2464,7 @@
         return;
       }
       if (!url.toLowerCase().startsWith('https://')) {
-        alert('安全起见，WebDAV服务器地址必须使用https');
+        alert(t('webdavHttpsRequired'));
         return;
       }
       const config = saveWebDAVConfig();
@@ -2482,8 +2501,8 @@
           if (resp.status >= 200 && resp.status < 300) resolve(resp);
           else reject(new Error(`HTTP ${resp.status}`));
         },
-        onerror: () => reject(new Error('网络错误')),
-        ontimeout: () => reject(new Error('请求超时'))
+        onerror: () => reject(new Error(t('networkError'))),
+        ontimeout: () => reject(new Error(t('requestTimeout')))
       });
     });
     const content = resp.responseText;
@@ -2517,8 +2536,8 @@
           else if (r.status === 404) resolve(r);
           else reject(new Error(`HTTP ${r.status}`));
         },
-        onerror: () => reject(new Error('网络错误')),
-        ontimeout: () => reject(new Error('请求超时'))
+        onerror: () => reject(new Error(t('networkError'))),
+        ontimeout: () => reject(new Error(t('requestTimeout')))
       });
     });
 
