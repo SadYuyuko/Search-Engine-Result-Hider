@@ -64,4 +64,4 @@ Rules tend to favor titles and regular matches. For convenience, you can add rul
 ---  
 <img width="271" height="237" alt="34" src="https://github.com/user-attachments/assets/d56068eb-4bb7-4cf9-9449-c4bcbdbb6ac7" />  
 ---  
-<img width="255" height="192" alt="0" src="https://github.com/user-attachments/assets/ebbe67e4-b5e4-428c-bb76-139d64aa915b" />  
+<img width="256" height="192" alt="0" src="https://github.com/user-attachments/assets/89cb7c3a-8592-4fae-9677-9cf80c4abb11" />   
