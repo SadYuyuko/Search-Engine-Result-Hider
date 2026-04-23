@@ -31,7 +31,7 @@ Supports Bing, Google, and DuckDuckGo, with potential support for more search en
 2. Subscriptions update once per day. Only remote .txt file links are supported, with a maximum of 3 subscriptions. Subscription rules are applied after local rules. Due to script performance constraints, it is recommended to keep the total rule count under 30,000 to avoid performance issues on mobile devices.  
 3. Due to script extension limitations, complex `@+if` whitelist conditions and `##` uBlock DOM syntax rules are not supported. Such rules will be automatically removed when imported via subscription.  
 
-Rules are primarily intended for title and regex matching. When adding rules, you may omit the `*://*.` prefix and enter the domain directly for compatibility with uBlacklist rules.  
+Rules tend to favor titles and regular matches. For convenience, you can add rules in script without using `*://*.` Prefix directly write domain name, but for the rules that need to be used in the ublacklist, you need to add it.    
 
 ### Basic Rule Syntax:  
 **URL Matching:**  
