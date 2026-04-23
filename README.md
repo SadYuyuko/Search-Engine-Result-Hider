@@ -3,7 +3,7 @@
 ### [Github](https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js) | [Greasy Fork](https://greasyfork.org/zh-CN/scripts/552394) (推荐) 使用任意脚本管理器安装  
 [中文](README.md) | [English](README.en.md)  
 在仅支持安装脚本的移动端浏览器上尝试复刻ublacklist的功能，支持安装扩展的移动端和桌面端也可用但更推荐直接使用[ublacklist](https://addons.mozilla.org/zh-CN/firefox/addon/ublacklist)  
-适用于Bing、Google、DuckDuckGo，未来可能支持更多搜索引擎。支持包括ublacklist基础规则在内的正则匹配、URL匹配、标题匹配、白名单匹配以及搜索词条正文内容匹配  
+适用于Bing、Google、DuckDuckGo，未来可能支持更多搜索引擎。支持包括ublacklist基础规则在内的正则匹配、URL匹配、标题匹配、白名单匹配以及搜索词条正文内容匹配。  
  
 **当前功能：**  
 - 屏蔽按钮一键屏蔽域名  
@@ -30,7 +30,7 @@
 2.订阅每天同步一次，只支持.txt文件远程链接且最多支持3条订阅，逻辑为在本地规则后应用。由于脚本性能限制，规则总数建议不要超过3w条避免手机爆炸🤳💥  
 3.由于脚本扩展有限，暂不支持复杂的`@+if`白名单判断和`##`uBlock DOM语法规则，通过订阅导入会自动清除
     
-规则主要倾向于标题和正则匹配，添加规则时可不加`*://*.`前缀直接写域名，此用于兼容ublacklist规则  
+规则主要倾向于标题和正则匹配。方便起见，在脚本中添加规则时可不使用`*://*.`前缀直接写域名，但对于需要同时在ublacklist使用的规则必须加上。  
 ### 以下为基础规则：  
 **URL匹配：**  
 `*://www.example.com/*` – 匹配`example.com`  
