@@ -3,9 +3,9 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.2.0
-// @description        支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
-// @description:zh-CN  支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
+// @version      6.3.0
+// @description        支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
+// @description:zh-CN  支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports regular expressions.
 // @icon         data:image/png;base64,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
 // @author       南雪莲
@@ -59,7 +59,8 @@
     showBubble: true,
     bubbleState: null,
     panelCentered: true,
-    bubbleAction: 'openPanel'
+    bubbleAction: 'openPanel',
+    language: 'zh-CN'
   });
 
   // 兼容旧配置
@@ -69,15 +70,215 @@
   if (currentConfig.showBubble === undefined) currentConfig.showBubble = true;
   if (currentConfig.panelCentered === undefined) currentConfig.panelCentered = true;
   if (currentConfig.bubbleAction === undefined) currentConfig.bubbleAction = 'openPanel';
+  if (currentConfig.language === undefined) currentConfig.language = 'zh-CN';
 
   let showHiddenResults = false;
 
-  // 缓存
+  // 多语言文本映射
+  const LANG_TEXTS = {
+    'zh-CN': {
+      enableBlock: '启用屏蔽',
+      showCount: '显示数量',
+      debugMode: '调试模式',
+      oneClickBlock: '一键屏蔽',
+      blockDomain: '屏蔽域名',
+      doubleConfirm: '二次确认',
+      bubbleSize: '悬浮球大小:',
+      sizeMedium: '中杯',
+      sizeLarge: '大杯',
+      sizeLarger: '超大',
+      sizeXLarge: '特大',
+      blockRules: '屏蔽规则:',
+      subscribe: '订阅',
+      sync: '同步',
+      import: '导入',
+      export: '导出',
+      save: '保存',
+      test: '统计',
+      close: '关闭',
+      placeholder: '每行一个规则',
+      ruleHint: 'title/.*ABC.*/ 匹配标题 | text/*ABC.*/ 匹配内容',
+      scrollTop: '回到顶部',
+      scrollBottom: '回到底部',
+      panelTitle: '订阅管理',
+      addSubscription: '➕ 添加订阅',
+      saveSub: '保存',
+      importSub: '导入',
+      cancel: '取消',
+      webdavTitle: 'WebDAV 同步设置',
+      webdavUrl: 'Webdav地址',
+      webdavUser: 'Webdav账号',
+      webdavPass: '应用密码',
+      filename: '文件名',
+      upload: '上传',
+      download: '下载',
+      matchedRule: '规则',
+      localRule: '本地规则',
+      subscription: '订阅',
+      urlRule: 'URL规则',
+      titleRule: '标题规则',
+      textRule: '正文规则',
+      regexRule: '正则规则',
+      matchedCount: '匹配',
+      noMatch: '无匹配项',
+      whitelistRules: '白名单规则',
+      ruleErrors: '个规则错误',
+      menuOpenPanel: '⚙️ 打开配置面板',
+      menuEnable: '屏蔽功能',
+      menuConfirm: '二次确认',
+      menuCenter: '面板居中',
+      menuBubble: '悬浮球状态',
+      menuBubbleAction: '悬浮球功能',
+      menuLang: 'Language：中文',
+      menuLangEn: 'Language: English',
+      bubbleTitleHide: '点击隐藏已屏蔽结果',
+      bubbleTitleShow: '点击显示已屏蔽结果',
+      bubbleTitlePanel: '拖动边缘吸附，点击打开配置面板',
+      blockBtnTitle: '屏蔽此词条',
+      unblockBtnTitle: '取消屏蔽此域名规则',
+      subscriptionSuccess: '订阅成功！已更新 {count} 条有效规则。',
+      subscriptionSaved: '订阅配置已保存',
+      importDone: '导入操作完成',
+      uploadSuccess: '上传成功！',
+      downloadSuccess: '下载成功！规则已加载到编辑区，保存生效',
+      noRulesExport: '没有规则可导出',
+      confirmBlock: '确定要屏蔽并添加规则 [ {rule} ] 吗？',
+      statsSourceLocal: '本地规则',
+      statsSourceSub: '订阅',
+      statsWhitelist: '白名单规则',
+      statsNoMatch: '无匹配项',
+      statsErrors: '发现 {count} 个规则错误：',
+      statsRule: '规则：',
+      matchedCountLabel: '匹配',
+      matchedCountUnit: '条',
+      menuBubbleStateShow: '显示',
+      menuBubbleStateHide: '隐藏',
+      menuBubbleActionOpen: '打开面板',
+      menuBubbleActionToggle: '显示隐藏结果',
+      stateEnabled: '启用',
+      stateDisabled: '关闭',
+      statsError: '错误：',
+      subLinkEmpty: '链接为空',
+      subImportSuccess: '导入成功，已导入 {count} 条规则',
+      subImportFailed: '导入失败，请检查链接或网络状态',
+      maxSubscriptions: '最多只能添加3条订阅',
+      webdavUploading: '正在上传...',
+      webdavDownloading: '正在下载...',
+      webdavUploadFailed: '上传失败：',
+      webdavDownloadFailed: '下载失败：',
+    },
+    'en': {
+      enableBlock: 'Enable Block',
+      showCount: 'Show Count',
+      debugMode: 'Debug',
+      oneClickBlock: 'Click Block',
+      blockDomain: 'Block Domain',
+      doubleConfirm: 'Confirm',
+      bubbleSize: 'Bubble Size:',
+      sizeMedium: 'Medium',
+      sizeLarge: 'Large',
+      sizeLarger: 'Larger',
+      sizeXLarge: 'XLarge',
+      blockRules: 'Block Rules:',
+      subscribe: 'Subscribe',
+      sync: 'Sync',
+      import: 'Import',
+      export: 'Export',
+      save: 'Save',
+      test: 'Stats',
+      close: 'Close',
+      placeholder: 'One rule per line',
+      ruleHint: 'title/.*ABC.*/ matches title | text/*ABC.*/ matches snippet',
+      scrollTop: 'Scroll to Top',
+      scrollBottom: 'Scroll to Bottom',
+      panelTitle: 'Subscription Manager',
+      addSubscription: '➕ Add Subscription',
+      saveSub: 'Save',
+      importSub: 'Import',
+      cancel: 'Cancel',
+      webdavTitle: 'WebDAV Sync Settings',
+      webdavUrl: 'WebDAV URL',
+      webdavUser: 'Username',
+      webdavPass: 'App Password',
+      filename: 'Filename',
+      upload: 'Upload',
+      download: 'Download',
+      matchedRule: 'Rule',
+      localRule: 'Local Rule',
+      subscription: 'Subscription',
+      urlRule: 'URL Rule',
+      titleRule: 'Title Rule',
+      textRule: 'Text Rule',
+      regexRule: 'Regex Rule',
+      matchedCount: 'Matches',
+      noMatch: 'No matches',
+      whitelistRules: 'Whitelist Rules',
+      ruleErrors: 'rule errors',
+      menuOpenPanel: '⚙️ Open Panel',
+      menuEnable: 'Blocking',
+      menuConfirm: 'Confirm',
+      menuCenter: 'Center Panel',
+      menuBubble: 'Bubble',
+      menuBubbleAction: 'Bubble Action',
+      menuLang: 'Language：中文',
+      menuLangEn: 'Language: English',
+      bubbleTitleHide: 'Click to hide blocked results',
+      bubbleTitleShow: 'Click to show blocked results',
+      bubbleTitlePanel: 'Drag to snap edge, click to open panel',
+      blockBtnTitle: 'Block this entry',
+      unblockBtnTitle: 'Unblock this domain rule',
+      subscriptionSuccess: 'Subscription successful! Updated {count} valid rules.',
+      subscriptionSaved: 'Subscription config saved',
+      importDone: 'Import completed',
+      uploadSuccess: 'Upload successful!',
+      downloadSuccess: 'Download successful! Rules loaded into editor, save to apply.',
+      noRulesExport: 'No rules to export',
+      confirmBlock: 'Add block rule [ {rule} ] ?',
+      statsSourceLocal: 'Local Rules',
+      statsSourceSub: 'Subscription',
+      statsWhitelist: 'Whitelist Rules',
+      statsNoMatch: 'No matches',
+      statsErrors: 'Found {count} rule errors:',
+      statsRule: 'Rule:',
+      matchedCountLabel: 'Hits',
+      matchedCountUnit: 'Result',
+      menuBubbleStateShow: 'Show',
+      menuBubbleStateHide: 'Hide',
+      menuBubbleActionOpen: 'Open Panel',
+      menuBubbleActionToggle: 'Toggle Results',
+      stateEnabled: 'Enabled',
+      stateDisabled: 'Disabled',
+      statsError: 'Error:',
+      subLinkEmpty: 'URL is empty',
+      subImportSuccess: 'Import success, {count} rules imported',
+      subImportFailed: 'Import failed, check URL or network',
+      maxSubscriptions: 'Maximum 3 subscriptions allowed',
+      webdavUploading: 'Uploading...',
+      webdavDownloading: 'Downloading...',
+      webdavUploadFailed: 'Upload failed: ',
+      webdavDownloadFailed: 'Download failed: ',
+    }
+  };
+
+  function t(key, params = {}) {
+    const lang = currentConfig.language;
+    const texts = LANG_TEXTS[lang] || LANG_TEXTS['zh-CN'];
+    let text = texts[key] || key;
+    for (const [k, v] of Object.entries(params)) {
+      text = text.replace(new RegExp(`{${k}}`, 'g'), v);
+    }
+    return text;
+  }
+
+  // Set优化
   let compiledRules = {
     domains: new Set(),
     urls: [],
     titles: [],
-    texts: []
+    texts: [],
+    whitelistDomains: new Set(),
+    whitelistUrlPatterns: [],
+    rulesList: []
   };
 
   // 样式
@@ -424,6 +625,34 @@
         .bubble-number {
         color: #000000 !important;
         }
+
+        /* 匹配规则标签 */
+        .searchfilter-matched-rule {
+            position: absolute;
+            top: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            max-width: calc(100% - 70px);
+            background: rgba(0, 0, 0, 0.2);
+            color: #000000;
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            z-index: 98;
+            pointer-events: none;
+            font-family: monospace;
+            backdrop-filter: blur(2px);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        @media (prefers-color-scheme: dark) {
+            .searchfilter-matched-rule {
+                background: rgba(0, 160, 0, 0.9);
+                color: #fff;
+            }
+        }
     `);
 
   function migrateSubscriptions() {
@@ -481,10 +710,17 @@
   function validateRule(rule) {
     if (!rule || rule.trim() === '') return true;
 
-    if (rule.startsWith('/') && rule.lastIndexOf('/') > 0) {
-      const lastSlash = rule.lastIndexOf('/');
-      const pattern = rule.slice(1, lastSlash);
-      const flags = rule.slice(lastSlash + 1);
+    // 白名单规则检查
+    let ruleToCheck = rule;
+    if (rule.startsWith('@')) {
+      ruleToCheck = rule.substring(1).trim();
+      if (!ruleToCheck) return true;
+    }
+
+    if (ruleToCheck.startsWith('/') && ruleToCheck.lastIndexOf('/') > 0) {
+      const lastSlash = ruleToCheck.lastIndexOf('/');
+      const pattern = ruleToCheck.slice(1, lastSlash);
+      const flags = ruleToCheck.slice(lastSlash + 1);
       try {
         new RegExp(pattern, flags);
         return true;
@@ -494,8 +730,8 @@
     }
 
     // 标题或正文规则
-    if (rule.startsWith('text/') || rule.startsWith('title/')) {
-      let remaining = rule.startsWith('title/') ? rule.substring(6) : rule.substring(5);
+    if (ruleToCheck.startsWith('text/') || ruleToCheck.startsWith('title/')) {
+      let remaining = ruleToCheck.startsWith('title/') ? ruleToCheck.substring(6) : ruleToCheck.substring(5);
       let pattern, flags = '';
       const lastSlashIndex = remaining.lastIndexOf('/');
       if (lastSlashIndex !== -1 && lastSlashIndex < remaining.length - 1) {
@@ -530,7 +766,7 @@
     }
 
     // URL通配符规则
-    let pattern = rule;
+    let pattern = ruleToCheck;
     if (pattern.startsWith('*://')) pattern = pattern.substring(4);
     if (pattern.includes('/')) {
       const parts = pattern.split('/');
@@ -625,20 +861,65 @@
     };
   }
 
+  // 白名单简单域名
+  function extractSimpleWhitelistDomain(rule) {
+    const match = rule.match(/^@\*:\/\/(?:\*\.)?([^\/\*]+)\/\*$/);
+    return match ? match[1].toLowerCase() : null;
+  }
+
   // 预编译规则索引
   function buildRuleIndex() {
     compiledRules = {
       domains: new Set(),
       urls: [],
       titles: [],
-      texts: []
+      texts: [],
+      whitelistDomains: new Set(),
+      whitelistUrlPatterns: [],
+      rulesList: []
     };
     const subscriptionRules = getAllSubscriptionRules();
     const allRules = currentConfig.rules.concat(subscriptionRules);
+    const subscriptions = getSubscriptions();
+
+    // 获取规则来源标签
+    function getRuleSource(rule) {
+      for (let idx = 0; idx < subscriptions.length; idx++) {
+        const sub = subscriptions[idx];
+        if (sub.enabled && sub.rules && sub.rules.includes(rule)) {
+          return `${t('subscription')}${idx + 1}`;
+        }
+      }
+      return t('localRule');
+    }
 
     allRules.forEach(rule => {
       if (!rule || rule.trim() === '' || rule.startsWith('#')) return;
 
+      const source = getRuleSource(rule);
+
+      // 白名单简单处理
+      if (rule.startsWith('@')) {
+        const simpleDomain = extractSimpleWhitelistDomain(rule);
+        if (simpleDomain) {
+          compiledRules.whitelistDomains.add(simpleDomain);
+        } else {
+          const whitelistRule = rule.substring(1).trim();
+          if (!whitelistRule) return;
+          try {
+            const {
+              pattern,
+              flags
+            } = ruleToRegex(whitelistRule);
+            compiledRules.whitelistUrlPatterns.push(new RegExp(pattern, flags));
+          } catch (e) {
+            if (currentConfig.debug) console.warn('白名单规则预编译失败:', rule, e);
+          }
+        }
+        return;
+      }
+
+      // 处理域名规则
       if (!rule.startsWith('/') && !rule.startsWith('text/') && !rule.startsWith('title/')) {
         let domainMatch = rule.match(/^\*:\/\/\*\.([^\/]+)\/\*$/);
         if (!domainMatch) {
@@ -648,6 +929,12 @@
           const domain = domainMatch[1].toLowerCase();
           if (!domain.includes('/')) {
             compiledRules.domains.add(domain);
+            compiledRules.rulesList.push({
+              type: 'domain',
+              domain: domain,
+              originalRule: rule,
+              source: source
+            });
             return;
           }
         }
@@ -661,19 +948,40 @@
             pattern,
             flags
           } = ruleToRegex(virtualRule);
-          compiledRules.texts.push(new RegExp(pattern, flags));
+          const regex = new RegExp(pattern, flags);
+          compiledRules.texts.push(regex);
+          compiledRules.rulesList.push({
+            type: 'text',
+            regex: regex,
+            originalRule: rule,
+            source: source
+          });
         } else if (rule.startsWith('title/')) {
           let {
             pattern,
             flags
           } = ruleToRegex(rule);
-          compiledRules.titles.push(new RegExp(pattern, flags));
+          const regex = new RegExp(pattern, flags);
+          compiledRules.titles.push(regex);
+          compiledRules.rulesList.push({
+            type: 'title',
+            regex: regex,
+            originalRule: rule,
+            source: source
+          });
         } else {
           let {
             pattern,
             flags
           } = ruleToRegex(rule);
-          compiledRules.urls.push(new RegExp(pattern, flags));
+          const regex = new RegExp(pattern, flags);
+          compiledRules.urls.push(regex);
+          compiledRules.rulesList.push({
+            type: rule.startsWith('/') ? 'regex' : 'url',
+            regex: regex,
+            originalRule: rule,
+            source: source
+          });
         }
       } catch (e) {
         if (currentConfig.debug) console.warn('规则预编译失败:', rule, e);
@@ -681,9 +989,23 @@
     });
   }
 
-  // 匹配函数
+  // 规则匹配
   function checkRuleMatchOptimized(url, domain, title, snippet) {
     let d = domain.toLowerCase();
+    while (d) {
+      if (compiledRules.whitelistDomains.has(d)) return false;
+      let dotIndex = d.indexOf('.');
+      if (dotIndex === -1) break;
+      d = d.substring(dotIndex + 1);
+    }
+
+    for (let i = 0; i < compiledRules.whitelistUrlPatterns.length; i++) {
+      if (compiledRules.whitelistUrlPatterns[i].test(url) || compiledRules.whitelistUrlPatterns[i].test(domain)) {
+        return false;
+      }
+    }
+
+    d = domain.toLowerCase();
     while (d) {
       if (compiledRules.domains.has(d)) return true;
       let dotIndex = d.indexOf('.');
@@ -691,7 +1013,6 @@
       d = d.substring(dotIndex + 1);
     }
 
-    // 预编译正则匹配
     for (let i = 0; i < compiledRules.urls.length; i++) {
       if (compiledRules.urls[i].test(url) || compiledRules.urls[i].test(domain)) return true;
     }
@@ -709,6 +1030,38 @@
     }
 
     return false;
+  }
+
+  // 查找第一条命中规则
+  function findFirstMatchingRule(url, domain, title, snippet) {
+    for (const item of compiledRules.rulesList) {
+      try {
+        if (item.type === 'domain') {
+          let d = domain.toLowerCase();
+          while (d) {
+            if (d === item.domain) {
+              return { rule: item.originalRule, source: item.source };
+            }
+            const dot = d.indexOf('.');
+            if (dot === -1) break;
+            d = d.substring(dot + 1);
+          }
+        } else if (item.type === 'url' || item.type === 'regex') {
+          if (item.regex.test(url) || item.regex.test(domain)) {
+            return { rule: item.originalRule, source: item.source };
+          }
+        } else if (item.type === 'title' && title) {
+          if (item.regex.test(title)) {
+            return { rule: item.originalRule, source: item.source };
+          }
+        } else if (item.type === 'text' && snippet) {
+          if (item.regex.test(snippet)) {
+            return { rule: item.originalRule, source: item.source };
+          }
+        }
+      } catch (e) {}
+    }
+    return null;
   }
 
   // 正文选择器
@@ -766,7 +1119,7 @@
     }
   }
 
-  // 匹配函数
+  // 函数匹配
   function checkRuleMatch(rule, url, domain, title, snippet) {
     if (rule.startsWith('/') && rule.lastIndexOf('/') > 0) {
       try {
@@ -852,7 +1205,7 @@
     // 切换屏蔽按钮颜色
     const iconColor = isBlocked ? '#3182ce' : 'currentColor';
     btn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>`;
-    btn.title = isBlocked ? '取消屏蔽此域名规则' : '屏蔽此词条';
+    btn.title = isBlocked ? t('unblockBtnTitle') : t('blockBtnTitle');
 
     if (window.getComputedStyle(result).position === 'static') result.style.position = 'relative';
     if (engine === 'bing') {
@@ -904,7 +1257,7 @@
           newRule = domain + '/*';
         }
         if (currentConfig.blockConfirm) {
-          if (!confirm(`确定要屏蔽并添加规则 [ ${newRule} ] 吗？`)) return;
+          if (!confirm(t('confirmBlock', {rule: newRule}))) return;
         }
         if (!currentConfig.rules.includes(newRule)) {
           currentConfig.rules.push(newRule);
@@ -925,6 +1278,21 @@
       }
     };
     result.appendChild(btn);
+  }
+
+  // 添加匹配规则标签
+  function addMatchedRuleLabel(result) {
+    if (!result.dataset.matchedRule) return;
+    let existing = result.querySelector('.searchfilter-matched-rule');
+    if (existing) existing.remove();
+    const label = document.createElement('div');
+    label.className = 'searchfilter-matched-rule';
+    const sourceText = result.dataset.matchedSource || t('matchedRule');
+    const ruleText = result.dataset.matchedRule;
+    label.textContent = `${sourceText}：${ruleText}`;
+    label.title = `${sourceText}：${ruleText}`;
+    if (window.getComputedStyle(result).position === 'static') result.style.position = 'relative';
+    result.appendChild(label);
   }
 
   // 视口观察器
@@ -976,9 +1344,16 @@
       result.style.display = showHiddenResults ? '' : 'none';
       result.setAttribute('data-blocker-processed', 'true');
       result.setAttribute('data-is-blocked', 'true');
+      // 查找匹配规则
+      const match = findFirstMatchingRule(url, domain, title, snippet);
+      if (match) {
+        result.dataset.matchedRule = match.rule;
+        result.dataset.matchedSource = match.source;
+      }
       if (showHiddenResults) {
         result.classList.add('searchfilter-blocked-visible');
         if (currentConfig.showBlockBtn) injectBlockButton(result, engine, url, domain);
+        addMatchedRuleLabel(result);
       }
       return true;
     } else {
@@ -998,6 +1373,8 @@
         result.removeAttribute('data-is-blocked');
         result.removeAttribute('data-observed');
         result.classList.remove('searchfilter-blocked-visible');
+        const label = result.querySelector('.searchfilter-matched-rule');
+        if (label) label.remove();
       });
       showHiddenResults = false;
       updateStatus(0);
@@ -1014,7 +1391,7 @@
     });
   }
 
-  // 立即更新悬浮球
+  // 更新悬浮球
   function forceReprocessAll() {
     buildRuleIndex();
 
@@ -1028,6 +1405,8 @@
       el.removeAttribute('data-is-blocked');
       el.classList.remove('searchfilter-blocked-visible');
       el.style.display = '';
+      const label = el.querySelector('.searchfilter-matched-rule');
+      if (label) label.remove();
     });
     document.querySelectorAll('.searchfilter-quick-block').forEach(btn => btn.remove());
 
@@ -1136,7 +1515,7 @@
 
     if (currentConfig.bubbleAction === 'toggleHidden') {
       statusBtn.innerHTML = '⭕';
-      statusBtn.title = `点击${showHiddenResults ? '隐藏' : '显示'}已屏蔽结果`;
+      statusBtn.title = showHiddenResults ? t('bubbleTitleHide') : t('bubbleTitleShow');
     } else {
       if (currentConfig.showCount) {
         const icon = '🚫';
@@ -1148,7 +1527,7 @@
       } else {
         statusBtn.innerHTML = '🚫';
       }
-      statusBtn.title = '拖动边缘吸附，点击打开配置面板';
+      statusBtn.title = t('bubbleTitlePanel');
     }
 
     statusBtn.style.color = '';
@@ -1321,8 +1700,11 @@
             injectBlockButton(el, engine, link.href, domain);
           }
         }
+        addMatchedRuleLabel(el);
       } else {
         el.classList.remove('searchfilter-blocked-visible');
+        const label = el.querySelector('.searchfilter-matched-rule');
+        if (label) label.remove();
       }
     });
     const status = document.getElementById('searchfilter-status');
@@ -1423,7 +1805,7 @@
     statsPanel.style.display = 'flex';
   }
 
-  // 更新面板内容
+  // 面板内容
   function updateStatsContent() {
     const statsContent = document.getElementById('searchfilter-stats-content');
     if (!statsContent) return;
@@ -1431,72 +1813,99 @@
     const textarea = document.getElementById('searchfilter-rules');
     const rulesText = textarea ? textarea.value : currentConfig.rules.join('\n');
     const rawLines = rulesText.split('\n');
-    const testRules = filterValidRuleLines(rawLines);
-    const subscriptionRules = getAllSubscriptionRules();
-    const allTestRules = testRules.concat(subscriptionRules);
+    const localRules = filterValidRuleLines(rawLines);
 
-    const engine = getSearchEngine();
-    const results = document.querySelectorAll(selectors[engine]);
-
-    const ruleStats = {};
+    // 静态语法错误检查
     const ruleErrors = {};
-
-    results.forEach(result => {
-      const link = getResultLink(result, engine);
-      if (!link || !link.href) return;
-      const url = link.href;
-      let domain = '';
-      try {
-        domain = new URL(url).hostname;
-      } catch (e) {}
-      const title = getResultTitle(result, engine) || '';
-      const snippet = getResultSnippet(result, engine) || '';
-
-      allTestRules.forEach(rule => {
-        try {
-          if (checkRuleMatch(rule, url, domain, title, snippet)) {
-            if (!ruleStats[rule]) ruleStats[rule] = 0;
-            ruleStats[rule]++;
-          }
-        } catch (e) {
-          if (!ruleErrors[rule]) ruleErrors[rule] = [];
-          ruleErrors[rule].push(e.message);
-        }
-      });
+    localRules.forEach(rule => {
+      if (!cachedValidateRule(rule)) {
+        ruleErrors[rule] = ['Invalid syntax'];
+      }
     });
 
-    const ruleStatsArray = Object.entries(ruleStats).map(([rule, count]) => ({
-        rule,
-        count
-      }))
-      .sort((a, b) => b.count - a.count);
-    const ruleErrorsArray = Object.entries(ruleErrors).map(([rule, errors]) => ({
-      rule,
-      errors: [...new Set(errors)]
-    }));
+    // 白名单规则收集
+    const whitelistRules = localRules.filter(rule => rule.startsWith('@')).map(rule => rule.substring(1).trim());
 
+    // 遍历已处理结果
+    const engine = getSearchEngine();
+    const results = document.querySelectorAll(selectors[engine]);
+    const statsBySource = new Map();
+
+    results.forEach(result => {
+      const matchedRule = result.dataset.matchedRule;
+      const matchedSource = result.dataset.matchedSource;
+      if (!matchedRule || !matchedSource) return;
+
+      if (!statsBySource.has(matchedSource)) {
+        statsBySource.set(matchedSource, {
+          total: 0,
+          rules: new Map()
+        });
+      }
+      const sourceStats = statsBySource.get(matchedSource);
+      sourceStats.total++;
+      const ruleMap = sourceStats.rules;
+      ruleMap.set(matchedRule, (ruleMap.get(matchedRule) || 0) + 1);
+    });
+
+    // 错误信息展示
+    const ruleErrorsArray = Object.entries(ruleErrors).map(([rule, errors]) => ({ rule, errors }));
     let resultHTML = '';
 
     if (ruleErrorsArray.length > 0) {
-      resultHTML += `<div style="color: #c53030; background: #fff5f5; padding: 8px; border-radius: 4px; margin-bottom: 12px;"><strong>⚠️ 发现 ${ruleErrorsArray.length} 个规则错误：</strong><br>`;
+      resultHTML += `<div style="color: #c53030; background: #fff5f5; padding: 8px; border-radius: 4px; margin-bottom: 12px;"><strong>⚠️ ${t('statsErrors', {count: ruleErrorsArray.length})}</strong><br>`;
       ruleErrorsArray.forEach(item => {
-        resultHTML += `<div style="margin: 4px 0; font-size: 11px;"><div style="color: #2d3748;"><strong>规则：</strong>${item.rule}</div><div style="color: #c53030;"><strong>错误：</strong>${item.errors.join(', ')}</div></div>`;
+        resultHTML += `<div style="margin: 4px 0; font-size: 11px;"><div style="color: #2d3748;"><strong>${t('statsRule')}</strong>${item.rule}</div><div style="color: #c53030;"><strong>${t('statsError')}</strong>${item.errors.join(', ')}</div></div>`;
       });
       resultHTML += '</div>';
     }
 
-    if (ruleStatsArray.length > 0) {
-      const totalMatches = ruleStatsArray.reduce((sum, item) => sum + item.count, 0);
-      resultHTML += `<div style="color: #2d3748; font-weight: bold; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #e2e8f0;">共匹配 ${totalMatches} 条结果</div>`;
-      ruleStatsArray.forEach(item => {
-        let ruleType = 'URL规则';
-        if (item.rule.startsWith('title/')) ruleType = '标题规则';
-        else if (item.rule.startsWith('text/')) ruleType = '正文规则';
-        else if (item.rule.startsWith('/')) ruleType = '正则规则';
-        resultHTML += `<div style="margin: 4px 0; padding: 6px 0; border-bottom: 1px solid #edf2f7;"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;"><span style="font-size: 11px; color: #718096;">${ruleType}</span><span style="font-size: 11px; color: #38a169; font-weight: bold;">匹配: ${item.count} 条</span></div><div style="font-size: 12px; color: #2d3748; word-break: break-all; font-family: 'Consolas', monospace;">${item.rule}</div></div>`;
+    // 按来源显示统计
+    const sourceOrder = [`${t('subscription')}1`, `${t('subscription')}2`, `${t('subscription')}3`, t('localRule')];
+    let hasMatches = false;
+
+    sourceOrder.forEach(source => {
+      const sourceStats = statsBySource.get(source);
+      if (!sourceStats || sourceStats.total === 0) return;
+      hasMatches = true;
+
+      resultHTML += `<div style="margin-bottom: 16px;">`;
+      resultHTML += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #cbd5e0;">`;
+      resultHTML += `<span style="font-weight: bold; color: #2d3748; font-size: 14px;">${source}</span>`;
+      resultHTML += `<span style="background: #2c5282; color: white; padding: 2px 10px; border-radius: 12px; font-size: 12px;">${t('matchedCountLabel')} ${sourceStats.total} ${t('matchedCountUnit')}</span>`;
+      resultHTML += `</div>`;
+
+      const sortedRules = Array.from(sourceStats.rules.entries()).sort((a, b) => b[1] - a[1]);
+
+      sortedRules.forEach(([rule, count]) => {
+        let ruleType = t('urlRule');
+        if (rule.startsWith('title/')) ruleType = t('titleRule');
+        else if (rule.startsWith('text/')) ruleType = t('textRule');
+        else if (rule.startsWith('/')) ruleType = t('regexRule');
+
+        resultHTML += `<div style="margin: 6px 0; padding: 6px 8px; background: #f7fafc; border-radius: 4px;">`;
+        resultHTML += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">`;
+        resultHTML += `<span style="font-size: 11px; color: #718096;">${ruleType}</span>`;
+        resultHTML += `<span style="font-size: 11px; color: #38a169; font-weight: bold;">${t('matchedCountLabel')}: ${count} ${t('matchedCountUnit')}</span>`;
+        resultHTML += `</div>`;
+        resultHTML += `<div style="font-size: 12px; color: #2d3748; word-break: break-all; font-family: 'Consolas', monospace;">${rule}</div>`;
+        resultHTML += `</div>`;
       });
-    } else if (ruleErrorsArray.length === 0) {
-      resultHTML = '<div style="color: #38a169; padding: 10px; border-radius: 4px; font-size: 12px; background: #f0fff4; text-align: center;">无匹配项</div>';
+
+      resultHTML += `</div>`;
+    });
+
+    if (!hasMatches && ruleErrorsArray.length === 0) {
+      resultHTML = `<div style="color: #38a169; padding: 10px; border-radius: 4px; font-size: 12px; background: #f0fff4; text-align: center;">${t('noMatch')}</div>`;
+    }
+
+    // 白名单列表展示
+    if (whitelistRules.length > 0) {
+      resultHTML += `<div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #e2e8f0;"><strong style="color: #2d3748;">🛡️ ${t('whitelistRules')} (${whitelistRules.length})</strong><br>`;
+      whitelistRules.forEach(rule => {
+        resultHTML += `<div style="font-size: 11px; color: #4a5568; word-break: break-all; font-family: 'Consolas', monospace;">@${rule}</div>`;
+      });
+      resultHTML += `</div>`;
     }
 
     statsContent.innerHTML = resultHTML;
@@ -1543,80 +1952,79 @@
 
     const sizeOptions = [{
       value: 'medium',
-      label: '中杯'
+      label: t('sizeMedium')
     }, {
       value: 'large',
-      label: '大杯'
+      label: t('sizeLarge')
     }, {
       value: 'larger',
-      label: '超大'
+      label: t('sizeLarger')
     }, {
       value: 'xlarge',
-      label: '特大'
+      label: t('sizeXLarge')
     }];
 
     panel.innerHTML = `
             <div style="display: flex; gap: 8px; margin-top: 10px; margin-bottom: 8px;">
                 <label style="display: flex; align-items: center; flex: 1; justify-content: flex-start; white-space: nowrap;">
                     <input type="checkbox" id="searchfilter-enabled" ${currentConfig.enabled ? 'checked' : ''} style="margin-right: 4px;">
-                    <span>启用屏蔽</span>
+                    <span>${t('enableBlock')}</span>
                 </label>
                 <label style="display: flex; align-items: center; flex: 1; justify-content: center; white-space: nowrap;">
                     <input type="checkbox" id="searchfilter-show-count" ${currentConfig.showCount ? 'checked' : ''} style="margin-right: 4px;">
-                    <span>显示数量</span>
+                    <span>${t('showCount')}</span>
                 </label>
                 <label style="display: flex; align-items: center; flex: 1; justify-content: flex-end; white-space: nowrap;">
                     <input type="checkbox" id="searchfilter-debug" ${currentConfig.debug ? 'checked' : ''} style="margin-right: 4px;">
-                    <span>调试模式</span>
+                    <span>${t('debugMode')}</span>
                 </label>
             </div>
             
             <div style="display: flex; gap: 8px; margin-bottom: 12px;">
                 <label style="display: flex; align-items: center; flex: 1; justify-content: flex-start; white-space: nowrap;">
                     <input type="checkbox" id="searchfilter-show-block-btn" ${currentConfig.showBlockBtn ? 'checked' : ''} style="margin-right: 4px;">
-                    <span>一键屏蔽</span>
+                    <span>${t('oneClickBlock')}</span>
                 </label>
                 <label style="display: flex; align-items: center; flex: 1; justify-content: center; white-space: nowrap;">
                     <input type="checkbox" id="searchfilter-block-domain" ${currentConfig.blockDomain ? 'checked' : ''} style="margin-right: 4px;">
-                    <span>屏蔽域名</span>
+                    <span>${t('blockDomain')}</span>
                 </label>
                 <label style="display: flex; align-items: center; flex: 1; justify-content: flex-end; white-space: nowrap;">
                     <input type="checkbox" id="searchfilter-block-confirm" ${currentConfig.blockConfirm ? 'checked' : ''} style="margin-right: 4px;">
-                    <span>二次确认</span>
+                    <span>${t('doubleConfirm')}</span>
                 </label>
             </div>
             
             <div class="option-row">
-                <span class="option-label">悬浮球大小:</span>
+                <span class="option-label">${t('bubbleSize')}</span>
                 ${createOptionButtons('bubbleSize', currentConfig.bubbleSize, sizeOptions)}
             </div>
             
             <div style="margin-bottom: 8px;">
                 <div class="compact-row">
-                    <span style="font-size: 12px; color: #4a5568;">屏蔽规则:</span>
+                    <span style="font-size: 12px; color: #4a5568;">${t('blockRules')}</span>
                     <div style="display: flex; gap: 4px;">
-                        <button id="searchfilter-subscribe" class="searchfilter-button searchfilter-button-secondary" style="padding: 3px 8px; border: 1px solid transparent;" title="订阅规则">订阅</button>
-                        <button id="searchfilter-sync" class="searchfilter-button searchfilter-button-success" style="padding: 3px 8px; border: 1px solid transparent;" title="WebDAV同步">同步</button>
-                        <button id="searchfilter-import-file" class="searchfilter-button searchfilter-button-secondary" style="padding: 3px 8px; border: 1px solid transparent;" title="从TXT文件导入">导入</button>
-                        <button id="searchfilter-export-file" class="searchfilter-button searchfilter-button-success" style="padding: 3px 8px; border: 1px solid transparent;" title="导出到TXT文件">导出</button>
+                        <button id="searchfilter-subscribe" class="searchfilter-button searchfilter-button-secondary" style="padding: 3px 8px; border: 1px solid transparent;" title="${t('subscribe')}">${t('subscribe')}</button>
+                        <button id="searchfilter-sync" class="searchfilter-button searchfilter-button-success" style="padding: 3px 8px; border: 1px solid transparent;" title="${t('sync')}">${t('sync')}</button>
+                        <button id="searchfilter-import-file" class="searchfilter-button searchfilter-button-secondary" style="padding: 3px 8px; border: 1px solid transparent;" title="${t('import')}">${t('import')}</button>
+                        <button id="searchfilter-export-file" class="searchfilter-button searchfilter-button-success" style="padding: 3px 8px; border: 1px solid transparent;" title="${t('export')}">${t('export')}</button>
                     </div>
                 </div>
                 <div class="rules-container">
                     <div id="searchfilter-line-numbers"></div>
-                    <textarea id="searchfilter-rules" placeholder="每行一个规则" wrap="off">${currentConfig.rules.join('\n')}</textarea>
-                    <div id="searchfilter-scroll-top" class="searchfilter-scroll-btn" style="top: 2px;" title="回到顶部">⬆️</div>
-                    <div id="searchfilter-scroll-bottom" class="searchfilter-scroll-btn" style="bottom: 1px;" title="回到底部">⬇️</div>
+                    <textarea id="searchfilter-rules" placeholder="${t('placeholder')}" wrap="off">${currentConfig.rules.join('\n')}</textarea>
+                    <div id="searchfilter-scroll-top" class="searchfilter-scroll-btn" style="top: 2px;" title="${t('scrollTop')}">⬆️</div>
+                    <div id="searchfilter-scroll-bottom" class="searchfilter-scroll-btn" style="bottom: 1px;" title="${t('scrollBottom')}">⬇️</div>
                 </div>
                 <div style="font-size: 10px; color: #718096; margin-top: 3px; text-align: left;">
-                title/.*文本.*/ 匹配标题 | text/.*文本.*/ 匹配内容<br>
-                title/.*AbC.*/i 加i忽略大小写 | title/.*A(B|C).*/ 同时匹配AB和AC<br>
+                ${t('ruleHint')}<br>
                 </div>
             </div>
             
             <div style="display: flex; gap: 6px; margin-top: 8px;" id="searchfilter-panel-footer">
-                <button id="searchfilter-save" class="searchfilter-button searchfilter-button-primary action-button" style="flex: 2;">保存</button>
-                <button id="searchfilter-test" class="searchfilter-button searchfilter-button-secondary action-button" style="flex: 1;">统计</button>
-                <button id="searchfilter-close" class="searchfilter-button searchfilter-button-danger action-button" style="flex: 1;">关闭</button>
+                <button id="searchfilter-save" class="searchfilter-button searchfilter-button-primary action-button" style="flex: 2;">${t('save')}</button>
+                <button id="searchfilter-test" class="searchfilter-button searchfilter-button-secondary action-button" style="flex: 1;">${t('test')}</button>
+                <button id="searchfilter-close" class="searchfilter-button searchfilter-button-danger action-button" style="flex: 1;">${t('close')}</button>
             </div>
             
             <!-- 统计面板 -->
@@ -1772,7 +2180,7 @@
     else subs.push(subData);
     saveSubscriptions(subs);
 
-    if (showAlerts) alert(`订阅成功！已更新 ${validRules.length} 条有效规则。`);
+    if (showAlerts) alert(t('subscriptionSuccess', {count: validRules.length}));
     return {
       success: true,
       count: validRules.length
@@ -1800,17 +2208,17 @@
       rowsHtml += `<div class="subscription-row" data-index="${index}">
                 <div class="subscription-input-row">
                     <input type="text" class="subscription-url" placeholder="https://example.com/rules.txt" value="${sub.url || ''}">
-                    <button class="delete-subscription-btn" title="删除订阅" data-index="${index}">❌</button>
+                    <button class="delete-subscription-btn" title="${t('delete')}" data-index="${index}">❌</button>
                 </div>
                 <div class="subscription-status-message"></div>
             </div>`;
     });
 
     panel.innerHTML = `
-            <h3 style="margin:0 0 16px;font-size:16px;color:#2d3748;">订阅管理</h3>
+            <h3 style="margin:0 0 16px;font-size:16px;color:#2d3748;">${t('panelTitle')}</h3>
             <div id="subscription-rows-container">${rowsHtml}</div>
-            <div class="add-subscription-btn"><button id="add-subscription" class="searchfilter-button searchfilter-button-secondary" style="width:100%;" ${subscriptions.length >= 3 ? 'disabled' : ''}>➕ 添加订阅</button></div>
-            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;"><button id="subscription-save" class="searchfilter-button searchfilter-button-primary" style="flex:1;">保存</button><button id="subscription-import" class="searchfilter-button searchfilter-button-primary" style="flex:1;">导入</button><button id="subscription-cancel" class="searchfilter-button searchfilter-button-secondary" style="flex:1;">取消</button></div>
+            <div class="add-subscription-btn"><button id="add-subscription" class="searchfilter-button searchfilter-button-secondary" style="width:100%;" ${subscriptions.length >= 3 ? 'disabled' : ''}>${t('addSubscription')}</button></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;"><button id="subscription-save" class="searchfilter-button searchfilter-button-primary" style="flex:1;">${t('saveSub')}</button><button id="subscription-import" class="searchfilter-button searchfilter-button-primary" style="flex:1;">${t('importSub')}</button><button id="subscription-cancel" class="searchfilter-button searchfilter-button-secondary" style="flex:1;">${t('cancel')}</button></div>
             <div id="subscription-status" style="margin-top:2px;font-size:12px;color:#4a5568;min-height:12px;"></div>
         `;
 
@@ -1832,12 +2240,12 @@
 
     addBtn.onclick = () => {
       if (container.querySelectorAll('.subscription-row').length >= 3) {
-        setStatus('最多只能添加3条订阅', true);
+        setStatus(t('maxSubscriptions'), true);
         return;
       }
       const newRow = document.createElement('div');
       newRow.className = 'subscription-row';
-      newRow.innerHTML = `<div class="subscription-input-row"><input type="text" class="subscription-url" placeholder="https://example.com/rules.txt" value=""><button class="delete-subscription-btn" title="删除订阅">❌</button></div><div class="subscription-status-message"></div>`;
+      newRow.innerHTML = `<div class="subscription-input-row"><input type="text" class="subscription-url" placeholder="https://example.com/rules.txt" value=""><button class="delete-subscription-btn" title="${t('delete')}">❌</button></div><div class="subscription-status-message"></div>`;
       container.appendChild(newRow);
       updateAddButtonState();
       bindDeleteEvents();
@@ -1881,7 +2289,7 @@
         }
       });
       saveSubscriptions(newSubs);
-      setStatus('订阅配置已保存');
+      setStatus(t('subscriptionSaved'));
       subscriptions = newSubs;
       forceReprocessAll();
     };
@@ -1889,30 +2297,30 @@
     document.getElementById('subscription-import').onclick = async () => {
       const rows = container.querySelectorAll('.subscription-row');
       if (rows.length === 0) {
-        setStatus('没有订阅链接', true);
+        setStatus(t('subLinkEmpty'), true);
         return;
       }
-      setStatus('正在导入...');
+      setStatus(t('importing'));
       for (let row of rows) {
         const input = row.querySelector('.subscription-url');
         const url = input.value.trim();
         const msgDiv = row.querySelector('.subscription-status-message');
         if (!url) {
-          msgDiv.textContent = '链接为空';
+          msgDiv.textContent = t('subLinkEmpty');
           msgDiv.className = 'subscription-status-message error';
           continue;
         }
         try {
           const result = await performSubscriptionForUrl(url, false);
-          msgDiv.textContent = `导入成功，已导入 ${result.count} 条规则`;
+          msgDiv.textContent = t('subImportSuccess', {count: result.count});
           msgDiv.className = 'subscription-status-message success';
         } catch (err) {
           console.error(`导入失败 [${url}]:`, err);
-          msgDiv.textContent = '导入失败，请检查链接或网络状态';
+          msgDiv.textContent = t('subImportFailed');
           msgDiv.className = 'subscription-status-message error';
         }
       }
-      setStatus('导入操作完成');
+      setStatus(t('importDone'));
       forceReprocessAll();
     };
 
@@ -1948,12 +2356,12 @@
     panel.style.cssText = `position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 315px; max-width: 90vw; padding: 15px 15px 8px 15px; z-index: 10002;`;
 
     panel.innerHTML = `
-            <h3 style="margin:0 0 16px;font-size:16px;color:#2d3748;">WebDAV 同步设置</h3>
-            <div style="margin-bottom:12px;"><label>Webdav地址</label><input id="webdav-url" type="text" placeholder="https://example.com/remote.php/dav/files/user/" value="${webdavConfig.url}"></div>
-            <div style="margin-bottom:12px;"><label>Webdav账号</label><input id="webdav-username" type="text" value="${webdavConfig.username}"></div>
-            <div style="margin-bottom:12px;"><label>应用密码</label><input id="webdav-password" type="password" value="${webdavConfig.password}"></div>
-            <div style="margin-bottom:20px;"><label>文件名</label><input id="webdav-filename" type="text" placeholder="rules.txt" value="${webdavConfig.filename}"></div>
-            <div style="display:flex;gap:8px;justify-content:flex-end;"><button id="webdav-upload" class="searchfilter-button searchfilter-button-success" style="flex:1;">上传</button><button id="webdav-download" class="searchfilter-button searchfilter-button-primary" style="flex:1;">下载</button><button id="webdav-cancel" class="searchfilter-button searchfilter-button-secondary" style="flex:1;">取消</button></div>
+            <h3 style="margin:0 0 16px;font-size:16px;color:#2d3748;">${t('webdavTitle')}</h3>
+            <div style="margin-bottom:12px;"><label>${t('webdavUrl')}</label><input id="webdav-url" type="text" placeholder="https://example.com/remote.php/dav/files/user/" value="${webdavConfig.url}"></div>
+            <div style="margin-bottom:12px;"><label>${t('webdavUser')}</label><input id="webdav-username" type="text" value="${webdavConfig.username}"></div>
+            <div style="margin-bottom:12px;"><label>${t('webdavPass')}</label><input id="webdav-password" type="password" value="${webdavConfig.password}"></div>
+            <div style="margin-bottom:20px;"><label>${t('filename')}</label><input id="webdav-filename" type="text" placeholder="rules.txt" value="${webdavConfig.filename}"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;"><button id="webdav-upload" class="searchfilter-button searchfilter-button-success" style="flex:1;">${t('upload')}</button><button id="webdav-download" class="searchfilter-button searchfilter-button-primary" style="flex:1;">${t('download')}</button><button id="webdav-cancel" class="searchfilter-button searchfilter-button-secondary" style="flex:1;">${t('cancel')}</button></div>
             <div id="webdav-status" style="margin-top:2px;font-size:12px;color:#4a5568;min-height:12px;"></div>
         `;
 
@@ -1995,7 +2403,7 @@
     document.getElementById('webdav-upload').onclick = async () => {
       const url = urlInput.value.trim();
       if (!url) {
-        setStatus('请填写服务器地址', true);
+        setStatus(t('webdavUrlEmpty'), true);
         return;
       }
       if (!url.toLowerCase().startsWith('https://')) {
@@ -2005,7 +2413,7 @@
       const config = saveWebDAVConfig();
       const textarea = document.getElementById('searchfilter-rules');
       const content = textarea ? textarea.value : currentConfig.rules.join('\n');
-      setStatus('正在上传...');
+      setStatus(t('webdavUploading'));
       try {
         const fullUrl = config.url.replace(/\/$/, '') + '/' + config.filename;
         const headers = {};
@@ -2024,16 +2432,16 @@
             ontimeout: () => reject(new Error('请求超时'))
           });
         });
-        setStatus('上传成功！');
+        setStatus(t('uploadSuccess'));
       } catch (err) {
-        setStatus(`上传失败：${err.message}`, true);
+        setStatus(t('webdavUploadFailed') + err.message, true);
       }
     };
 
     document.getElementById('webdav-download').onclick = async () => {
       const url = urlInput.value.trim();
       if (!url) {
-        setStatus('请填写服务器地址', true);
+        setStatus(t('webdavUrlEmpty'), true);
         return;
       }
       if (!url.toLowerCase().startsWith('https://')) {
@@ -2041,12 +2449,12 @@
         return;
       }
       const config = saveWebDAVConfig();
-      setStatus('正在下载...');
+      setStatus(t('webdavDownloading'));
       try {
         await performWebDAVDownload(config, true, setStatus);
-        setStatus('下载成功！规则已加载到编辑区，保存生效');
+        setStatus(t('downloadSuccess'));
       } catch (err) {
-        setStatus(`下载失败：${err.message}`, true);
+        setStatus(t('webdavDownloadFailed') + err.message, true);
       }
     };
 
@@ -2195,7 +2603,7 @@
     const textarea = document.getElementById('searchfilter-rules');
     const content = textarea.value;
     if (!content.trim()) {
-      alert('没有规则可导出');
+      alert(t('noRulesExport'));
       return;
     }
     const now = new Date();
@@ -2217,29 +2625,35 @@
 
   // 管理器菜单
   function registerMenu() {
-    GM_registerMenuCommand("⚙️ 打开配置面板", () => showConfigPanel());
-    GM_registerMenuCommand(currentConfig.enabled ? "🟢 屏蔽功能：启用" : "🔴 屏蔽功能：关闭", () => {
+    GM_registerMenuCommand(t('menuOpenPanel'), () => showConfigPanel());
+    GM_registerMenuCommand((currentConfig.enabled ? "🟢 " : "🔴 ") + t('menuEnable') + (currentConfig.enabled ? `：${t('stateEnabled')}` : `：${t('stateDisabled')}`), () => {
       currentConfig.enabled = !currentConfig.enabled;
       GM_setValue(CONFIG_KEY, currentConfig);
       location.reload();
     });
-    GM_registerMenuCommand(currentConfig.blockConfirm ? "🟢 二次确认：启用" : "🔴 二次确认：关闭", () => {
+    GM_registerMenuCommand((currentConfig.blockConfirm ? "🟢 " : "🔴 ") + t('menuConfirm') + (currentConfig.blockConfirm ? `：${t('stateEnabled')}` : `：${t('stateDisabled')}`), () => {
       currentConfig.blockConfirm = !currentConfig.blockConfirm;
       GM_setValue(CONFIG_KEY, currentConfig);
       location.reload();
     });
-    GM_registerMenuCommand(currentConfig.panelCentered ? "🟢 面板居中：启用" : "🔴 面板居中：关闭", () => {
+    GM_registerMenuCommand((currentConfig.panelCentered ? "🟢 " : "🔴 ") + t('menuCenter') + (currentConfig.panelCentered ? `：${t('stateEnabled')}` : `：${t('stateDisabled')}`), () => {
       currentConfig.panelCentered = !currentConfig.panelCentered;
       GM_setValue(CONFIG_KEY, currentConfig);
       location.reload();
     });
-    GM_registerMenuCommand(currentConfig.showBubble ? "🟢 悬浮球状态：显示" : "🔴 悬浮球状态：隐藏", () => {
+    GM_registerMenuCommand((currentConfig.showBubble ? "🟢 " : "🔴 ") + t('menuBubble') + (currentConfig.showBubble ? `：${t('menuBubbleStateShow')}` : `：${t('menuBubbleStateHide')}`), () => {
       currentConfig.showBubble = !currentConfig.showBubble;
       GM_setValue(CONFIG_KEY, currentConfig);
       location.reload();
     });
-    GM_registerMenuCommand(currentConfig.bubbleAction === 'openPanel' ? "🟢 悬浮球功能：打开面板" : "🔵 悬浮球功能：显示隐藏结果", () => {
+    GM_registerMenuCommand((currentConfig.bubbleAction === 'openPanel' ? "🟢 " : "🔵 ") + t('menuBubbleAction') + (currentConfig.bubbleAction === 'openPanel' ? `：${t('menuBubbleActionOpen')}` : `：${t('menuBubbleActionToggle')}`), () => {
       currentConfig.bubbleAction = currentConfig.bubbleAction === 'openPanel' ? 'toggleHidden' : 'openPanel';
+      GM_setValue(CONFIG_KEY, currentConfig);
+      location.reload();
+    });
+    const langDisplay = currentConfig.language === 'zh-CN' ? t('menuLang') : t('menuLangEn');
+    GM_registerMenuCommand((currentConfig.language === 'zh-CN' ? '🟢 ' : '🔵 ') + langDisplay, () => {
+      currentConfig.language = currentConfig.language === 'zh-CN' ? 'en' : 'zh-CN';
       GM_setValue(CONFIG_KEY, currentConfig);
       location.reload();
     });
