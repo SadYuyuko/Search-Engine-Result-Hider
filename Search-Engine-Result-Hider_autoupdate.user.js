@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.3.2
+// @version      6.3.3
 // @description        支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:zh-CN  支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports regular expressions.
@@ -26,9 +26,9 @@
 // @grant        GM_addStyle
 // @grant        GM_registerMenuCommand
 // @grant        GM_xmlhttpRequest
-// @homepageURL  https://greasyfork.org/zh-CN/scripts/552394
-// @homepageURL  https://github.com/SadYuyuko/Search-Engine-Result-Hider
 // @run-at       document-idle
+// @downloadURL  https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js
+// @updateURL    https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js
 // ==/UserScript==
 
 (function() {
@@ -1073,7 +1073,10 @@
           let d = domain.toLowerCase();
           while (d) {
             if (d === item.domain) {
-              return { rule: item.originalRule, source: item.source };
+              return {
+                rule: item.originalRule,
+                source: item.source
+              };
             }
             const dot = d.indexOf('.');
             if (dot === -1) break;
@@ -1081,15 +1084,24 @@
           }
         } else if (item.type === 'url' || item.type === 'regex') {
           if (item.regex.test(url) || item.regex.test(domain)) {
-            return { rule: item.originalRule, source: item.source };
+            return {
+              rule: item.originalRule,
+              source: item.source
+            };
           }
         } else if (item.type === 'title' && title) {
           if (item.regex.test(title)) {
-            return { rule: item.originalRule, source: item.source };
+            return {
+              rule: item.originalRule,
+              source: item.source
+            };
           }
         } else if (item.type === 'text' && snippet) {
           if (item.regex.test(snippet)) {
-            return { rule: item.originalRule, source: item.source };
+            return {
+              rule: item.originalRule,
+              source: item.source
+            };
           }
         }
       } catch (e) {}
@@ -1307,7 +1319,9 @@
           newRule = domain + '/*';
         }
         if (currentConfig.blockConfirm) {
-          if (!confirm(t('confirmBlock', {rule: newRule}))) return;
+          if (!confirm(t('confirmBlock', {
+              rule: newRule
+            }))) return;
         }
         if (!currentConfig.rules.includes(newRule)) {
           currentConfig.rules.push(newRule);
@@ -1494,6 +1508,7 @@
         `;
   }
 
+  // 悬浮球大小
   function applyBubbleSize(element) {
     let fontSize, padding, lineHeight;
     switch (currentConfig.bubbleSize) {
@@ -1793,7 +1808,6 @@
   function scheduleLineNumbersUpdate() {
     if (lineUpdateRaf) cancelAnimationFrame(lineUpdateRaf);
     lineUpdateRaf = requestAnimationFrame(() => {
-      validationCache.clear();
       updateLineNumbersIncremental();
       lineUpdateRaf = null;
     });
@@ -1868,7 +1882,10 @@
     });
 
     // 错误信息展示
-    const ruleErrorsArray = Object.entries(ruleErrors).map(([rule, errors]) => ({ rule, errors }));
+    const ruleErrorsArray = Object.entries(ruleErrors).map(([rule, errors]) => ({
+      rule,
+      errors
+    }));
     let resultHTML = '';
 
     if (ruleErrorsArray.length > 0) {
@@ -1930,7 +1947,38 @@
     statsContent.innerHTML = resultHTML;
   }
 
-  // 显示配置面板
+  // 面板定位
+  function getPanelPositionStyles() {
+    const statusBtn = document.getElementById('searchfilter-status');
+    if (currentConfig.panelCentered) {
+      return `top: 60%; left: 50%; transform: translate(-50%, -50%);`;
+    }
+
+    let rect;
+    if (statusBtn) {
+      rect = statusBtn.getBoundingClientRect();
+    } else {
+      rect = {
+        left: window.innerWidth - 50,
+        right: window.innerWidth - 10,
+        top: window.innerHeight - 50,
+        bottom: window.innerHeight - 10,
+        width: 40,
+        height: 40
+      };
+    }
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const isLeft = centerX < window.innerWidth / 2;
+    const isTop = centerY < window.innerHeight / 2;
+
+    if (isLeft && isTop) return 'top: 10px; left: 10px; transform: none;';
+    if (!isLeft && isTop) return 'top: 10px; right: 10px; transform: none;';
+    if (isLeft && !isTop) return 'bottom: 10px; left: 10px; transform: none;';
+    return 'bottom: 10px; right: 10px; transform: none;';
+  }
+
+  // 面板显示
   function showConfigPanel() {
     const existingPanel = document.getElementById('searchfilter-panel');
     if (existingPanel) {
@@ -1943,31 +1991,15 @@
     panel.classList.add('searchfilter-panel-fade');
 
     const statusBtn = document.getElementById('searchfilter-status');
-    let positionCSS = '';
-    if (currentConfig.panelCentered) {
-      positionCSS = `top: 60%; left: 50%; transform: translate(-50%, -50%);`;
-    } else {
-      let rect;
-      if (statusBtn) rect = statusBtn.getBoundingClientRect();
-      else rect = {
-        left: window.innerWidth - 50,
-        right: window.innerWidth - 10,
-        top: window.innerHeight - 50,
-        bottom: window.innerHeight - 10,
-        width: 40,
-        height: 40
-      };
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-      const isLeft = centerX < window.innerWidth / 2;
-      const isTop = centerY < window.innerHeight / 2;
-      if (isLeft && isTop) positionCSS = 'top: 10px; left: 10px; transform: none;';
-      else if (!isLeft && isTop) positionCSS = 'top: 10px; right: 10px; transform: none;';
-      else if (isLeft && !isTop) positionCSS = 'bottom: 10px; left: 10px; transform: none;';
-      else positionCSS = 'bottom: 10px; right: 10px; transform: none;';
-    }
-
-    panel.style.cssText = `position: fixed; ${positionCSS} width: 315px; max-width: 90vw; z-index: 10001; padding: 5px 15px 15px 15px;`;
+    panel.style.cssText = `
+        position: fixed;
+        ${getPanelPositionStyles()}
+        width: 320px;
+        z-index: 10001;
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+    `;
 
     const sizeOptions = [{
       value: 'medium',
@@ -2199,7 +2231,9 @@
     else subs.push(subData);
     saveSubscriptions(subs);
 
-    if (showAlerts) alert(t('subscriptionSuccess', {count: validRules.length}));
+    if (showAlerts) alert(t('subscriptionSuccess', {
+      count: validRules.length
+    }));
     return {
       success: true,
       count: validRules.length
@@ -2217,7 +2251,15 @@
     const panel = document.createElement('div');
     panel.id = 'searchfilter-subscription-panel';
     panel.classList.add('searchfilter-panel-fade');
-    panel.style.cssText = `position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 315px; max-width: 90vw; padding: 15px 15px 8px 15px; z-index: 10002;`;
+    panel.style.cssText = `
+        position: fixed;
+        ${getPanelPositionStyles()}
+        width: 320px;
+        z-index: 10001;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+    `;
 
     let subscriptions = getSubscriptions();
     if (!subscriptions) subscriptions = [];
@@ -2331,7 +2373,9 @@
         }
         try {
           const result = await performSubscriptionForUrl(url, false);
-          msgDiv.textContent = t('subImportSuccess', {count: result.count});
+          msgDiv.textContent = t('subImportSuccess', {
+            count: result.count
+          });
           msgDiv.className = 'subscription-status-message success';
         } catch (err) {
           console.error(`导入失败 [${url}]:`, err);
@@ -2372,7 +2416,15 @@
     const panel = document.createElement('div');
     panel.id = 'searchfilter-webdav-panel';
     panel.classList.add('searchfilter-panel-fade');
-    panel.style.cssText = `position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 315px; max-width: 90vw; padding: 15px 15px 8px 15px; z-index: 10002;`;
+    panel.style.cssText = `
+        position: fixed;
+        ${getPanelPositionStyles()}
+        width: 320px;
+        z-index: 10001;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+    `;
 
     panel.innerHTML = `
             <h3 style="margin:0 0 16px;font-size:16px;color:#2d3748;">${t('webdavTitle')}</h3>
