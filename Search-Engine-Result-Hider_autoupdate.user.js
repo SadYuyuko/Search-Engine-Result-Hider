@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.3.3
+// @version      6.4.0
 // @description        支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:zh-CN  支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports regular expressions.
@@ -1219,7 +1219,7 @@
   function filterValidRuleLines(lines) {
     return lines
       .map(line => line.trim())
-      .filter(line => line.length > 0 && !line.startsWith('#'));
+      .filter(line => line.length > 0);
   }
 
   // 选择器链接
@@ -1282,18 +1282,24 @@
       e.preventDefault();
       e.stopPropagation();
 
-      // 移除屏蔽
+      // 移除规则
       if (isBlocked) {
         let baseDomain = domain.replace(/^www\./, '');
         let ruleRemoved = false;
 
+        const possibleRules = [
+          `${domain}/*`,
+          `www.${baseDomain}/*`,
+          `*.${baseDomain}/*`,
+          domain,
+          baseDomain
+        ];
+
         const newRules = currentConfig.rules.filter(rule => {
-          let cleanRule = rule.replace(/^\*:\/\//, '');
-          const domainPattern1 = `${domain}/*`;
-          const domainPattern2 = `*.${baseDomain}/*`;
-          const matches = (cleanRule === domainPattern1 || cleanRule === domainPattern2);
-          if (matches) ruleRemoved = true;
-          return !matches;
+          const cleanRule = rule.replace(/^\*:\/\//, '');
+          const matched = possibleRules.includes(cleanRule);
+          if (matched) ruleRemoved = true;
+          return !matched;
         });
 
         if (ruleRemoved) {
@@ -1308,37 +1314,46 @@
           forceReprocessAll();
         }
         return;
-      } else {
+      }
 
-        // 添加屏蔽
-        let newRule = '';
+      // 添加规则
+      let newRule = '';
+      const isIP = /^(\d{1,3}\.){3}\d{1,3}$/.test(domain);
+
+      if (isIP) {
+        newRule = `*://${domain}`;
+      } else {
+        const baseDomain = domain.startsWith('www.') ? domain.substring(4) : domain;
         if (currentConfig.blockDomain) {
-          let baseDomain = domain.startsWith('www.') ? domain.substring(4) : domain;
-          newRule = baseDomain + '/*';
+          newRule = `*://*.${baseDomain}/*`;
         } else {
-          newRule = domain + '/*';
+          newRule = `*://${domain}/*`;
         }
-        if (currentConfig.blockConfirm) {
-          if (!confirm(t('confirmBlock', {
-              rule: newRule
-            }))) return;
+      }
+
+      // 二次确认
+      if (currentConfig.blockConfirm) {
+        if (!confirm(t('confirmBlock', {
+            rule: newRule
+          }))) return;
+      }
+
+      // 避免重复
+      if (!currentConfig.rules.includes(newRule)) {
+        currentConfig.rules.push(newRule);
+        GM_setValue(CONFIG_KEY, currentConfig);
+        GM_setValue(LOCAL_LAST_MODIFIED_KEY, Date.now());
+        const textarea = document.getElementById('searchfilter-rules');
+        if (textarea) {
+          textarea.value = currentConfig.rules.join('\n');
+          updateLineNumbers();
         }
-        if (!currentConfig.rules.includes(newRule)) {
-          currentConfig.rules.push(newRule);
-          GM_setValue(CONFIG_KEY, currentConfig);
-          GM_setValue(LOCAL_LAST_MODIFIED_KEY, Date.now());
-          const textarea = document.getElementById('searchfilter-rules');
-          if (textarea) {
-            textarea.value = currentConfig.rules.join('\n');
-            updateLineNumbers();
-          }
-          forceReprocessAll();
-        } else {
-          result.style.display = 'none';
-          result.setAttribute('data-is-blocked', 'true');
-          const totalBlocked = document.querySelectorAll('[data-is-blocked="true"]').length;
-          updateStatus(totalBlocked);
-        }
+        forceReprocessAll();
+      } else {
+        result.style.display = 'none';
+        result.setAttribute('data-is-blocked', 'true');
+        const totalBlocked = document.querySelectorAll('[data-is-blocked="true"]').length;
+        updateStatus(totalBlocked);
       }
     };
     result.appendChild(btn);
@@ -1846,17 +1861,18 @@
     const rulesText = textarea ? textarea.value : currentConfig.rules.join('\n');
     const rawLines = rulesText.split('\n');
     const localRules = filterValidRuleLines(rawLines);
+    const activeRules = localRules.filter(rule => !rule.startsWith('#'));
 
     // 静态语法错误检查
     const ruleErrors = {};
-    localRules.forEach(rule => {
+    activeRules.forEach(rule => {
       if (!cachedValidateRule(rule)) {
         ruleErrors[rule] = ['Invalid syntax'];
       }
     });
 
     // 白名单规则收集
-    const whitelistRules = localRules.filter(rule => rule.startsWith('@')).map(rule => rule.substring(1).trim());
+    const whitelistRules = activeRules.filter(rule => rule.startsWith('@')).map(rule => rule.substring(1).trim());
 
     // 遍历已处理结果
     const engine = getSearchEngine();
