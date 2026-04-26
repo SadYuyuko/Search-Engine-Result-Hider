@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.4.1
+// @version      6.4.2
 // @description        支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:zh-CN  支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports regular expressions.
@@ -103,7 +103,7 @@
       panelTitle: '订阅管理',
       addSubscription: '➕ 添加订阅',
       saveSub: '保存',
-      importSub: '导入',
+      importSub: '导入'，
       cancel: '取消',
       webdavTitle: 'WebDAV 同步设置',
       webdavUrl: 'Webdav地址',
@@ -1601,6 +1601,10 @@
       let startX, startY, initialLeft, initialTop;
       let dragStartTime = 0;
 
+      // 长按定时器
+      let longPressTimer = null;
+      let hasLongPressed = false;
+
       status.addEventListener('mousedown', startDrag);
       status.addEventListener('touchstart', startDrag, {
         passive: false
@@ -1612,8 +1616,13 @@
           e.stopPropagation();
         }
         if (e.type === 'mousedown' && e.button !== 0) return;
+
         isDragging = false;
+        hasLongPressed = false;
         dragStartTime = Date.now();
+
+        if (longPressTimer) clearTimeout(longPressTimer);
+
         const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
         const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
         startX = clientX;
@@ -1633,14 +1642,36 @@
           passive: false
         });
         document.addEventListener('touchend', endDrag);
+
+        // 判断长按触发
+        if (currentConfig.bubbleAction === 'toggleHidden') {
+          longPressTimer = setTimeout(() => {
+            if (!isDragging) {
+              hasLongPressed = true;
+              status.style.transform = 'scale(1.15)';
+              setTimeout(() => {
+                status.style.transform = 'scale(1)';
+              }, 200);
+
+              showConfigPanel();
+            }
+          }, 600);
+        }
       }
 
       function onDrag(e) {
+        if (hasLongPressed) return;
+
         const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
         const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
         const dx = clientX - startX;
         const dy = clientY - startY;
-        if (!isDragging && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) isDragging = true;
+
+        if (!isDragging && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+          isDragging = true;
+          if (longPressTimer) clearTimeout(longPressTimer);
+        }
+
         if (isDragging) {
           if (e.type === 'touchmove') e.preventDefault();
           let newLeft = initialLeft + dx;
@@ -1653,6 +1684,8 @@
       }
 
       function endDrag(e) {
+        if (longPressTimer) clearTimeout(longPressTimer);
+
         if (e.type === 'touchend') e.preventDefault();
         document.removeEventListener('mousemove', onDrag);
         document.removeEventListener('mouseup', endDrag);
@@ -1692,7 +1725,8 @@
             status.style.bottom = 'auto';
           }
 
-          if (Date.now() - dragStartTime < 300) {
+          // 判断短按点击
+          if (!hasLongPressed && Date.now() - dragStartTime < 300) {
             if (currentConfig.bubbleAction === 'openPanel') {
               setTimeout(() => {
                 showConfigPanel();
@@ -2153,7 +2187,7 @@
       behavior: 'smooth'
     });
 
-        panel.querySelectorAll('.option-button').forEach(button => {
+    panel.querySelectorAll('.option-button').forEach(button => {
       button.addEventListener('click', function() {
         const name = this.dataset.name;
         const value = this.dataset.value;
