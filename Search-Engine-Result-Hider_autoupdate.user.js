@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.4.0
+// @version      6.4.1
 // @description        支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:zh-CN  支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports regular expressions.
@@ -1560,21 +1560,23 @@
   // 悬浮球内容
   function updateBubbleContent(statusBtn, blocked) {
     const isLeft = currentConfig.bubbleState ? currentConfig.bubbleState.isLeftHalf : false;
+    const isToggleMode = currentConfig.bubbleAction === 'toggleHidden';
 
-    if (currentConfig.bubbleAction === 'toggleHidden') {
-      statusBtn.innerHTML = '⭕';
+    const icon = isToggleMode ? '⭕' : '🚫';
+
+    if (currentConfig.showCount) {
+      if (isLeft) {
+        statusBtn.innerHTML = `${icon} <span class="bubble-number">${blocked}</span>`;
+      } else {
+        statusBtn.innerHTML = `<span class="bubble-number">${blocked}</span> ${icon}`;
+      }
+    } else {
+      statusBtn.innerHTML = icon;
+    }
+
+    if (isToggleMode) {
       statusBtn.title = showHiddenResults ? t('bubbleTitleHide') : t('bubbleTitleShow');
     } else {
-      if (currentConfig.showCount) {
-        const icon = '🚫';
-        if (isLeft) {
-          statusBtn.innerHTML = `${icon} <span class="bubble-number">${blocked}</span>`;
-        } else {
-          statusBtn.innerHTML = `<span class="bubble-number">${blocked}</span> ${icon}`;
-        }
-      } else {
-        statusBtn.innerHTML = '🚫';
-      }
       statusBtn.title = t('bubbleTitlePanel');
     }
 
@@ -2119,6 +2121,10 @@
         panel.remove();
         document.removeEventListener('click', window._panelCloseHandler);
         window._panelCloseHandler = null;
+
+        currentConfig = GM_getValue(CONFIG_KEY, currentConfig);
+        const statusBtn = document.getElementById('searchfilter-status');
+        if (statusBtn) applyBubbleSize(statusBtn);
       }, {
         once: true
       });
@@ -2147,13 +2153,18 @@
       behavior: 'smooth'
     });
 
-    panel.querySelectorAll('.option-button').forEach(button => {
+        panel.querySelectorAll('.option-button').forEach(button => {
       button.addEventListener('click', function() {
         const name = this.dataset.name;
         const value = this.dataset.value;
         currentConfig[name] = value;
         const buttons = panel.querySelectorAll(`[data-name="${name}"]`);
         buttons.forEach(btn => btn.classList.toggle('active', btn.dataset.value === value));
+
+        if (name === 'bubbleSize') {
+          const statusBtn = document.getElementById('searchfilter-status');
+          if (statusBtn) applyBubbleSize(statusBtn);
+        }
       });
     });
 
