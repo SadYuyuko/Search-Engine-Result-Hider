@@ -18,7 +18,7 @@ Supports Bing, Google, and DuckDuckGo, with potential support for more search en
   ┣ Toggle floating bubble visibility  
   ┣ Language switching  
   ┣ Toggle panel centering: centered by default; when disabled, the panel appears in one of four corners based on the floating bubble's position  
-  ┗ Toggle floating bubble function: default click opens the panel; when toggled, click toggles visibility of blocked results, and clicking the block button on a blocked result allows unblocking (effective only for non‑regex domain rules)  
+  ┗ Toggle floating bubble function: default click opens the panel; when toggled, click toggles visibility of blocked results. In this mode, long press the floating ball to open the configuration panel, and clicking the block button on a blocked result allows unblocking (effective only for non‑regex domain rules)  
 
 **About WebDAV:**  
 1. Synchronizes automatically every hour. Auto‑sync merges files based on timestamps and deduplicates. Manual upload/download overwrites files. Currently tested only with single‑device synchronization. In theory, it can sync the same configuration file as uBlacklist, but no guarantees are made regarding file overwrite logic errors. Always back up your files first.  
