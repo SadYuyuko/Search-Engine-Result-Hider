@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.4.3
+// @version      6.5.0
 // @description        支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:zh-CN  支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports regular expressions.
@@ -146,6 +146,7 @@
       statsSourceLocal: '本地规则',
       statsSourceSub: '订阅',
       statsWhitelist: '白名单规则',
+      statsCompound: '复合规则',
       statsNoMatch: '无匹配项',
       statsErrors: '发现 {count} 个规则错误：',
       statsRule: '规则：',
@@ -241,6 +242,7 @@
       statsSourceLocal: 'Local Rules',
       statsSourceSub: 'Subscription',
       statsWhitelist: 'Whitelist Rules',
+      statsCompound: 'Compound Rules',
       statsNoMatch: 'No matches',
       statsErrors: 'Found {count} rule errors:',
       statsRule: 'Rule:',
@@ -315,7 +317,8 @@
     texts: [],
     whitelistDomains: new Set(),
     whitelistUrlPatterns: [],
-    rulesList: []
+    rulesList: [],
+    conditionalRules: []
   };
 
   // 样式
@@ -505,7 +508,7 @@
                 color: #ffffff;
             }
         }
-    
+
         /* 快速滑动按钮 */
         .searchfilter-scroll-btn {
             position: absolute;
@@ -739,14 +742,160 @@
     return SELECTORS.containers[engine] || SELECTORS.containers.other;
   }
 
+  // 解析规则
+  function evaluateCondition(condStr, dynamicConditionsList) {
+    const currentEngine = getSearchEngine();
+    const currentSite = window.location.hostname;
+
+    if (/^(google|bing|duckduckgo)$/i.test(condStr.trim())) {
+      return currentEngine === condStr.trim().toLowerCase();
+    }
+
+    let siteMatch = condStr.match(/^site\s*[=:]\s*['"](.*?)['"]$/i);
+    if (siteMatch) {
+      return currentSite.endsWith(siteMatch[1].toLowerCase());
+    }
+    siteMatch = condStr.match(/^site\s*\(\s*['"](.*?)['"]\s*\)$/i);
+    if (siteMatch) {
+      return currentSite.endsWith(siteMatch[1].toLowerCase());
+    }
+
+    const titleMatch = condStr.match(/^title\s*\*\=\s*['"](.*?)['"]$/i);
+    if (titleMatch) {
+      dynamicConditionsList.push({
+        type: 'title',
+        op: '*=',
+        val: titleMatch[1]
+      });
+      return true;
+    }
+
+    return false;
+  }
+
+  function parseRuleWithConditions(ruleStr) {
+    let coreRule = ruleStr.trim();
+    let staticPass = true;
+    let dynamicConditions = [];
+
+    function extractBalancedParens(str, startIndex) {
+      if (str[startIndex] !== '(') return null;
+      let depth = 0;
+      for (let i = startIndex; i < str.length; i++) {
+        if (str[i] === '(') depth++;
+        else if (str[i] === ')') {
+          depth--;
+          if (depth === 0) {
+            return {
+              content: str.substring(startIndex + 1, i),
+              endIndex: i + 1
+            };
+          }
+        }
+      }
+      return null;
+    }
+
+    // 处理前置@if
+    const prefixIfIdx = coreRule.search(/@if\s*\(/i);
+    if (prefixIfIdx !== -1) {
+      const parenResult = extractBalancedParens(coreRule, coreRule.indexOf('(', prefixIfIdx));
+      if (parenResult) {
+        const cond = parenResult.content.trim();
+        const afterParen = coreRule.substring(parenResult.endIndex).trim();
+        const braceMatch = afterParen.match(/^\{\s*([\s\S]*?)\s*\}$/);
+        if (braceMatch) {
+          coreRule = braceMatch[1].trim();
+          if (!evaluateCondition(cond, dynamicConditions)) staticPass = false;
+        }
+      }
+    }
+
+    // 处理所有@if
+    const ifRegex = /@if\s*\(/gi;
+    let match;
+    const ranges = [];
+
+    while ((match = ifRegex.exec(coreRule)) !== null) {
+      const condStartIdx = match.index + match[0].length - 1;
+
+      const parenResult = extractBalancedParens(coreRule, condStartIdx);
+      if (!parenResult) continue;
+
+      const cond = parenResult.content.trim();
+
+      ranges.push({
+        start: match.index,
+        end: parenResult.endIndex
+      });
+
+      if (!evaluateCondition(cond, dynamicConditions)) {
+        staticPass = false;
+      }
+    }
+
+    ranges.sort((a, b) => b.start - a.start);
+
+    for (const r of ranges) {
+      coreRule = coreRule.slice(0, r.start) + coreRule.slice(r.end);
+    }
+
+    coreRule = coreRule.replace(/\s{2,}/g, ' ').trim();
+
+    return {
+      coreRule,
+      staticPass,
+      dynamicConditions
+    };
+  }
+
   // 语法检查
   function validateRule(rule) {
     if (!rule || rule.trim() === '') return true;
 
+    let ruleToCheck = rule.trim();
+
+    function extractBalancedParens(str, startIndex) {
+      if (str[startIndex] !== '(') return null;
+      let depth = 0;
+      for (let i = startIndex; i < str.length; i++) {
+        if (str[i] === '(') depth++;
+        else if (str[i] === ')') {
+          depth--;
+          if (depth === 0) {
+            return {
+              content: str.substring(startIndex + 1, i),
+              endIndex: i + 1
+            };
+          }
+        }
+      }
+      return null;
+    }
+
+    const prefixIfIdx = ruleToCheck.search(/@if\s*\(/i);
+    if (prefixIfIdx !== -1) {
+      const parenResult = extractBalancedParens(ruleToCheck, ruleToCheck.indexOf('(', prefixIfIdx));
+      if (parenResult) {
+        const afterParen = ruleToCheck.substring(parenResult.endIndex).trim();
+        const braceMatch = afterParen.match(/^\{\s*([\s\S]*?)\s*\}$/);
+        if (braceMatch) {
+          ruleToCheck = braceMatch[1].trim();
+        }
+      }
+    } else {
+      const lastPostfixIdx = ruleToCheck.lastIndexOf('@if(');
+      if (lastPostfixIdx !== -1) {
+        const parenResult = extractBalancedParens(ruleToCheck, lastPostfixIdx + 3); // '(' 索引
+        if (parenResult) {
+          ruleToCheck = ruleToCheck.substring(0, lastPostfixIdx).trim();
+        }
+      }
+    }
+
     // 白名单规则检查
-    let ruleToCheck = rule;
-    if (rule.startsWith('@')) {
-      ruleToCheck = rule.substring(1).trim();
+    if (ruleToCheck.startsWith('@')) {
+      ruleToCheck = ruleToCheck.substring(1).trim();
       if (!ruleToCheck) return true;
     }
 
@@ -909,13 +1058,14 @@
       texts: [],
       whitelistDomains: new Set(),
       whitelistUrlPatterns: [],
-      rulesList: []
+      rulesList: [],
+      conditionalRules: []
     };
     const subscriptionRules = getAllSubscriptionRules();
     const allRules = currentConfig.rules.concat(subscriptionRules);
     const subscriptions = getSubscriptions();
 
-    // 获取规则来源标签
+    // 规则来源标签
     function getRuleSource(rule) {
       for (let idx = 0; idx < subscriptions.length; idx++) {
         const sub = subscriptions[idx];
@@ -931,13 +1081,19 @@
 
       const source = getRuleSource(rule);
 
+      const parsed = parseRuleWithConditions(rule);
+      if (!parsed.staticPass) return;
+
+      const coreRule = parsed.coreRule;
+      const hasDynamic = parsed.dynamicConditions.length > 0;
+
       // 白名单简单处理
-      if (rule.startsWith('@')) {
-        const simpleDomain = extractSimpleWhitelistDomain(rule);
+      if (coreRule.startsWith('@')) {
+        const simpleDomain = extractSimpleWhitelistDomain(coreRule);
         if (simpleDomain) {
           compiledRules.whitelistDomains.add(simpleDomain);
         } else {
-          const whitelistRule = rule.substring(1).trim();
+          const whitelistRule = coreRule.substring(1).trim();
           if (!whitelistRule) return;
           try {
             const {
@@ -952,22 +1108,27 @@
         return;
       }
 
+      let ruleObj = {
+        originalRule: rule,
+        source: source,
+        conditions: parsed.dynamicConditions
+      };
+
       // 处理域名规则
-      if (!rule.startsWith('/') && !rule.startsWith('text/') && !rule.startsWith('title/')) {
-        let domainMatch = rule.match(/^\*:\/\/\*\.([^\/]+)\/\*$/);
+      if (!coreRule.startsWith('/') && !coreRule.startsWith('text/') && !coreRule.startsWith('title/')) {
+        let domainMatch = coreRule.match(/^\*:\/\/\*\.([^\/]+)\/\*$/);
         if (!domainMatch) {
-          domainMatch = rule.match(/^\*:\/\/([^\/]+)\/\*$/);
+          domainMatch = coreRule.match(/^\*:\/\/([^\/]+)\/\*$/);
         }
         if (domainMatch) {
           const domain = domainMatch[1].toLowerCase();
           if (!domain.includes('/')) {
-            compiledRules.domains.add(domain);
-            compiledRules.rulesList.push({
-              type: 'domain',
-              domain: domain,
-              originalRule: rule,
-              source: source
-            });
+            ruleObj.type = 'domain';
+            ruleObj.domain = domain;
+            if (!hasDynamic) compiledRules.domains.add(domain);
+            else compiledRules.conditionalRules.push(ruleObj);
+
+            compiledRules.rulesList.push(ruleObj);
             return;
           }
         }
@@ -975,46 +1136,40 @@
 
       // 预编译正则表达式
       try {
-        if (rule.startsWith('text/')) {
-          let virtualRule = rule.replace(/^text\//, 'title/');
+        if (coreRule.startsWith('text/')) {
+          let virtualRule = coreRule.replace(/^text\//, 'title/');
           let {
             pattern,
             flags
           } = ruleToRegex(virtualRule);
           const regex = new RegExp(pattern, flags);
-          compiledRules.texts.push(regex);
-          compiledRules.rulesList.push({
-            type: 'text',
-            regex: regex,
-            originalRule: rule,
-            source: source
-          });
-        } else if (rule.startsWith('title/')) {
+          ruleObj.type = 'text';
+          ruleObj.regex = regex;
+          if (!hasDynamic) compiledRules.texts.push(regex);
+          else compiledRules.conditionalRules.push(ruleObj);
+          compiledRules.rulesList.push(ruleObj);
+        } else if (coreRule.startsWith('title/')) {
           let {
             pattern,
             flags
-          } = ruleToRegex(rule);
+          } = ruleToRegex(coreRule);
           const regex = new RegExp(pattern, flags);
-          compiledRules.titles.push(regex);
-          compiledRules.rulesList.push({
-            type: 'title',
-            regex: regex,
-            originalRule: rule,
-            source: source
-          });
+          ruleObj.type = 'title';
+          ruleObj.regex = regex;
+          if (!hasDynamic) compiledRules.titles.push(regex);
+          else compiledRules.conditionalRules.push(ruleObj);
+          compiledRules.rulesList.push(ruleObj);
         } else {
           let {
             pattern,
             flags
-          } = ruleToRegex(rule);
+          } = ruleToRegex(coreRule);
           const regex = new RegExp(pattern, flags);
-          compiledRules.urls.push(regex);
-          compiledRules.rulesList.push({
-            type: rule.startsWith('/') ? 'regex' : 'url',
-            regex: regex,
-            originalRule: rule,
-            source: source
-          });
+          ruleObj.type = coreRule.startsWith('/') ? 'regex' : 'url';
+          ruleObj.regex = regex;
+          if (!hasDynamic) compiledRules.urls.push(regex);
+          else compiledRules.conditionalRules.push(ruleObj);
+          compiledRules.rulesList.push(ruleObj);
         }
       } catch (e) {
         if (currentConfig.debug) console.warn('规则预编译失败:', rule, e);
@@ -1062,6 +1217,42 @@
       }
     }
 
+    for (let i = 0; i < compiledRules.conditionalRules.length; i++) {
+      const ruleObj = compiledRules.conditionalRules[i];
+      let conditionsMet = true;
+      for (let j = 0; j < ruleObj.conditions.length; j++) {
+        const cond = ruleObj.conditions[j];
+        if (cond.type === 'title' && cond.op === '*=') {
+          if (!title || !title.includes(cond.val)) {
+            conditionsMet = false;
+            break;
+          }
+        }
+      }
+      if (!conditionsMet) continue;
+
+      if (ruleObj.type === 'domain') {
+        let d2 = domain.toLowerCase();
+        let matched = false;
+        while (d2) {
+          if (d2 === ruleObj.domain) {
+            matched = true;
+            break;
+          }
+          let dotIndex = d2.indexOf('.');
+          if (dotIndex === -1) break;
+          d2 = d2.substring(dotIndex + 1);
+        }
+        if (matched) return true;
+      } else if (ruleObj.type === 'url' || ruleObj.type === 'regex') {
+        if (ruleObj.regex.test(url) || ruleObj.regex.test(domain)) return true;
+      } else if (ruleObj.type === 'title' && title) {
+        if (ruleObj.regex.test(title)) return true;
+      } else if (ruleObj.type === 'text' && snippet) {
+        if (ruleObj.regex.test(snippet)) return true;
+      }
+    }
+
     return false;
   }
 
@@ -1069,6 +1260,20 @@
   function findFirstMatchingRule(url, domain, title, snippet) {
     for (const item of compiledRules.rulesList) {
       try {
+        if (item.conditions && item.conditions.length > 0) {
+          let conditionsMet = true;
+          for (let j = 0; j < item.conditions.length; j++) {
+            const cond = item.conditions[j];
+            if (cond.type === 'title' && cond.op === '*=') {
+              if (!title || !title.includes(cond.val)) {
+                conditionsMet = false;
+                break;
+              }
+            }
+          }
+          if (!conditionsMet) continue;
+        }
+
         if (item.type === 'domain') {
           let d = domain.toLowerCase();
           while (d) {
@@ -1331,7 +1536,6 @@
         }
       }
 
-      // 二次确认
       if (currentConfig.blockConfirm) {
         if (!confirm(t('confirmBlock', {
             rule: newRule
@@ -1423,7 +1627,6 @@
       result.style.display = showHiddenResults ? '' : 'none';
       result.setAttribute('data-blocker-processed', 'true');
       result.setAttribute('data-is-blocked', 'true');
-      // 查找匹配规则
       const match = findFirstMatchingRule(url, domain, title, snippet);
       if (match) {
         result.dataset.matchedRule = match.rule;
@@ -1868,13 +2071,12 @@
     scheduleLineNumbersUpdate();
   }
 
-  // 隐藏统计面板
+  // 统计面板
   function hideStatsPanel() {
     const statsPanel = document.getElementById('searchfilter-stats-panel');
     if (statsPanel) statsPanel.style.display = 'none';
   }
 
-  // 切换显示隐藏
   function toggleStatsPanel() {
     const statsPanel = document.getElementById('searchfilter-stats-panel');
     if (!statsPanel) return;
@@ -1888,7 +2090,6 @@
     statsPanel.style.display = 'flex';
   }
 
-  // 面板内容
   function updateStatsContent() {
     const statsContent = document.getElementById('searchfilter-stats-content');
     if (!statsContent) return;
@@ -1899,7 +2100,7 @@
     const localRules = filterValidRuleLines(rawLines);
     const activeRules = localRules.filter(rule => !rule.startsWith('#'));
 
-    // 静态语法错误检查
+    // 静态语法检查
     const ruleErrors = {};
     activeRules.forEach(rule => {
       if (!cachedValidateRule(rule)) {
@@ -1907,10 +2108,13 @@
       }
     });
 
-    // 白名单规则收集
-    const whitelistRules = activeRules.filter(rule => rule.startsWith('@')).map(rule => rule.substring(1).trim());
+    // 规则统计
+    const whitelistRules = activeRules
+      .filter(rule => rule.startsWith('@') && !rule.toLowerCase().startsWith('@if'))
+      .map(rule => rule.substring(1).trim());
 
-    // 遍历已处理结果
+    const compoundRules = activeRules.filter(rule => rule.toLowerCase().startsWith('@if'));
+
     const engine = getSearchEngine();
     const selector = getContainerSelector(engine);
     const results = document.querySelectorAll(selector);
@@ -1933,7 +2137,7 @@
       ruleMap.set(matchedRule, (ruleMap.get(matchedRule) || 0) + 1);
     });
 
-    // 错误信息展示
+    // 错误信息
     const ruleErrorsArray = Object.entries(ruleErrors).map(([rule, errors]) => ({
       rule,
       errors
@@ -1948,7 +2152,7 @@
       resultHTML += '</div>';
     }
 
-    // 按来源显示统计
+    // 匹配规则统计
     const sourceOrder = [`${t('subscription')}1`, `${t('subscription')}2`, `${t('subscription')}3`, t('localRule')];
     let hasMatches = false;
 
@@ -1967,9 +2171,15 @@
 
       sortedRules.forEach(([rule, count]) => {
         let ruleType = t('urlRule');
-        if (rule.startsWith('title/')) ruleType = t('titleRule');
-        else if (rule.startsWith('text/')) ruleType = t('textRule');
-        else if (rule.startsWith('/')) ruleType = t('regexRule');
+        if (rule.trim().toLowerCase().startsWith('@if')) {
+          ruleType = t('statsCompound');
+        } else if (rule.startsWith('title/')) {
+          ruleType = t('titleRule');
+        } else if (rule.startsWith('text/')) {
+          ruleType = t('textRule');
+        } else if (rule.startsWith('/')) {
+          ruleType = t('regexRule');
+        }
 
         resultHTML += `<div style="margin: 6px 0; padding: 6px 8px; background: #f7fafc; border-radius: 4px;">`;
         resultHTML += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">`;
@@ -1987,9 +2197,9 @@
       resultHTML = `<div style="color: #38a169; padding: 10px; border-radius: 4px; font-size: 12px; background: #f0fff4; text-align: center;">${t('noMatch')}</div>`;
     }
 
-    // 白名单列表展示
+    // 白名单列表
     if (whitelistRules.length > 0) {
-      resultHTML += `<div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #e2e8f0;"><strong style="color: #2d3748;">🛡️ ${t('whitelistRules')} (${whitelistRules.length})</strong><br>`;
+      resultHTML += `<div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #e2e8f0;"><strong style="color: #2d3748;">${t('whitelistRules')} (${whitelistRules.length})</strong><br>`;
       whitelistRules.forEach(rule => {
         resultHTML += `<div style="font-size: 11px; color: #4a5568; word-break: break-all; font-family: 'Consolas', monospace;">@${rule}</div>`;
       });
@@ -2130,7 +2340,6 @@
                 <button id="searchfilter-close" class="searchfilter-button searchfilter-button-danger action-button" style="flex: 1;">${t('close')}</button>
             </div>
             
-            <!-- 统计面板 -->
             <div id="searchfilter-stats-panel">
                 <div id="searchfilter-stats-content"></div>
             </div>
