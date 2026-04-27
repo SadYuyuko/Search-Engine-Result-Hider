@@ -37,12 +37,14 @@
 `*://*.example.com/*` – 匹配`example.com`及其所有子域名  
 `*://*.example.com/path/*` – 匹配`example.com`特定路径  
 `*://*.example.*` – 匹配`example.com`所有顶级域名  
+  
 **标题匹配：**  
 `title/.*示例.*/` – 匹配标题包含`示例`的结果  
 `title/^示例.*/` – 匹配标题以`示例`开头的搜索结果  
 `title/.*示例(A|B).*/` – 匹配标题包含`示例A`和`示例B`的结果  
 `title/.*示例(A|B).*/i` – 加i忽略大小写，匹配除上条结果外还包含`示例a`和`示例b`的结果  
 `title/.*示例AbC.*/i` – 加i忽略大小写，匹配除`示例AbC`外还包含`示例ABC`等结果  
+  
 **正文匹配：**  
 `text/.*示例.*/` – 匹配结果词条的网页描述内容中包含`示例`的搜索结果，此规则不会匹配标题  
 `text/.*示例abc.*/i` – 同上，加i忽略大小写  
@@ -52,6 +54,7 @@
 `@*://*.example.com/*` – 放行`example.com`及其所有子域名  
 `@*://example.com/abc/*` – 只放行`example.com`特定路径  
 `@*://*.example.com/abc/*` – 只放行`example.com`子域名特定路径，屏蔽其他路径和主站  
+  
 **复合规则：**  
 `*://*.example.com/* @if(title *= "示例")` - 屏蔽`example.com`的搜索结果中标题含有`示例`的结果  
 `@if (Google) { *://*.example.com/* }` - 仅在Google中屏蔽该`example.com`  
