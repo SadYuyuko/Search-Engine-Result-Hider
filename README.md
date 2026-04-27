@@ -28,7 +28,7 @@
 **注意：**  
 1.导出到TXT依赖blob处理，请确保浏览器blob功能正常  
 2.订阅每天同步一次，只支持.txt文件远程链接且最多支持3条订阅，逻辑为在本地规则后应用。由于脚本性能限制，规则总数建议不要超过3w条避免手机爆炸🤳💥  
-3.由于脚本扩展有限，暂不支持复杂的`@+if`白名单判断和`##`uBlock DOM语法规则，通过订阅导入会自动清除
+3.由于脚本扩展有限，暂不支持`##`uBlock DOM语法规则，通过订阅导入会自动清除
     
 规则主要倾向于标题和正则匹配。方便起见，在脚本中添加规则时可不使用`*://*.`前缀直接写域名，但对于需要同时在ublacklist使用的规则必须加上。  
 ### 以下为基础规则：  
@@ -52,6 +52,11 @@
 `@*://*.example.com/*` – 放行`example.com`及其所有子域名  
 `@*://example.com/abc/*` – 只放行`example.com`特定路径  
 `@*://*.example.com/abc/*` – 只放行`example.com`子域名特定路径，屏蔽其他路径和主站  
+**复合规则：**  
+`*://*.example.com/* @if(title *= "示例")` - 屏蔽`example.com`的搜索结果中标题含有`示例`的结果  
+`@if (Google) { *://*.example.com/* }` - 仅在Google中屏蔽该`example.com`  
+`@if (site = "google.com.hk") { *://*.example.com/* }` - 仅在Google HK中屏蔽`example.com`  
+`@if(Google) { *://*.example.com/* @if(title *= "示例") @if(site = "google.com") }` - 仅在Google中，屏蔽`example.com`的搜索结果中标题含有`示例`的结果  
     
 **效果截图：**  
   
