@@ -59,8 +59,8 @@ Rules tend to favor titles and regular matches. For convenience, you can add rul
 `@*://*.example.com/abc/*` – allow only the specific path `/abc` on subdomains of `example.com`; block other paths and the main site  
   
 **Composite rules:**  
-`*://.example.com/* @if(title = "keyword")` - Block results from example.com whose title contains the keyword in search results  
-`@if (Google) { *://.example.com/* }` - Block this example.com only on Google  
+`*://*.example.com/* @if(title *= "keyword")` - Block results from example.com whose title contains the keyword in search results  
+`@if (Google) { *://*.example.com/* }` - Block this example.com only on Google  
 `@if (site = "google.com.hk") { *://*.example.com/* }` - Block example.com only on Google HK  
 `@if(Google) { *://*.example.com/* @if(title *= "keyword") @if(site = "google.com") }` - Block results from example.com whose title contains the keyword, only on Google  
   
