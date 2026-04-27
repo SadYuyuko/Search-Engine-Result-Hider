@@ -29,8 +29,8 @@ Supports Bing, Google, and DuckDuckGo, with potential support for more search en
 **Notes:**  
 1. Exporting to TXT relies on blob functionality. Please ensure your browser supports blob operations.  
 2. Subscriptions update once per day. Only remote .txt file links are supported, with a maximum of 3 subscriptions. Subscription rules are applied after local rules. Due to script performance constraints, it is recommended to keep the total rule count under 30,000 to avoid performance issues on mobile devices.  
-3. Due to script extension limitations, complex `@+if` whitelist conditions and `##` uBlock DOM syntax rules are not supported. Such rules will be automatically removed when imported via subscription.  
-
+3. Due to script extension limitations, `##` uBlock DOM syntax rules are not supported. Such rules will be automatically removed when imported via subscription.  
+  
 Rules tend to favor titles and regular matches. For convenience, you can add rules in script without using `*://*.` Prefix directly write domain name, but for the rules that need to be used in the ublacklist, you need to add it.    
 
 ### Basic Rule Syntax:  
@@ -56,8 +56,14 @@ Rules tend to favor titles and regular matches. For convenience, you can add rul
 `@*://example.com/*` – allow the main site `example.com`  
 `@*://*.example.com/*` – allow `example.com` and all its subdomains  
 `@*://example.com/abc/*` – allow only the specific path `/abc` on `example.com`  
-`@*://*.example.com/abc/*` – allow only the specific path `/abc` on subdomains of `example.com`; block other paths and the main site
-
+`@*://*.example.com/abc/*` – allow only the specific path `/abc` on subdomains of `example.com`; block other paths and the main site  
+  
+**Composite rules:**  
+`*://.example.com/* @if(title = "keyword")` - Block results from example.com whose title contains the keyword in search results  
+`@if (Google) { *://.example.com/* }` - Block this example.com only on Google  
+`@if (site = "google.com.hk") { *://*.example.com/* }` - Block example.com only on Google HK  
+`@if(Google) { *://*.example.com/* @if(title *= "keyword") @if(site = "google.com") }` - Block results from example.com whose title contains the keyword, only on Google  
+  
 **Screenshots：**  
 
 <img width="271" height="250" alt="12" src="https://github.com/user-attachments/assets/50544492-2a0d-4a25-9edf-58e05f0c323c" />  
