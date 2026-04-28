@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.5.0
+// @version      6.5.1
 // @description        支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:zh-CN  支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports regular expressions.
@@ -2113,7 +2113,7 @@
       .filter(rule => rule.startsWith('@') && !rule.toLowerCase().startsWith('@if'))
       .map(rule => rule.substring(1).trim());
 
-    const compoundRules = activeRules.filter(rule => rule.toLowerCase().startsWith('@if'));
+    const compoundRules = activeRules.filter(rule => /@if\s*\(/i.test(rule));
 
     const engine = getSearchEngine();
     const selector = getContainerSelector(engine);
@@ -2171,7 +2171,7 @@
 
       sortedRules.forEach(([rule, count]) => {
         let ruleType = t('urlRule');
-        if (rule.trim().toLowerCase().startsWith('@if')) {
+        if (/@if\s*\(/i.test(rule)) {
           ruleType = t('statsCompound');
         } else if (rule.startsWith('title/')) {
           ruleType = t('titleRule');
@@ -2278,7 +2278,7 @@
     }];
 
     panel.innerHTML = `
-            <div style="display: flex; gap: 8px; margin-top: 10px; margin-bottom: 8px;">
+            <div style="display: flex; gap: 8px; margin-top: 0px; margin-bottom: 8px;">
                 <label style="display: flex; align-items: center; flex: 1; justify-content: flex-start; white-space: nowrap;">
                     <input type="checkbox" id="searchfilter-enabled" ${currentConfig.enabled ? 'checked' : ''} style="margin-right: 4px;">
                     <span>${t('enableBlock')}</span>
@@ -2313,7 +2313,7 @@
                 ${createOptionButtons('bubbleSize', currentConfig.bubbleSize, sizeOptions)}
             </div>
             
-            <div style="margin-bottom: 8px;">
+            <div style="margin-bottom: 0px;">
                 <div class="compact-row">
                     <span style="font-size: 12px; color: #4a5568;">${t('blockRules')}</span>
                     <div style="display: flex; gap: 4px;">
@@ -2548,8 +2548,8 @@
             <h3 style="margin:0 0 16px;font-size:16px;color:#2d3748;">${t('panelTitle')}</h3>
             <div id="subscription-rows-container">${rowsHtml}</div>
             <div class="add-subscription-btn"><button id="add-subscription" class="searchfilter-button searchfilter-button-secondary" style="width:100%;" ${subscriptions.length >= 3 ? 'disabled' : ''}>${t('addSubscription')}</button></div>
-            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;"><button id="subscription-save" class="searchfilter-button searchfilter-button-primary" style="flex:1;">${t('saveSub')}</button><button id="subscription-import" class="searchfilter-button searchfilter-button-primary" style="flex:1;">${t('importSub')}</button><button id="subscription-cancel" class="searchfilter-button searchfilter-button-secondary" style="flex:1;">${t('cancel')}</button></div>
-            <div id="subscription-status" style="margin-top:2px;font-size:12px;color:#4a5568;min-height:12px;"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:0px;"><button id="subscription-save" class="searchfilter-button searchfilter-button-primary" style="flex:1;">${t('saveSub')}</button><button id="subscription-import" class="searchfilter-button searchfilter-button-primary" style="flex:1;">${t('importSub')}</button><button id="subscription-cancel" class="searchfilter-button searchfilter-button-secondary" style="flex:1;">${t('cancel')}</button></div>
+            <div id="subscription-status" style="margin-top:0px;font-size:12px;color:#4a5568;min-height:0px;"></div>
         `;
 
     document.body.appendChild(panel);
@@ -2696,13 +2696,13 @@
     `;
 
     panel.innerHTML = `
-            <h3 style="margin:0 0 16px;font-size:16px;color:#2d3748;">${t('webdavTitle')}</h3>
-            <div style="margin-bottom:12px;"><label>${t('webdavUrl')}</label><input id="webdav-url" type="text" placeholder="https://example.com/remote.php/dav/files/user/" value="${webdavConfig.url}"></div>
-            <div style="margin-bottom:12px;"><label>${t('webdavUser')}</label><input id="webdav-username" type="text" value="${webdavConfig.username}"></div>
-            <div style="margin-bottom:12px;"><label>${t('webdavPass')}</label><input id="webdav-password" type="password" value="${webdavConfig.password}"></div>
-            <div style="margin-bottom:20px;"><label>${t('filename')}</label><input id="webdav-filename" type="text" placeholder="rules.txt" value="${webdavConfig.filename}"></div>
+            <h3 style="margin:0 0 10px;font-size:16px;color:#2d3748;">${t('webdavTitle')}</h3>
+            <div style="margin-bottom:5px;"><label>${t('webdavUrl')}</label><input id="webdav-url" type="text" placeholder="https://example.com/remote.php/dav/files/user/" value="${webdavConfig.url}"></div>
+            <div style="margin-bottom:5px;"><label>${t('webdavUser')}</label><input id="webdav-username" type="text" value="${webdavConfig.username}"></div>
+            <div style="margin-bottom:5px;"><label>${t('webdavPass')}</label><input id="webdav-password" type="password" value="${webdavConfig.password}"></div>
+            <div style="margin-bottom:5px;"><label>${t('filename')}</label><input id="webdav-filename" type="text" placeholder="rules.txt" value="${webdavConfig.filename}"></div>
             <div style="display:flex;gap:8px;justify-content:flex-end;"><button id="webdav-upload" class="searchfilter-button searchfilter-button-success" style="flex:1;">${t('upload')}</button><button id="webdav-download" class="searchfilter-button searchfilter-button-primary" style="flex:1;">${t('download')}</button><button id="webdav-cancel" class="searchfilter-button searchfilter-button-secondary" style="flex:1;">${t('cancel')}</button></div>
-            <div id="webdav-status" style="margin-top:2px;font-size:12px;color:#4a5568;min-height:12px;"></div>
+            <div id="webdav-status" style="margin-top:0px;font-size:12px;color:#4a5568;min-height:0px;"></div>
         `;
 
     document.body.appendChild(panel);
