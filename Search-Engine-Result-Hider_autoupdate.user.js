@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.5.1
+// @version      6.5.2
 // @description        支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:zh-CN  支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports regular expressions.
@@ -26,6 +26,7 @@
 // @grant        GM_addStyle
 // @grant        GM_registerMenuCommand
 // @grant        GM_xmlhttpRequest
+// @connect      dav.jianguoyun.com
 // @run-at       document-idle
 // @downloadURL  https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js
 // @updateURL    https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js
