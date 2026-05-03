@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.5.2
+// @version      6.5.3
 // @description        支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:zh-CN  支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports regular expressions.
@@ -16,17 +16,17 @@
 // @match        *://*.duckduckgo.com/*
 // @match        *://duckduckgo.com/*
 // @match        *://*.google.com/*
+// @match        *://*.google.co.jp/*
 // @match        *://*.google.com.hk/*
 // @match        *://*.google.com.tw/*
-// @match        *://*.google.co.jp/*
 // @match        *://*.google.com.sg/*
-// @include      /^https?:\/\/([\w-]+\.)?google\.[a-z.]{2,6}\/.*$/
+// @include       /^https?:\/\/([\w-]+\.)?google\.[a-z.]{2,6}\/.*$/
+// @connect      dav.jianguoyun.com
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_addStyle
 // @grant        GM_registerMenuCommand
 // @grant        GM_xmlhttpRequest
-// @connect      dav.jianguoyun.com
 // @run-at       document-idle
 // @downloadURL  https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js
 // @updateURL    https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js
@@ -542,23 +542,140 @@
         #searchform .searchfilter-quick-block,
         #top_nav .searchfilter-quick-block,
         #extabar .searchfilter-quick-block { display: none !important; }
-        
-        /* WebDAV面板 */
-        #searchfilter-webdav-panel input,
-        #searchfilter-subscription-panel input {
-            width: 100%;
-            padding: 6px;
-            border: 1px solid #e2e8f0;
-            border-radius: 4px;
-            box-sizing: border-box;
-            font-size: 13px;
+
+        /* 面板隔离 */
+        #searchfilter-webdav-panel,
+        #searchfilter-subscription-panel {
+            box-sizing: border-box !important;
+            background: #ffffff !important;
+            color: #2d3748 !important;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+            text-align: left !important;
+            line-height: 1.5 !important;
         }
+
+        #searchfilter-webdav-panel *,
+        #searchfilter-subscription-panel * {
+            box-sizing: border-box !important;
+        }
+
+        #searchfilter-webdav-panel h3,
+        #searchfilter-subscription-panel h3 {
+            margin: 0 0 12px 0 !important;
+            font-size: 16px !important;
+            color: inherit !important;
+            font-weight: 600 !important;
+            padding: 0 !important;
+            border: none !important;
+            background: transparent !important;
+            letter-spacing: normal !important;
+        }
+
+        #searchfilter-webdav-panel .webdav-row {
+            margin-bottom: 8px !important;
+            padding: 0 !important;
+            border: none !important;
+            background: transparent !important;
+            display: block !important;
+        }
+
         #searchfilter-webdav-panel label,
         #searchfilter-subscription-panel label {
-            display: block;
-            margin-bottom: 4px;
-            color: #4a5568;
-            font-size: 12px;
+            display: block !important;
+            margin: 0 0 4px 0 !important;
+            color: #4a5568 !important;
+            font-size: 12px !important;
+            font-weight: normal !important;
+            line-height: 1.2 !important;
+        }
+
+        #searchfilter-webdav-panel input[type="text"],
+        #searchfilter-webdav-panel input[type="password"],
+        #searchfilter-subscription-panel input[type="text"] {
+            width: 100% !important;
+            padding: 6px 8px !important;
+            margin: 0 !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 4px !important;
+            font-size: 13px !important;
+            background: #ffffff !important;
+            color: #2d3748 !important;
+            height: 30px !important;
+            line-height: normal !important;
+            box-shadow: none !important;
+            outline: none !important;
+            display: block !important;
+        }
+
+        #searchfilter-webdav-panel input:focus,
+        #searchfilter-subscription-panel input:focus {
+            border-color: #3182ce !important;
+        }
+
+        #searchfilter-webdav-panel .webdav-btn-group {
+            display: flex !important;
+            gap: 8px !important;
+            justify-content: flex-end !important;
+            margin-top: 12px !important;
+        }
+
+        #searchfilter-webdav-panel .searchfilter-button,
+        #searchfilter-subscription-panel .searchfilter-button {
+            height: 30px !important;
+            padding: 0 12px !important;
+            font-size: 13px !important;
+            margin: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        
+        #searchfilter-webdav-panel .searchfilter-button {
+            flex: 1 !important;
+        }
+
+        #webdav-status {
+            margin-top: 8px !important;
+            font-size: 12px !important;
+            min-height: 18px !important;
+            line-height: 1.2 !important;
+            word-break: break-all !important;
+        }
+
+        /* 深色模式 */
+        @media (prefers-color-scheme: dark) {
+            #searchfilter-webdav-panel,
+            #searchfilter-subscription-panel {
+                background: #171717 !important; 
+                color: #f3f4f6 !important; 
+                border-color: #374151 !important;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
+            }
+
+            #searchfilter-webdav-panel label,
+            #searchfilter-subscription-panel label {
+                color: #9ca3af !important; 
+            }
+
+            #searchfilter-webdav-panel input[type="text"],
+            #searchfilter-webdav-panel input[type="password"],
+            #searchfilter-subscription-panel input[type="text"] {
+                background: #374151 !important;
+                border-color: #4b5563 !important;
+                color: #f3f4f6 !important;
+            }
+
+            #searchfilter-webdav-panel input:focus,
+            #searchfilter-subscription-panel input:focus {
+                border-color: #60a5fa !important; 
+            }
+
+            #webdav-status {
+                color: #9ca3af !important;
+            }
         }
 
         /* 面板渐入渐出动画 */
@@ -580,14 +697,6 @@
         }
         #searchfilter-subscription-panel:not(.searchfilter-panel-fade) {
             transition: opacity 0.2s ease;
-        }
-
-        /* WebDAV面板按钮 */
-        #searchfilter-webdav-panel .searchfilter-button,
-        #searchfilter-subscription-panel .searchfilter-button {
-            height: 30px;
-            padding: 0 12px;
-            font-size: 13px;
         }
 
         /* 订阅布局 */
@@ -2697,13 +2806,17 @@
     `;
 
     panel.innerHTML = `
-            <h3 style="margin:0 0 10px;font-size:16px;color:#2d3748;">${t('webdavTitle')}</h3>
-            <div style="margin-bottom:5px;"><label>${t('webdavUrl')}</label><input id="webdav-url" type="text" placeholder="https://example.com/remote.php/dav/files/user/" value="${webdavConfig.url}"></div>
-            <div style="margin-bottom:5px;"><label>${t('webdavUser')}</label><input id="webdav-username" type="text" value="${webdavConfig.username}"></div>
-            <div style="margin-bottom:5px;"><label>${t('webdavPass')}</label><input id="webdav-password" type="password" value="${webdavConfig.password}"></div>
-            <div style="margin-bottom:5px;"><label>${t('filename')}</label><input id="webdav-filename" type="text" placeholder="rules.txt" value="${webdavConfig.filename}"></div>
-            <div style="display:flex;gap:8px;justify-content:flex-end;"><button id="webdav-upload" class="searchfilter-button searchfilter-button-success" style="flex:1;">${t('upload')}</button><button id="webdav-download" class="searchfilter-button searchfilter-button-primary" style="flex:1;">${t('download')}</button><button id="webdav-cancel" class="searchfilter-button searchfilter-button-secondary" style="flex:1;">${t('cancel')}</button></div>
-            <div id="webdav-status" style="margin-top:0px;font-size:12px;color:#4a5568;min-height:0px;"></div>
+            <h3>${t('webdavTitle')}</h3>
+            <div class="webdav-row"><label>${t('webdavUrl')}</label><input id="webdav-url" type="text" placeholder="https://example.com/remote.php/dav/files/user/" value="${webdavConfig.url}"></div>
+            <div class="webdav-row"><label>${t('webdavUser')}</label><input id="webdav-username" type="text" value="${webdavConfig.username}"></div>
+            <div class="webdav-row"><label>${t('webdavPass')}</label><input id="webdav-password" type="password" value="${webdavConfig.password}"></div>
+            <div class="webdav-row"><label>${t('filename')}</label><input id="webdav-filename" type="text" placeholder="rules.txt" value="${webdavConfig.filename}"></div>
+            <div class="webdav-btn-group">
+                <button id="webdav-upload" class="searchfilter-button searchfilter-button-success">${t('upload')}</button>
+                <button id="webdav-download" class="searchfilter-button searchfilter-button-primary">${t('download')}</button>
+                <button id="webdav-cancel" class="searchfilter-button searchfilter-button-secondary">${t('cancel')}</button>
+            </div>
+            <div id="webdav-status"></div>
         `;
 
     document.body.appendChild(panel);
@@ -2717,7 +2830,7 @@
 
     function setStatus(msg, isError = false) {
       statusDiv.textContent = msg;
-      statusDiv.style.color = isError ? '#c53030' : '#4a5568';
+      statusDiv.style.color = isError ? '#e53e3e' : '';
     }
 
     function saveWebDAVConfig() {
