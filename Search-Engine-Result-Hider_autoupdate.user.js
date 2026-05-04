@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.5.3
+// @version      6.5.4
 // @description        支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:zh-CN  支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports regular expressions.
@@ -16,10 +16,10 @@
 // @match        *://*.duckduckgo.com/*
 // @match        *://duckduckgo.com/*
 // @match        *://*.google.com/*
-// @match        *://*.google.co.jp/*
 // @match        *://*.google.com.hk/*
-// @match        *://*.google.com.tw/*
 // @match        *://*.google.com.sg/*
+// @match        *://*.google.com.my/*
+// @match        *://*.google.co.jp/*
 // @include       /^https?:\/\/([\w-]+\.)?google\.[a-z.]{2,6}\/.*$/
 // @connect      dav.jianguoyun.com
 // @grant        GM_setValue
@@ -322,7 +322,7 @@
     conditionalRules: []
   };
 
-  // 样式
+  // UI
   GM_addStyle(`
         /* 预留高度用于翻页 */
         body { min-height: 101vh !important; }
@@ -543,18 +543,67 @@
         #top_nav .searchfilter-quick-block,
         #extabar .searchfilter-quick-block { display: none !important; }
 
-        /* 面板隔离 */
-        #searchfilter-webdav-panel,
-        #searchfilter-subscription-panel {
-            box-sizing: border-box !important;
-            background: #ffffff !important;
-            color: #2d3748 !important;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-            border: 1px solid #e2e8f0 !important;
-            border-radius: 8px !important;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
-            text-align: left !important;
-            line-height: 1.5 !important;
+        /* 主面板隔离 */
+        #searchfilter-panel {
+        box-sizing: border-box !important;
+        background: #ffffff !important;
+        color: #2d3748 !important;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+        text-align: left !important;
+        line-height: 1.5 !important;
+        }
+
+        #searchfilter-panel * {
+        box-sizing: border-box !important;
+        }
+
+        /* 主面板深色 */
+        @media (prefers-color-scheme: dark) {
+        #searchfilter-panel {
+        background: #171717 !important; 
+        color: #f3f4f6 !important; 
+        border-color: #374151 !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
+        }
+
+        #searchfilter-panel .option-label,
+        #searchfilter-panel .compact-row span {
+            color: #9ca3af !important;
+        }
+
+        #searchfilter-panel .rules-container {
+            border-color: #4b5563 !important;
+            background: #1E1F21 !important;
+        }
+
+        #searchfilter-line-numbers {
+            background: #222629 !important;
+            border-right-color: #4b5563 !important;
+            color: #9ca3af !important;
+        }
+
+        #searchfilter-rules {
+            background: #1E1F21 !important;
+            color: #f3f4f6 !important;
+        }
+
+        #searchfilter-rules::placeholder {
+            color: #6b7280 !important;
+        }
+
+        /* 统计面板深色 */
+        #searchfilter-stats-panel {
+            background: #171717 !important;
+            border-color: #374151 !important;
+        }
+        #searchfilter-stats-content {
+            color: #f3f4f6 !important;
+        }
+
+        #searchfilter-panel .searchfilter-button {
         }
 
         #searchfilter-webdav-panel *,
@@ -645,7 +694,7 @@
             word-break: break-all !important;
         }
 
-        /* 深色模式 */
+        /* Webdav/订阅深色 */
         @media (prefers-color-scheme: dark) {
             #searchfilter-webdav-panel,
             #searchfilter-subscription-panel {
