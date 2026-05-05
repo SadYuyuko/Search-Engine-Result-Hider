@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.5.4
+// @version      6.5.5
 // @description        支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:zh-CN  支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports regular expressions.
@@ -13,14 +13,11 @@
 // @homepageURL  https://github.com/SadYuyuko/Search-Engine-Result-Hider
 // @license      MIT
 // @match        *://*.bing.com/*
-// @match        *://*.duckduckgo.com/*
-// @match        *://duckduckgo.com/*
 // @match        *://*.google.com/*
-// @match        *://*.google.com.hk/*
-// @match        *://*.google.com.sg/*
-// @match        *://*.google.com.my/*
-// @match        *://*.google.co.jp/*
-// @include       /^https?:\/\/([\w-]+\.)?google\.[a-z.]{2,6}\/.*$/
+// @match        *://*.duckduckgo.com/*
+// @include      /^https?:\/\/([\w-]+\.)?bing\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)\/.*$/
+// @include      /^https?:\/\/([\w-]+\.)?google\.(?:com|[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})\/.*$/
+// @include      /^https?:\/\/([\w-]+\.)?(?:duckduckgo\.com|ddg\.gg)\/.*$/
 // @connect      dav.jianguoyun.com
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -273,26 +270,26 @@
 
   // 选择器
   const SELECTORS = {
-    // 容器选择器
+    // 容器
     containers: {
       bing: 'li.b_algo, div.b_algo',
       google: 'div.g, div.MjjYud',
       duckduckgo: '[data-testid="result"], .result, .web-result, .tile, .tile--ad',
       other: 'div.g, li.b_algo'
     },
-    // 标题选择器
+    // 标题
     titles: {
       bing: ['h2 a', 'a h2', '.b_title'],
       google: ['h3', 'div[role="heading"]', '.LC20lb', '.DKV0Md', '.sXLaOe', '.c9DxTc', 'a h3'],
       duckduckgo: ['a[data-testid="result-title-a"]', '.result__title', '.tile__title', '.tile--title__title', 'h2 a', 'a h2']
     },
-    // 正文选择器
+    // 正文
     snippets: {
       bing: ['.b_caption p', '.b_snippet', '.b_paractl p', '.b_lineclamp2'],
       google: ['.st', '.VwiC3b', '.s3v9rd', '.IsZvec', '.lyLwlc', '.yXK7lf'],
       duckduckgo: ['[data-testid="result-snippet"]', '[data-result="snippet"]', '.result__snippet']
     },
-    // URL选择器
+    // URL
     links: {
       bing: 'a[href]',
       google: 'a[href]',
@@ -300,6 +297,20 @@
     }
   };
 
+  // 搜索引擎检测
+  function getSearchEngine() {
+    const hostname = window.location.hostname;
+    if (/(?:^|\.)google\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})$/.test(hostname)) return 'google';
+    if (/(?:^|\.)bing\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)$/.test(hostname)) return 'bing';
+    if (/(?:^|\.)(?:duckduckgo\.com|ddg\.gg)$/.test(hostname)) return 'duckduckgo';
+    return 'other';
+  }
+
+  function getContainerSelector(engine) {
+    return SELECTORS.containers[engine] || SELECTORS.containers.other;
+  }
+
+  // 语言
   function t(key, params = {}) {
     const lang = currentConfig.language;
     const texts = LANG_TEXTS[lang] || LANG_TEXTS['zh-CN'];
@@ -412,6 +423,7 @@
             height: 180px;
             margin-bottom: 3px;
             position: relative;
+            overflow: hidden;
         }
         
         /* 规则栏 */
@@ -543,8 +555,10 @@
         #top_nav .searchfilter-quick-block,
         #extabar .searchfilter-quick-block { display: none !important; }
 
-        /* 主面板隔离 */
-        #searchfilter-panel {
+        /* 面板隔离 */
+        #searchfilter-panel,
+        #searchfilter-webdav-panel,
+        #searchfilter-subscription-panel {
         box-sizing: border-box !important;
         background: #ffffff !important;
         color: #2d3748 !important;
@@ -556,7 +570,9 @@
         line-height: 1.5 !important;
         }
 
-        #searchfilter-panel * {
+        #searchfilter-panel *,
+        #searchfilter-webdav-panel *,
+        #searchfilter-subscription-panel * {
         box-sizing: border-box !important;
         }
 
@@ -604,6 +620,7 @@
         }
 
         #searchfilter-panel .searchfilter-button {
+        }
         }
 
         #searchfilter-webdav-panel *,
@@ -886,19 +903,6 @@
       if (s.rules && Array.isArray(s.rules)) rules.push(...s.rules);
     });
     return rules;
-  }
-
-  // 搜索引擎检测
-  function getSearchEngine() {
-    const hostname = window.location.hostname;
-    if (hostname.includes('bing.com')) return 'bing';
-    if (hostname.includes('google.com')) return 'google';
-    if (hostname.includes('duckduckgo.com')) return 'duckduckgo';
-    return 'other';
-  }
-
-  function getContainerSelector(engine) {
-    return SELECTORS.containers[engine] || SELECTORS.containers.other;
   }
 
   // 解析规则
