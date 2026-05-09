@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.5.5
+// @version      6.5.6
 // @description        支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:zh-CN  支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports regular expressions.
@@ -1049,7 +1049,7 @@
     } else {
       const lastPostfixIdx = ruleToCheck.lastIndexOf('@if(');
       if (lastPostfixIdx !== -1) {
-        const parenResult = extractBalancedParens(ruleToCheck, lastPostfixIdx + 3); // '(' 索引
+        const parenResult = extractBalancedParens(ruleToCheck, lastPostfixIdx + 3);
         if (parenResult) {
           ruleToCheck = ruleToCheck.substring(0, lastPostfixIdx).trim();
         }
@@ -1652,26 +1652,36 @@
 
       // 移除规则
       if (isBlocked) {
-        let baseDomain = domain.replace(/^www\./, '');
         let ruleRemoved = false;
+        const matchedRule = result.dataset.matchedRule;
 
-        const possibleRules = [
-          `${domain}/*`,
-          `www.${baseDomain}/*`,
-          `*.${baseDomain}/*`,
-          domain,
-          baseDomain
-        ];
+        if (matchedRule && currentConfig.rules.includes(matchedRule)) {
+          currentConfig.rules = currentConfig.rules.filter(rule => rule !== matchedRule);
+          ruleRemoved = true;
+        }
 
-        const newRules = currentConfig.rules.filter(rule => {
-          const cleanRule = rule.replace(/^\*:\/\//, '');
-          const matched = possibleRules.includes(cleanRule);
-          if (matched) ruleRemoved = true;
-          return !matched;
-        });
+        if (!ruleRemoved) {
+          let baseDomain = domain.replace(/^www\./, '');
+          const possibleRules = [
+            `*://${domain}/*`,
+            `*://www.${baseDomain}/*`,
+            `*://*.${baseDomain}/*`,
+            `${domain}/*`,
+            `www.${baseDomain}/*`,
+            `*.${baseDomain}/*`,
+            domain,
+            baseDomain
+          ];
+
+          const newRules = currentConfig.rules.filter(rule => {
+            const matched = possibleRules.includes(rule);
+            if (matched) ruleRemoved = true;
+            return !matched;
+          });
+          currentConfig.rules = newRules;
+        }
 
         if (ruleRemoved) {
-          currentConfig.rules = newRules;
           GM_setValue(CONFIG_KEY, currentConfig);
           GM_setValue(LOCAL_LAST_MODIFIED_KEY, Date.now());
           const textarea = document.getElementById('searchfilter-rules');
