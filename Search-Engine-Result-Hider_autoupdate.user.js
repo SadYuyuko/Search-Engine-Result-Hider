@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.5.6
+// @version      6.5.7
 // @description        支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:zh-CN  支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports regular expressions.
@@ -95,7 +95,7 @@
       test: '统计',
       close: '关闭',
       placeholder: '每行一个规则',
-      ruleHint: 'title/.*ABC.*/ 匹配标题 | text/*ABC.*/ 匹配内容',
+      ruleHint: '*://*.example.com/* 匹配域名 | title/.*ABC.*/ 匹配标题',
       scrollTop: '回到顶部',
       scrollBottom: '回到底部',
       panelTitle: '订阅管理',
@@ -169,6 +169,8 @@
       syntaxError: '语法错误',
       networkError: '网络错误',
       requestTimeout: '请求超时',
+      subLinkInvalid: '链接错误',
+      importing: '导入中',
     },
     'en': {
       enableBlock: 'Enable Block',
@@ -191,7 +193,7 @@
       test: 'Stats',
       close: 'Close',
       placeholder: 'One rule per line',
-      ruleHint: 'title/.*ABC.*/ matches title | text/*ABC.*/ matches snippet',
+      ruleHint: '*://*.example.com/* | title/.*ABC.*/ matches title',
       scrollTop: 'Scroll to Top',
       scrollBottom: 'Scroll to Bottom',
       panelTitle: 'Subscription Manager',
@@ -265,6 +267,8 @@
       syntaxError: 'Syntax error',
       networkError: 'Network error',
       requestTimeout: 'Request timeout',
+      subLinkInvalid: 'Invalid URL',
+      importing: 'Importing',
     }
   };
 
@@ -297,11 +301,11 @@
     }
   };
 
-  // 搜索引擎检测
+  // 引擎检测
   function getSearchEngine() {
     const hostname = window.location.hostname;
-    if (/(?:^|\.)google\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})$/.test(hostname)) return 'google';
     if (/(?:^|\.)bing\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)$/.test(hostname)) return 'bing';
+    if (/(?:^|\.)google\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})$/.test(hostname)) return 'google';
     if (/(?:^|\.)(?:duckduckgo\.com|ddg\.gg)$/.test(hostname)) return 'duckduckgo';
     return 'other';
   }
@@ -335,7 +339,7 @@
 
   // UI
   GM_addStyle(`
-        /* 预留高度用于翻页 */
+        /* 预留翻页高度 */
         body { min-height: 101vh !important; }
         #rcnt, #rso { min-height: 60vh; }
 
@@ -414,7 +418,6 @@
             box-sizing: border-box;
         }
 
-        /* 面板高度 */
         .rules-container {
             display: flex;
             border: 1px solid #e2e8f0;
@@ -711,7 +714,15 @@
             word-break: break-all !important;
         }
 
-        /* Webdav/订阅深色 */
+        #subscription-status {
+            margin-top: 8px !important;
+            font-size: 12px !important;
+            min-height: 18px !important;
+            line-height: 1.2 !important;
+            word-break: break-all !important;
+        }
+
+        /* Webdav订阅面板深色 */
         @media (prefers-color-scheme: dark) {
             #searchfilter-webdav-panel,
             #searchfilter-subscription-panel {
@@ -738,10 +749,13 @@
             #searchfilter-subscription-panel input:focus {
                 border-color: #60a5fa !important; 
             }
-
             #webdav-status {
                 color: #9ca3af !important;
             }
+
+            #subscription-status {
+    color: #9ca3af !important;
+}
         }
 
         /* 面板渐入渐出动画 */
@@ -2722,7 +2736,7 @@
             <div id="subscription-rows-container">${rowsHtml}</div>
             <div class="add-subscription-btn"><button id="add-subscription" class="searchfilter-button searchfilter-button-secondary" style="width:100%;" ${subscriptions.length >= 3 ? 'disabled' : ''}>${t('addSubscription')}</button></div>
             <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:0px;"><button id="subscription-save" class="searchfilter-button searchfilter-button-primary" style="flex:1;">${t('saveSub')}</button><button id="subscription-import" class="searchfilter-button searchfilter-button-primary" style="flex:1;">${t('importSub')}</button><button id="subscription-cancel" class="searchfilter-button searchfilter-button-secondary" style="flex:1;">${t('cancel')}</button></div>
-            <div id="subscription-status" style="margin-top:0px;font-size:12px;color:#4a5568;min-height:0px;"></div>
+            <div id="subscription-status" style="color:#4a5568;"></div>
         `;
 
     document.body.appendChild(panel);
@@ -2765,6 +2779,18 @@
     }
     bindDeleteEvents();
 
+    const closeHandler = (e) => {
+      if (!panel.contains(e.target)) {
+        panel.classList.remove('show');
+        panel.addEventListener('transitionend', () => {
+          panel.remove();
+          document.removeEventListener('click', closeHandler);
+        }, {
+          once: true
+        });
+      }
+    };
+
     const closePanel = () => {
       panel.classList.remove('show');
       panel.addEventListener('transitionend', () => {
@@ -2778,10 +2804,18 @@
     document.getElementById('subscription-save').onclick = () => {
       const rows = container.querySelectorAll('.subscription-row');
       const newSubs = [];
+      let hasError = false;
       rows.forEach(row => {
         const input = row.querySelector('.subscription-url');
         const url = input.value.trim();
         if (url) {
+          if (!/^https?:\/\//i.test(url)) {
+            const msgDiv = row.querySelector('.subscription-status-message');
+            msgDiv.textContent = t('subLinkInvalid');
+            msgDiv.className = 'subscription-status-message error';
+            hasError = true;
+            return;
+          }
           const existingSub = subscriptions.find(s => s.url === url);
           newSubs.push({
             url,
@@ -2791,6 +2825,7 @@
           });
         }
       });
+      if (hasError) return;
       saveSubscriptions(newSubs);
       setStatus(t('subscriptionSaved'));
       subscriptions = newSubs;
@@ -2804,6 +2839,7 @@
         return;
       }
       setStatus(t('importing'));
+      let hasError = false;
       for (let row of rows) {
         const input = row.querySelector('.subscription-url');
         const url = input.value.trim();
@@ -2811,6 +2847,13 @@
         if (!url) {
           msgDiv.textContent = t('subLinkEmpty');
           msgDiv.className = 'subscription-status-message error';
+          hasError = true;
+          continue;
+        }
+        if (!/^https?:\/\//i.test(url)) {
+          msgDiv.textContent = t('subLinkInvalid');
+          msgDiv.className = 'subscription-status-message error';
+          hasError = true;
           continue;
         }
         try {
@@ -2823,9 +2866,12 @@
           console.error(`导入失败 [${url}]:`, err);
           msgDiv.textContent = t('subImportFailed');
           msgDiv.className = 'subscription-status-message error';
+          hasError = true;
         }
       }
-      setStatus(t('importDone'));
+      if (!hasError) {
+        setStatus(t('importDone'));
+      }
       forceReprocessAll();
     };
 
@@ -2834,10 +2880,8 @@
       closePanel();
     };
 
-    const closeHandler = (e) => {
-      if (!panel.contains(e.target)) closePanel();
-    };
     setTimeout(() => document.addEventListener('click', closeHandler), 200);
+
   }
 
   function showWebDAVPanel() {
