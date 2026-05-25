@@ -67,7 +67,9 @@ Rules tend to favor titles and regular matches. For convenience, you can add rul
 **Screenshots：**  
 
 <img width="271" height="250" alt="12" src="https://github.com/user-attachments/assets/50544492-2a0d-4a25-9edf-58e05f0c323c" />  
+
 ---  
 <img width="271" height="237" alt="34" src="https://github.com/user-attachments/assets/d56068eb-4bb7-4cf9-9449-c4bcbdbb6ac7" />  
+
 ---  
 <img width="256" height="192" alt="0" src="https://github.com/user-attachments/assets/89cb7c3a-8592-4fae-9677-9cf80c4abb11" />   
