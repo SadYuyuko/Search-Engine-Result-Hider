@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.5.7
+// @version      6.6.0
 // @description        支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:zh-CN  支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
 // @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports regular expressions.
@@ -69,10 +69,9 @@
   if (currentConfig.panelCentered === undefined) currentConfig.panelCentered = true;
   if (currentConfig.bubbleAction === undefined) currentConfig.bubbleAction = 'openPanel';
   if (currentConfig.language === undefined) currentConfig.language = 'zh-CN';
-
   let showHiddenResults = false;
 
-  // 多语言文本映射
+  // 文本映射
   const LANG_TEXTS = {
     'zh-CN': {
       enableBlock: '启用屏蔽',
@@ -95,7 +94,7 @@
       test: '统计',
       close: '关闭',
       placeholder: '每行一个规则',
-      ruleHint: '*://*.example.com/* 匹配域名 | title/.*ABC.*/ 匹配标题',
+      ruleHint: 'title/.*示例.*/ 匹配标题 | text/.*示例.*/ 匹配内容',
       scrollTop: '回到顶部',
       scrollBottom: '回到底部',
       panelTitle: '订阅管理',
@@ -193,7 +192,7 @@
       test: 'Stats',
       close: 'Close',
       placeholder: 'One rule per line',
-      ruleHint: '*://*.example.com/* | title/.*ABC.*/ matches title',
+      ruleHint: 'title/.*abc.*/ matches title | text/.*abc.*/ matches snippet',
       scrollTop: 'Scroll to Top',
       scrollBottom: 'Scroll to Bottom',
       panelTitle: 'Subscription Manager',
@@ -2552,9 +2551,8 @@
         document.removeEventListener('click', window._panelCloseHandler);
         window._panelCloseHandler = null;
 
-        currentConfig = GM_getValue(CONFIG_KEY, currentConfig);
-        const statusBtn = document.getElementById('searchfilter-status');
-        if (statusBtn) applyBubbleSize(statusBtn);
+        const savedConfig = GM_getValue(CONFIG_KEY, currentConfig);
+        currentConfig = savedConfig;
       }, {
         once: true
       });
@@ -2563,6 +2561,14 @@
     document.getElementById('searchfilter-save').onclick = () => {
       hideStatsPanel();
       saveConfig();
+      const saveBtn = document.getElementById('searchfilter-save');
+      const originalText = saveBtn.textContent;
+      saveBtn.textContent = t('save');
+      saveBtn.style.backgroundColor = '#276749';
+      setTimeout(() => {
+        saveBtn.textContent = originalText;
+        saveBtn.style.backgroundColor = '';
+      }, 1200);
     };
     document.getElementById('searchfilter-test').onclick = toggleStatsPanel;
     document.getElementById('searchfilter-close').onclick = (e) => {
@@ -2583,6 +2589,7 @@
       behavior: 'smooth'
     });
 
+    // 悬浮球大小设置
     panel.querySelectorAll('.option-button').forEach(button => {
       button.addEventListener('click', function() {
         const name = this.dataset.name;
@@ -2594,6 +2601,7 @@
         if (name === 'bubbleSize') {
           const statusBtn = document.getElementById('searchfilter-status');
           if (statusBtn) applyBubbleSize(statusBtn);
+          GM_setValue(CONFIG_KEY, currentConfig);
         }
       });
     });
@@ -2636,19 +2644,6 @@
     showHiddenResults = false;
     forceReprocessAll();
 
-    if (panel) {
-      panel.classList.remove('show');
-      panel.addEventListener('transitionend', function onTransitionEnd() {
-        panel.remove();
-        if (window._panelCloseHandler) {
-          document.removeEventListener('click', window._panelCloseHandler);
-          window._panelCloseHandler = null;
-        }
-        panel.removeEventListener('transitionend', onTransitionEnd);
-      }, {
-        once: true
-      });
-    }
   }
 
   // 订阅管理
