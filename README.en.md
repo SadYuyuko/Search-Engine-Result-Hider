@@ -4,7 +4,7 @@
 [中文](README.md) | [English](README.en.md)  
 This script is trying to replicate the functionality of uBlacklist on mobile browsers that only support script installation. It also works on desktop browsers or mobile browsers with extension support, though [uBlacklist](https://addons.mozilla.org/zh-CN/firefox/addon/ublacklist) is the preferred option in those environments.  
 
-Supports Bing, Google, and DuckDuckGo, with potential support for more search engines in the future. It includes uBlacklist basic rule compatibility as well as regex matching, URL matching, title matching, whitelist matching, and matching against the snippet text of search results.  
+Supports Bing, Google, DuckDuckGo and Yandex, with potential support for more search engines in the future. It includes uBlacklist basic rule compatibility as well as regex matching, URL matching, title matching, whitelist matching, and matching against the snippet text of search results.  
 
 **Current Features:**  
 - One-click domain blocking via a block button  
@@ -18,7 +18,7 @@ Supports Bing, Google, and DuckDuckGo, with potential support for more search en
   ┣ Toggle floating bubble visibility  
   ┣ Language switching  
   ┣ Toggle panel centering: centered by default; when disabled, the panel appears in one of four corners based on the floating bubble's position  
-  ┗ Toggle floating bubble function: default click opens the panel; when toggled, click toggles visibility of blocked results. In this mode, long press the floating ball to open the configuration panel, and clicking the block button on a blocked result allows unblocking (effective only for non‑regex domain rules)  
+  ┗ Toggle floating bubble function: default click opens the panel; when toggled, click toggles visibility of blocked results. In this mode, long press the floating ball to open the configuration panel, and clicking the block button on a blocked result allows unblocking  
 
 **About WebDAV:**  
 1. Synchronizes automatically every hour. Auto‑sync merges files based on timestamps and deduplicates. Manual upload/download overwrites files. Currently tested only with single‑device synchronization. In theory, it can sync the same configuration file as uBlacklist, but no guarantees are made regarding file overwrite logic errors. Always back up your files first.  
