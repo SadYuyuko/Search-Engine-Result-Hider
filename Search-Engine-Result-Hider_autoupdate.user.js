@@ -3,10 +3,10 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.6.0
-// @description        支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
-// @description:zh-CN  支持正则规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具。
-// @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports regular expressions.
+// @version      6.7.0
+// @description        支持正则的搜索结果屏蔽工具。
+// @description:zh-CN  支持正则的搜索结果屏蔽工具。
+// @description:en     A search result blocking tool that supports regular expressions.
 // @icon         data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZWQiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCI+PC9jaXJjbGU+PGxpbmUgeDE9IjQuOTMiIHkxPSI0LjkzIiB4Mj0iMTkuMDciIHkyPSIxOS4wNyI+PC9saW5lPjwvc3ZnPg==
 // @author       南雪莲
 // @homepageURL  https://greasyfork.org/zh-CN/scripts/552394
@@ -15,9 +15,12 @@
 // @match        *://*.bing.com/*
 // @match        *://*.google.com/*
 // @match        *://*.duckduckgo.com/*
+// @match        *://*.yandex.com/*
 // @include      /^https?:\/\/([\w-]+\.)?bing\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)\/.*$/
 // @include      /^https?:\/\/([\w-]+\.)?google\.(?:com|[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})\/.*$/
 // @include      /^https?:\/\/([\w-]+\.)?(?:duckduckgo\.com|ddg\.gg)\/.*$/
+// @include      /^https?:\/\/([\w-]+\.)?yandex\.(?:com|ru|eu|by|kz|ua|uz|az|kg|md|tj|tm|lv|lt|ee|fi|ge|tr)\/.*$/
+// @include      /^https?:\/\/([\w-]+\.)?ya\.ru\/.*$/
 // @connect      dav.jianguoyun.com
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -273,30 +276,30 @@
 
   // 选择器
   const SELECTORS = {
-    // 容器
     containers: {
       bing: 'li.b_algo, div.b_algo',
       google: 'div.g, div.MjjYud',
       duckduckgo: '[data-testid="result"], .result, .web-result, .tile, .tile--ad',
+      yandex: 'div.Organic',
       other: 'div.g, li.b_algo'
     },
-    // 标题
     titles: {
       bing: ['h2 a', 'a h2', '.b_title'],
       google: ['h3', 'div[role="heading"]', '.LC20lb', '.DKV0Md', '.sXLaOe', '.c9DxTc', 'a h3'],
-      duckduckgo: ['a[data-testid="result-title-a"]', '.result__title', '.tile__title', '.tile--title__title', 'h2 a', 'a h2']
+      duckduckgo: ['a[data-testid="result-title-a"]', '.result__title', '.tile__title', '.tile--title__title', 'h2 a', 'a h2'],
+      yandex: ['.OrganicTitle']
     },
-    // 正文
     snippets: {
       bing: ['.b_caption p', '.b_snippet', '.b_paractl p', '.b_lineclamp2'],
       google: ['.st', '.VwiC3b', '.s3v9rd', '.IsZvec', '.lyLwlc', '.yXK7lf'],
-      duckduckgo: ['[data-testid="result-snippet"]', '[data-result="snippet"]', '.result__snippet']
+      duckduckgo: ['[data-testid="result-snippet"]', '[data-result="snippet"]', '.result__snippet'],
+      yandex: ['.OrganicText']
     },
-    // URL
     links: {
       bing: 'a[href]',
       google: 'a[href]',
-      duckduckgo: ['a[data-testid="result-extras-url-link"]', 'a[data-testid="result-title-a"]', '.result__url', '.tile--title__domain', 'a[href]']
+      duckduckgo: ['a[data-testid="result-extras-url-link"]', 'a[data-testid="result-title-a"]', '.result__url', '.tile--title__domain', 'a[href]'],
+      yandex: ['.OrganicTitle a', '.Path-Item a', 'a.Link', 'a[href]']
     }
   };
 
@@ -306,6 +309,8 @@
     if (/(?:^|\.)bing\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)$/.test(hostname)) return 'bing';
     if (/(?:^|\.)google\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})$/.test(hostname)) return 'google';
     if (/(?:^|\.)(?:duckduckgo\.com|ddg\.gg)$/.test(hostname)) return 'duckduckgo';
+    if (/(?:^|\.)yandex\.(?:com|ru|eu|by|kz|ua|uz|az|kg|md|tj|tm|lv|lt|ee|fi|ge|tr)$/.test(hostname)) return 'yandex';
+    if (/(?:^|\.)ya\.ru$/.test(hostname)) return 'yandex';
     return 'other';
   }
 
@@ -324,7 +329,7 @@
     return text;
   }
 
-  // Set优化
+  // Set
   let compiledRules = {
     domains: new Set(),
     urls: [],
@@ -923,7 +928,7 @@
     const currentEngine = getSearchEngine();
     const currentSite = window.location.hostname;
 
-    if (/^(google|bing|duckduckgo)$/i.test(condStr.trim())) {
+    if (/^(google|bing|duckduckgo|yandex)$/i.test(condStr.trim())) {
       return currentEngine === condStr.trim().toLowerCase();
     }
 
@@ -1432,7 +1437,7 @@
     return false;
   }
 
-  // 查找第一条命中规则
+  // 查找首条命中规则
   function findFirstMatchingRule(url, domain, title, snippet) {
     for (const item of compiledRules.rulesList) {
       try {
@@ -1637,6 +1642,9 @@
       }
       if (!result.closest('#center_col')) return;
     }
+    if (engine === 'yandex') {
+      if (!result.closest('.main__content, .content, [class*="z6OLDwO9"]')) return;
+    }
     const title = getResultTitle(result, engine);
     if (!title) return;
     if (result.querySelector('.searchfilter-quick-block')) return;
@@ -1645,13 +1653,16 @@
     const btn = document.createElement('div');
     btn.className = 'searchfilter-quick-block';
 
-    // 切换屏蔽按钮颜色
+    // 屏蔽按钮
     const iconColor = isBlocked ? '#3182ce' : 'currentColor';
     btn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>`;
     btn.title = isBlocked ? t('unblockBtnTitle') : t('blockBtnTitle');
 
     if (window.getComputedStyle(result).position === 'static') result.style.position = 'relative';
     if (engine === 'bing') {
+      btn.style.right = '5px';
+      btn.style.top = '10px';
+    } else if (engine === 'yandex') {
       btn.style.right = '5px';
       btn.style.top = '10px';
     } else {
@@ -1851,7 +1862,32 @@
 
     const engine = getSearchEngine();
     const selector = getContainerSelector(engine);
+
+    // 调试1
+    if (currentConfig.debug) {
+      const allMatches = document.querySelectorAll(selector);
+      console.log(`[搜索屏蔽器] 引擎: ${engine}, 选择器: "${selector}", 匹配数量: ${allMatches.length}`);
+      if (allMatches.length > 0) {
+        console.log('[搜索屏蔽器] 第一个匹配元素:', allMatches[0]);
+        console.log('[搜索屏蔽器] 第一个元素的 href:', allMatches[0].querySelector('a[href]')?.href);
+      } else {
+        console.log('[搜索屏蔽器] ⚠️ 选择器未匹配到任何元素！');
+        console.log('[搜索屏蔽器] 页面中所有 li:', document.querySelectorAll('li').length);
+        console.log('[搜索屏蔽器] 页面中所有 article:', document.querySelectorAll('article').length);
+        const lis = document.querySelectorAll('li');
+        const classes = new Set();
+        lis.forEach(li => {
+          if (li.className && typeof li.className === 'string') classes.add(li.className);
+        });
+        console.log('[搜索屏蔽器] li 的 class 列表:', [...classes].slice(0, 30));
+      }
+    }
+
     const newResults = document.querySelectorAll(`${selector}:not([data-observed])`);
+
+    if (currentConfig.debug) {
+      console.log(`[搜索屏蔽器] 未处理的新结果数量: ${newResults.length}`);
+    }
 
     newResults.forEach(result => {
       result.setAttribute('data-observed', 'true');
@@ -1859,12 +1895,17 @@
     });
   }
 
-  // 更新悬浮球
   function forceReprocessAll() {
     buildRuleIndex();
 
     const engine = getSearchEngine();
     const selector = getContainerSelector(engine);
+
+    // 调试2
+    if (currentConfig.debug) {
+      console.log(`[搜索屏蔽器-force] 引擎: ${engine}, 选择器: "${selector}"`);
+      console.log(`[搜索屏蔽器-force] 规则数量: domains=${compiledRules.domains.size}, urls=${compiledRules.urls.length}, titles=${compiledRules.titles.length}, texts=${compiledRules.texts.length}`);
+    }
 
     document.querySelectorAll('[data-observed]').forEach(el => {
       resultObserver.unobserve(el);
@@ -1879,6 +1920,12 @@
     document.querySelectorAll('.searchfilter-quick-block').forEach(btn => btn.remove());
 
     const allResults = document.querySelectorAll(selector);
+
+    // 调试3
+    if (currentConfig.debug) {
+      console.log(`[搜索屏蔽器-force] 找到 ${allResults.length} 个结果元素`);
+    }
+
     let totalBlocked = 0;
 
     allResults.forEach(result => {
@@ -1886,6 +1933,11 @@
       const blocked = processSingleResult(result);
       if (blocked) totalBlocked++;
     });
+
+    // 调试4
+    if (currentConfig.debug) {
+      console.log(`[搜索屏蔽器-force] 共屏蔽 ${totalBlocked} 个结果`);
+    }
 
     updateStatus(totalBlocked);
   }
