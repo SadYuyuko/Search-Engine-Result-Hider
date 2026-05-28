@@ -3,7 +3,7 @@
 ### [Github](https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js) | [Greasy Fork](https://greasyfork.org/zh-CN/scripts/552394) (推荐) 使用任意脚本管理器安装  
 [中文](README.md) | [English](README.en.md)  
 在仅支持安装脚本的移动端浏览器上尝试复刻ublacklist的功能，支持安装扩展的移动端和桌面端也可用但更推荐直接使用[ublacklist](https://addons.mozilla.org/zh-CN/firefox/addon/ublacklist)  
-适用于Bing、Google、DuckDuckGo，未来可能支持更多搜索引擎。支持包括ublacklist基础规则在内的正则匹配、URL匹配、标题匹配、白名单匹配以及搜索词条正文内容匹配。  
+适用于Bing、Google、DuckDuckGo、Yandex，未来可能支持更多搜索引擎。支持包括ublacklist基础规则在内的正则匹配、URL匹配、标题匹配、白名单匹配以及搜索词条正文内容匹配。  
  
 **当前功能：**  
 - 屏蔽按钮一键屏蔽域名  
@@ -17,7 +17,7 @@
   ┣ 隐藏悬浮球  
   ┣ 语言切换  
   ┣ 开关面板居中：默认居中，切换后根据悬浮球位置显示在4个角落  
-  ┗切换悬浮球功能：默认点击展开面板，切换后点击显示被屏蔽结果，此模式下长按悬浮球打开配置面板，被屏蔽结果的屏蔽按钮再次点击取消屏蔽 （仅对非正则域名规则生效）  
+  ┗切换悬浮球功能：默认点击展开面板，切换后点击显示被屏蔽结果，此模式下长按悬浮球打开配置面板，被屏蔽结果的屏蔽按钮再次点击取消屏蔽  
   
 **关于Webdav：**  
 1.每小时同步一次，自动同步会根据文件时间去重合并，手动上传下载则为覆盖文件。目前仅在单设备同步上测试过，理论上可以和ublacklist同步同一配置文件，但不保证不会出现文件错误替换逻辑问题，请提前备份文件  
