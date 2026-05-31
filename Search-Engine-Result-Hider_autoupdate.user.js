@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.7.0
+// @version      6.7.1
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -14,19 +14,19 @@
 // @license      MIT
 // @match        *://*.bing.com/*
 // @match        *://*.google.com/*
-// @match        *://*.duckduckgo.com/*
 // @match        *://*.yandex.com/*
+// @match        *://*.duckduckgo.com/*
+// @include      /^https?:\/\/([\w-]+\.)?ya\.ru\/.*$/
+// @include      /^https?:\/\/([\w-]+\.)?(?:duckduckgo\.com|ddg\.gg)\/.*$/
 // @include      /^https?:\/\/([\w-]+\.)?bing\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)\/.*$/
 // @include      /^https?:\/\/([\w-]+\.)?google\.(?:com|[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})\/.*$/
-// @include      /^https?:\/\/([\w-]+\.)?(?:duckduckgo\.com|ddg\.gg)\/.*$/
 // @include      /^https?:\/\/([\w-]+\.)?yandex\.(?:com|ru|eu|by|kz|ua|uz|az|kg|md|tj|tm|lv|lt|ee|fi|ge|tr)\/.*$/
-// @include      /^https?:\/\/([\w-]+\.)?ya\.ru\/.*$/
 // @connect      dav.jianguoyun.com
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_addStyle
-// @grant        GM_registerMenuCommand
 // @grant        GM_xmlhttpRequest
+// @grant        GM_registerMenuCommand
 // @run-at       document-idle
 // @downloadURL  https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js
 // @updateURL    https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js
@@ -46,6 +46,7 @@
   const SUBSCRIPTIONS_KEY = 'searchfilter_subscriptions';
   const WEBDAV_LAST_SYNC_KEY = 'searchfilter_webdav_last_sync';
   const LOCAL_LAST_MODIFIED_KEY = 'searchfilter_local_last_modified';
+  const WEBDAV_AUTO_SYNC_KEY = 'searchfilter_webdav_auto_sync';
 
   // 默认配置
   let currentConfig = GM_getValue(CONFIG_KEY, {
@@ -173,6 +174,7 @@
       requestTimeout: '请求超时',
       subLinkInvalid: '链接错误',
       importing: '导入中',
+      autoSync: '自动同步',
     },
     'en': {
       enableBlock: 'Enable Block',
@@ -271,6 +273,7 @@
       requestTimeout: 'Request timeout',
       subLinkInvalid: 'Invalid URL',
       importing: 'Importing',
+      autoSync: 'Auto Sync',
     }
   };
 
@@ -1074,7 +1077,7 @@
       }
     }
 
-    // 白名单规则检查
+    // 白名单规则
     if (ruleToCheck.startsWith('@')) {
       ruleToCheck = ruleToCheck.substring(1).trim();
       if (!ruleToCheck) return true;
@@ -1092,7 +1095,7 @@
       }
     }
 
-    // 标题或正文规则
+    // 标题/正文规则
     if (ruleToCheck.startsWith('text/') || ruleToCheck.startsWith('title/')) {
       let remaining = ruleToCheck.startsWith('title/') ? ruleToCheck.substring(6) : ruleToCheck.substring(5);
       let pattern, flags = '';
@@ -2959,8 +2962,11 @@
         flex-direction: column;
     `;
 
+    const autoSyncEnabled = GM_getValue(WEBDAV_AUTO_SYNC_KEY, false);
+
+    // webdav面板
     panel.innerHTML = `
-            <h3>${t('webdavTitle')}</h3>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0;"><h3 style="margin:0;font-size:16px;color:#2d3748;line-height:1;">${t('webdavTitle')}</h3><label style="display:flex;align-items:baseline;font-size:12px;color:#4a5568;cursor:pointer;margin:0;white-space:nowrap;line-height:1;"><input type="checkbox" id="webdav-auto-sync" ${autoSyncEnabled ? 'checked' : ''} style="margin:0 5px 0 0;cursor:pointer;vertical-align:middle;position:relative;top:0;"><span style="line-height:1;">${t('autoSync')}</span></label></div>
             <div class="webdav-row"><label>${t('webdavUrl')}</label><input id="webdav-url" type="text" placeholder="https://example.com/remote.php/dav/files/user/" value="${webdavConfig.url}"></div>
             <div class="webdav-row"><label>${t('webdavUser')}</label><input id="webdav-username" type="text" value="${webdavConfig.username}"></div>
             <div class="webdav-row"><label>${t('webdavPass')}</label><input id="webdav-password" type="password" value="${webdavConfig.password}"></div>
@@ -3044,6 +3050,10 @@
       } catch (err) {
         setStatus(t('webdavUploadFailed') + err.message, true);
       }
+    };
+
+    document.getElementById('webdav-auto-sync').onchange = (e) => {
+      GM_setValue(WEBDAV_AUTO_SYNC_KEY, e.target.checked);
     };
 
     document.getElementById('webdav-download').onclick = async () => {
@@ -3167,6 +3177,7 @@
   }
 
   function checkAutoWebDAV() {
+    if (!GM_getValue(WEBDAV_AUTO_SYNC_KEY, false)) return;
     const config = GM_getValue(WEBDAV_KEY);
     if (!config || !config.url) return;
     const lastSync = GM_getValue(WEBDAV_LAST_SYNC_KEY, 0);
