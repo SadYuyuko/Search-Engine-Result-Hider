@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.7.1
+// @version      6.7.2
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -98,7 +98,6 @@
       test: '统计',
       close: '关闭',
       placeholder: '每行一个规则',
-      ruleHint: 'title/.*示例.*/ 匹配标题 | text/.*示例.*/ 匹配内容',
       scrollTop: '回到顶部',
       scrollBottom: '回到底部',
       panelTitle: '订阅管理',
@@ -106,7 +105,7 @@
       saveSub: '保存',
       importSub: '导入',
       cancel: '取消',
-      webdavTitle: 'WebDAV 同步设置',
+      webdavTitle: 'WebDAV同步设置',
       webdavUrl: 'Webdav地址',
       webdavUser: 'Webdav账号',
       webdavPass: '应用密码',
@@ -168,13 +167,15 @@
       webdavDownloading: '正在下载...',
       webdavUploadFailed: '上传失败：',
       webdavDownloadFailed: '下载失败：',
-      webdavHttpsRequired: '安全起见，WebDAV服务器地址必须使用https',
+      webdavHttpsRequired: '安全起见，WebDAV地址必须使用https',
       syntaxError: '语法错误',
       networkError: '网络错误',
       requestTimeout: '请求超时',
       subLinkInvalid: '链接错误',
       importing: '导入中',
       autoSync: '自动同步',
+      webdavUrlEmpty: 'WebDAV地址为空',
+      delete: '删除',
     },
     'en': {
       enableBlock: 'Enable Block',
@@ -197,7 +198,6 @@
       test: 'Stats',
       close: 'Close',
       placeholder: 'One rule per line',
-      ruleHint: 'title/.*abc.*/ matches title | text/.*abc.*/ matches snippet',
       scrollTop: 'Scroll to Top',
       scrollBottom: 'Scroll to Bottom',
       panelTitle: 'Subscription Manager',
@@ -274,6 +274,8 @@
       subLinkInvalid: 'Invalid URL',
       importing: 'Importing',
       autoSync: 'Auto Sync',
+      webdavUrlEmpty: 'WebDAV URL is empty',
+      delete: 'Delete',
     }
   };
 
@@ -425,18 +427,19 @@
             box-sizing: border-box;
         }
 
+        /* 规则栏输入 */
         .rules-container {
             display: flex;
             border: 1px solid #e2e8f0;
             border-radius: 4px;
             background: #f8fafc;
-            height: 180px;
+            height: 190px;
             margin-bottom: 3px;
             position: relative;
             overflow: hidden;
         }
         
-        /* 规则栏 */
+        /* 规则栏行号 */
         #searchfilter-line-numbers {
             width: 26px;
             padding: 8px 2px 8px 0;
@@ -1318,7 +1321,7 @@
         }
       }
 
-      // 预编译正则表达式
+      // 预编译正则
       try {
         if (coreRule.startsWith('text/')) {
           let virtualRule = coreRule.replace(/^text\//, 'title/');
@@ -2481,7 +2484,7 @@
     return 'bottom: 10px; right: 10px; transform: none;';
   }
 
-  // 面板显示
+  // 主面板样式
   function showConfigPanel() {
     const existingPanel = document.getElementById('searchfilter-panel');
     if (existingPanel) {
@@ -2569,10 +2572,6 @@
                     <textarea id="searchfilter-rules" placeholder="${t('placeholder')}" wrap="off">${currentConfig.rules.join('\n')}</textarea>
                     <div id="searchfilter-scroll-top" class="searchfilter-scroll-btn" style="top: 2px;" title="${t('scrollTop')}">⬆️</div>
                     <div id="searchfilter-scroll-bottom" class="searchfilter-scroll-btn" style="bottom: 1px;" title="${t('scrollBottom')}">⬇️</div>
-                </div>
-                <div style="font-size: 10px; color: #718096; margin-top: 3px; text-align: left;">
-                ${t('ruleHint')}<br>
-                </div>
             </div>
             
             <div style="display: flex; gap: 6px; margin-top: 8px;" id="searchfilter-panel-footer">
@@ -2754,6 +2753,7 @@
       return;
     }
 
+    // 订阅面板样式
     const panel = document.createElement('div');
     panel.id = 'searchfilter-subscription-panel';
     panel.classList.add('searchfilter-panel-fade');
@@ -2949,6 +2949,7 @@
       filename: 'rules.txt'
     });
 
+    // webdav面板样式
     const panel = document.createElement('div');
     panel.id = 'searchfilter-webdav-panel';
     panel.classList.add('searchfilter-panel-fade');
@@ -2964,7 +2965,7 @@
 
     const autoSyncEnabled = GM_getValue(WEBDAV_AUTO_SYNC_KEY, false);
 
-    // webdav面板
+    // webdav面板布局
     panel.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0;"><h3 style="margin:0;font-size:16px;color:#2d3748;line-height:1;">${t('webdavTitle')}</h3><label style="display:flex;align-items:baseline;font-size:12px;color:#4a5568;cursor:pointer;margin:0;white-space:nowrap;line-height:1;"><input type="checkbox" id="webdav-auto-sync" ${autoSyncEnabled ? 'checked' : ''} style="margin:0 5px 0 0;cursor:pointer;vertical-align:middle;position:relative;top:0;"><span style="line-height:1;">${t('autoSync')}</span></label></div>
             <div class="webdav-row"><label>${t('webdavUrl')}</label><input id="webdav-url" type="text" placeholder="https://example.com/remote.php/dav/files/user/" value="${webdavConfig.url}"></div>
