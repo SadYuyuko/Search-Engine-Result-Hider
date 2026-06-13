@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.7.3
+// @version      6.7.4
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -1501,6 +1501,25 @@
     return null;
   }
 
+  // 处理google追踪
+  function getCleanUrlAndFixDOM(link, engine) {
+    if (!link || !link.href) return '';
+    let url = link.href;
+    if (engine === 'google') {
+      try {
+        const urlObj = new URL(url);
+        if (urlObj.hostname.includes('google.') && urlObj.pathname === '/url') {
+          const realUrl = urlObj.searchParams.get('q') || urlObj.searchParams.get('url');
+          if (realUrl) {
+            url = realUrl;
+            link.href = realUrl;
+          }
+        }
+      } catch (e) {}
+    }
+    return url;
+  }
+
   // 正文选择器
   function getResultSnippet(result, engine) {
     const selectors = SELECTORS.snippets[engine] || SELECTORS.snippets.bing;
@@ -1815,7 +1834,7 @@
     const link = getResultLink(result, engine);
     if (!link || !link.href) return false;
 
-    const url = link.href;
+    const url = getCleanUrlAndFixDOM(link, engine);
     let domain = '';
     try {
       domain = new URL(url).hostname;
@@ -1837,9 +1856,9 @@
           const parent = result.parentElement;
           if (parent) {
             const hasVisibleSiblings = Array.from(parent.children).some(sibling => {
-              return sibling !== result && 
-                     sibling.style.display !== 'none' && 
-                     sibling.getAttribute('data-is-blocked') !== 'true';
+              return sibling !== result &&
+                sibling.style.display !== 'none' &&
+                sibling.getAttribute('data-is-blocked') !== 'true';
             });
             if (!hasVisibleSiblings) {
               parent.style.display = 'none';
@@ -2241,12 +2260,13 @@
         const engine = getSearchEngine();
         const link = getResultLink(el, engine);
         if (link && link.href && currentConfig.showBlockBtn) {
+          let url = getCleanUrlAndFixDOM(link, engine);
           let domain = '';
           try {
-            domain = new URL(link.href).hostname;
+            domain = new URL(url).hostname;
           } catch (e) {}
           if (!el.querySelector('.searchfilter-quick-block')) {
-            injectBlockButton(el, engine, link.href, domain);
+            injectBlockButton(el, engine, url, domain);
           }
         }
         addMatchedRuleLabel(el);
