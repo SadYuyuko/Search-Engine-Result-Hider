@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.7.4
+// @version      6.7.5
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -176,6 +176,7 @@
       autoSync: '自动同步',
       webdavUrlEmpty: 'WebDAV地址为空',
       delete: '删除',
+      togglePassword: '显示/隐藏密码',
     },
     'en': {
       enableBlock: 'Enable Block',
@@ -276,6 +277,7 @@
       autoSync: 'Auto Sync',
       webdavUrlEmpty: 'WebDAV URL is empty',
       delete: 'Delete',
+      togglePassword: 'Show/Hide Password',
     }
   };
 
@@ -3005,27 +3007,52 @@
 
     // webdav面板布局
     panel.innerHTML = `
-            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0;"><h3 style="margin:0;font-size:16px;color:#2d3748;line-height:1;">${t('webdavTitle')}</h3><label style="display:flex;align-items:baseline;font-size:12px;color:#4a5568;cursor:pointer;margin:0;white-space:nowrap;line-height:1;"><input type="checkbox" id="webdav-auto-sync" ${autoSyncEnabled ? 'checked' : ''} style="margin:0 5px 0 0;cursor:pointer;vertical-align:middle;position:relative;top:0;"><span style="line-height:1;">${t('autoSync')}</span></label></div>
-            <div class="webdav-row"><label>${t('webdavUrl')}</label><input id="webdav-url" type="text" placeholder="https://example.com/remote.php/dav/files/user/" value="${webdavConfig.url}"></div>
-            <div class="webdav-row"><label>${t('webdavUser')}</label><input id="webdav-username" type="text" value="${webdavConfig.username}"></div>
-            <div class="webdav-row"><label>${t('webdavPass')}</label><input id="webdav-password" type="password" value="${webdavConfig.password}"></div>
-            <div class="webdav-row"><label>${t('filename')}</label><input id="webdav-filename" type="text" placeholder="rules.txt" value="${webdavConfig.filename}"></div>
-            <div class="webdav-btn-group">
-                <button id="webdav-upload" class="searchfilter-button searchfilter-button-success">${t('upload')}</button>
-                <button id="webdav-download" class="searchfilter-button searchfilter-button-primary">${t('download')}</button>
-                <button id="webdav-cancel" class="searchfilter-button searchfilter-button-secondary">${t('cancel')}</button>
-            </div>
-            <div id="webdav-status"></div>
-        `;
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0;">
+        <h3 style="margin:0;font-size:16px;color:#2d3748;line-height:1;">${t('webdavTitle')}</h3>
+        <label style="display:flex;align-items:baseline;font-size:12px;color:#4a5568;cursor:pointer;margin:0;white-space:nowrap;line-height:1;">
+            <input type="checkbox" id="webdav-auto-sync" ${autoSyncEnabled ? 'checked' : ''} style="margin:0 5px 0 0;cursor:pointer;vertical-align:middle;position:relative;top:0;">
+            <span style="line-height:1;">${t('autoSync')}</span>
+        </label>
+    </div>
+    <div class="webdav-row"><label>${t('webdavUrl')}</label><input id="webdav-url" type="text" placeholder="https://example.com/remote.php/dav/files/user/" value="${webdavConfig.url}"></div>
+    <div class="webdav-row"><label>${t('webdavUser')}</label><input id="webdav-username" type="text" value="${webdavConfig.username}"></div>
+    <div class="webdav-row">
+        <label>${t('webdavPass')}</label>
+        <div style="position: relative; display: flex; align-items: center;">
+            <input id="webdav-password" type="password" value="${webdavConfig.password}" style="padding-right: 35px !important;">
+            <button id="webdav-toggle-password" type="button" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; font-size: 16px; line-height: 1; color: #718096; display: flex; align-items: center; justify-content: center; z-index: 1;" title="${t('togglePassword')}">🐵</button>
+        </div>
+    </div>
+    <div class="webdav-row"><label>${t('filename')}</label><input id="webdav-filename" type="text" placeholder="rules.txt" value="${webdavConfig.filename}"></div>
+    <div class="webdav-btn-group">
+        <button id="webdav-upload" class="searchfilter-button searchfilter-button-success">${t('upload')}</button>
+        <button id="webdav-download" class="searchfilter-button searchfilter-button-primary">${t('download')}</button>
+        <button id="webdav-cancel" class="searchfilter-button searchfilter-button-secondary">${t('cancel')}</button>
+    </div>
+    <div id="webdav-status"></div>
+`;
 
     document.body.appendChild(panel);
     requestAnimationFrame(() => panel.classList.add('show'));
 
+    // 获取输入元素
     const urlInput = document.getElementById('webdav-url');
     const usernameInput = document.getElementById('webdav-username');
     const passwordInput = document.getElementById('webdav-password');
     const filenameInput = document.getElementById('webdav-filename');
     const statusDiv = document.getElementById('webdav-status');
+
+    // 密码显隐切换
+    const togglePasswordBtn = document.getElementById('webdav-toggle-password');
+    if (togglePasswordBtn && passwordInput) {
+      togglePasswordBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const type = passwordInput.type === 'password' ? 'text' : 'password';
+        passwordInput.type = type;
+        togglePasswordBtn.textContent = type === 'password' ? '🐵' : '🙈';
+      });
+    }
 
     function setStatus(msg, isError = false) {
       statusDiv.textContent = msg;
