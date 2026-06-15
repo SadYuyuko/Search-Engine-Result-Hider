@@ -22,7 +22,7 @@ Supports Bing, Google, DuckDuckGo and Yandex, with potential support for more se
 
 **About WebDAV:**  
 1. Synchronizes automatically every hour. Auto‑sync merges files based on timestamps and deduplicates. Manual upload/download overwrites files. Currently tested only with single‑device synchronization. In theory, it can sync the same configuration file as uBlacklist, but no guarantees are made regarding file overwrite logic errors. Always back up your files first.  
-2. WebDAV sync requires cross‑origin request permissions. You can deny this if not needed.  
+2. WebDAV sync requires cross‑origin request permissions.  
 3. Due to inherent limitations of script data storage, only HTTPS addresses are supported, and it is strongly recommended to use an app‑specific password rather than your main account password.  
 4. Provide the full folder path in the address field, e.g., for Nutstore: `https://dav.jianguoyun.com/dav/your_folder/`  
 
@@ -46,11 +46,7 @@ Rules tend to favor titles and regular matches. For convenience, you can add rul
 `title/.*example(A|B).*/` – matches results whose title contains `exampleA` or `exampleB`  
 `title/.*example(A|B).*/i` – same as above, but case‑insensitive (also matches `examplea` and `exampleb`)  
 `title/.*exampleAbC.*/i` – case‑insensitive; matches `exampleAbC`, `exampleABC`, etc.  
-
-**Snippet Matching:**  
-`text/.*example.*/` – matches results whose snippet/description contains `example`. This rule does not match titles.  
-`text/.*exampleabc.*/i` – same as above, case‑insensitive.  
-
+  
 **Whitelist Matching:**  
 `@*://*.com/*` – allow all pages whose domain ends with `.com`  
 `@*://example.com/*` – allow the main site `example.com`  
@@ -67,6 +63,11 @@ Rules tend to favor titles and regular matches. For convenience, you can add rul
 **Highlighting Rules:**  
 '@1 *://*.example.com/*' – Adds color borders to 'example.com' and its subdomains  
 '@1 title/.*example.*/' – Add a color border to the result matched to the title with 'example'  
+  
+**Snippet Matching:**  
+`text/.*example.*/` – matches results whose snippet/description contains `example`. This rule does not match titles.  
+`text/.*exampleabc.*/i` – same as above, case‑insensitive.  
+Note: Snipet Matching is a script-only rule that doesn't work in ublacklist  
   
 ### Screenshots：  
 
