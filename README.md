@@ -66,7 +66,7 @@
 `@1 *://*.example.com/*` – 给`example.com`及其子域名加上颜色边框  
 `@1 title/.*示例.*/` – 给匹配到标题带有`示例`的结果加上颜色边框  
     
-**效果截图：**  
+### 效果截图：  
   
 <img width="464" height="300" alt="01" src="https://github.com/user-attachments/assets/998e772f-32be-4d0c-95de-7c2d65a4abd3" />  
 
