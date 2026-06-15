@@ -3,7 +3,7 @@
 ### [Github](https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js) | [Greasy Fork](https://greasyfork.org/zh-CN/scripts/552394) (推荐) 使用任意脚本管理器安装  
 [中文](README.md) | [English](README.en.md)  
 在仅支持安装脚本的移动端浏览器上尝试复刻ublacklist的功能，支持安装扩展的移动端和桌面端也可用但更推荐直接使用[ublacklist](https://addons.mozilla.org/zh-CN/firefox/addon/ublacklist)  
-适用于Bing、Google、DuckDuckGo、Yandex，未来可能支持更多搜索引擎。支持包括ublacklist基础规则在内的正则匹配、URL匹配、标题匹配、白名单匹配以及搜索词条正文内容匹配。  
+适用于Bing、Google、DuckDuckGo、Yandex，未来可能支持更多搜索引擎。支持包括ublacklist基础规则在内的正则匹配、URL匹配、标题匹配、白名单匹配、结果高亮以及搜索词条正文内容匹配。  
  
 **当前功能：**  
 - 屏蔽按钮一键屏蔽域名  
@@ -61,6 +61,10 @@
 `@if (Google) { *://*.example.com/* }` - 仅在Google中屏蔽该`example.com`  
 `@if (site = "google.com.hk") { *://*.example.com/* }` - 仅在Google HK中屏蔽`example.com`  
 `@if(Google) { *://*.example.com/* @if(title *= "示例") @if(site = "google.com") }` - 仅在Google中，屏蔽`example.com`的搜索结果中标题含有`示例`的结果  
+  
+**高亮规则：**  
+`@1 *://*.example.com/*` – 给`example.com`及其子域名加上颜色边框  
+`@1 title/.*示例.*/` – 给匹配到标题带有`示例`的结果加上颜色边框  
     
 **效果截图：**  
   
