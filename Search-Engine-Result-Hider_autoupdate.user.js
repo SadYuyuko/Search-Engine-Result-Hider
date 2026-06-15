@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.7.5
+// @version      6.8.0
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -20,7 +20,7 @@
 // @include      /^https?:\/\/([\w-]+\.)?(?:duckduckgo\.com|ddg\.gg)\/.*$/
 // @include      /^https?:\/\/([\w-]+\.)?bing\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)\/.*$/
 // @include      /^https?:\/\/([\w-]+\.)?google\.(?:com|[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})\/.*$/
-// @include      /^https?:\/\/([\w-]+\.)?yandex\.(?:com|ru|eu|by|kz|ua|uz|az|kg|md|tj|tm|lv|lt|ee|fi|ge|tr)\/.*$/
+// @include      /^https?:\/\/([\w-]+\.)?yandex\.(?:com|[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})\/.*$/
 // @connect      dav.jianguoyun.com
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -313,11 +313,11 @@
   // 引擎检测
   function getSearchEngine() {
     const hostname = window.location.hostname;
-    if (/(?:^|\.)bing\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)$/.test(hostname)) return 'bing';
-    if (/(?:^|\.)google\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})$/.test(hostname)) return 'google';
-    if (/(?:^|\.)(?:duckduckgo\.com|ddg\.gg)$/.test(hostname)) return 'duckduckgo';
-    if (/(?:^|\.)yandex\.(?:com|ru|eu|by|kz|ua|uz|az|kg|md|tj|tm|lv|lt|ee|fi|ge|tr)$/.test(hostname)) return 'yandex';
     if (/(?:^|\.)ya\.ru$/.test(hostname)) return 'yandex';
+    if (/(?:^|\.)bing\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)$/.test(hostname)) return 'bing';
+    if (/(?:^|\.)(?:duckduckgo\.com|ddg\.gg)$/.test(hostname)) return 'duckduckgo';
+    if (/(?:^|\.)google\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})$/.test(hostname)) return 'google';
+    if (/(?:^|\.)yandex\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})$/.test(hostname)) return 'yandex';
     return 'other';
   }
 
@@ -440,11 +440,11 @@
             position: relative;
             overflow: hidden;
         }
-        
+
         /* 规则栏行号 */
         #searchfilter-line-numbers {
-            width: 26px;
-            padding: 8px 2px 8px 0;
+            min-width: 20px;
+            padding: 8px 4px 8px 2px;
             background: #edf2f7;
             border-right: 1px solid #e2e8f0;
             text-align: right;
@@ -452,12 +452,13 @@
             font-family: 'Consolas', 'Monaco', monospace;
             font-size: 11px;
             line-height: 1.4;
+            white-space: nowrap;
             overflow: hidden;
             user-select: none;
             flex-shrink: 0;
             box-sizing: border-box;
         }
-        
+
         #searchfilter-rules {
             flex: 1;
             height: 100%;
@@ -474,12 +475,12 @@
             overflow-y: auto;
             outline: none;
         }
-        
+
         #searchfilter-rules::-webkit-scrollbar { width: 6px; height: 0px; }
         #searchfilter-rules::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
         #searchfilter-rules::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
         #searchfilter-rules::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
-        
+
         /* 统计面板 */
         #searchfilter-stats-panel {
             position: absolute;
@@ -497,19 +498,19 @@
             overflow: hidden;
             box-sizing: border-box;
         }
-        
+
         #searchfilter-stats-content {
             padding: 12px;
             overflow-y: auto;
             flex: 1;
             scrollbar-width: thin;
         }
-        
+
         #searchfilter-stats-content::-webkit-scrollbar { width: 6px; }
         #searchfilter-stats-content::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
         #searchfilter-stats-content::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
         #searchfilter-stats-content::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
-        
+
         /* 屏蔽按钮 */
         .searchfilter-quick-block {
             position: absolute;
@@ -526,11 +527,11 @@
             color: #000000; 
             transition: transform 0.2s;
         }
-        
+
         .searchfilter-quick-block:hover {
             transform: scale(1.1);
         }
-        
+
         @media (prefers-color-scheme: dark) {
             .searchfilter-quick-block {
                 color: #ffffff;
@@ -549,11 +550,10 @@
             background: transparent;
             z-index: 10;
         }
-        
+
         .searchfilter-scroll-btn:hover { opacity: 1; transform: scale(1.2); }
-        
         .searchfilter-quick-block:hover { transform: scale(1.1); opacity: 1; }
-        
+
         /* 非正文区域隐藏按钮 */
         .isv-r .searchfilter-quick-block, 
         .image-section .searchfilter-quick-block,
@@ -766,8 +766,8 @@
             }
 
             #subscription-status {
-    color: #9ca3af !important;
-}
+                color: #9ca3af !important;
+            }
         }
 
         /* 面板渐入渐出动画 */
@@ -780,7 +780,7 @@
             opacity: 1;
             transform: translate(-50%, -50%);
         }
-        
+
         #searchfilter-panel:not(.searchfilter-panel-fade) {
             transition: opacity 0.2s ease;
         }
@@ -894,6 +894,12 @@
                 background: rgba(0, 160, 0, 0.9);
                 color: #fff;
             }
+        }
+
+        /* 高亮边框 */
+        .searchfilter-highlighted {
+            outline: 2px solid #CE2029 !important;
+            outline-offset: -2px !important;
         }
     `);
 
@@ -1248,7 +1254,12 @@
       whitelistDomains: new Set(),
       whitelistUrlPatterns: [],
       rulesList: [],
-      conditionalRules: []
+      conditionalRules: [],
+      highlightDomains: new Set(),
+      highlightUrls: [],
+      highlightTitles: [],
+      highlightTexts: [],
+      highlightConditionalRules: []
     };
     const subscriptionRules = getAllSubscriptionRules();
     const allRules = currentConfig.rules.concat(subscriptionRules);
@@ -1266,6 +1277,83 @@
     }
 
     allRules.forEach(rule => {
+
+      // @1高亮规则
+      if (rule.trim().startsWith('@1')) {
+        let hlRule = rule.trim().substring(2).trim();
+        if (!hlRule) return;
+        const parsed = parseRuleWithConditions(hlRule);
+        if (!parsed.staticPass) return;
+        let coreRule = parsed.coreRule;
+
+        // @1域名规则
+        let domainMatch = coreRule.match(/^\*:\/\/\*\.([^\/]+)\/\*$/);
+        if (!domainMatch) domainMatch = coreRule.match(/^\*:\/\/([^\/]+)\/\*$/);
+        if (domainMatch) {
+          const domain = domainMatch[1].toLowerCase();
+          if (!domain.includes('/')) {
+            if (!parsed.dynamicConditions.length)
+              compiledRules.highlightDomains.add(domain);
+            else
+              compiledRules.highlightConditionalRules.push({
+                type: 'domain',
+                domain,
+                conditions: parsed.dynamicConditions
+              });
+            return;
+          }
+        }
+
+        // @1正则/标题/正文/URL规则
+        try {
+          let type, regex, ruleObj = {
+            conditions: parsed.dynamicConditions
+          };
+          if (coreRule.startsWith('/')) {
+            type = 'url';
+            let {
+              pattern,
+              flags
+            } = ruleToRegex(coreRule);
+            regex = new RegExp(pattern, flags);
+          } else if (coreRule.startsWith('title/')) {
+            type = 'title';
+            let {
+              pattern,
+              flags
+            } = ruleToRegex(coreRule);
+            regex = new RegExp(pattern, flags);
+          } else if (coreRule.startsWith('text/')) {
+            type = 'text';
+            let {
+              pattern,
+              flags
+            } = ruleToRegex(coreRule.replace('text/', 'title/'));
+            regex = new RegExp(pattern, flags);
+          } else {
+            type = 'url';
+            let {
+              pattern,
+              flags
+            } = ruleToRegex(coreRule);
+            regex = new RegExp(pattern, flags);
+          }
+          ruleObj.type = type;
+          ruleObj.regex = regex;
+
+          if (!parsed.dynamicConditions.length) {
+            if (type === 'url') compiledRules.highlightUrls.push(regex);
+            else if (type === 'title') compiledRules.highlightTitles.push(regex);
+            else if (type === 'text') compiledRules.highlightTexts.push(regex);
+          } else {
+            compiledRules.highlightConditionalRules.push(ruleObj);
+          }
+        } catch (e) {
+          if (currentConfig.debug) console.warn('高亮规则编译失败:', hlRule, e);
+        }
+        return;
+      }
+
       if (!rule || rule.trim() === '' || rule.startsWith('#')) return;
 
       const source = getRuleSource(rule);
@@ -1368,6 +1456,51 @@
 
   // 规则匹配
   function checkRuleMatchOptimized(url, domain, title, snippet) {
+    // 优先检查高亮
+    let hd = domain.toLowerCase();
+    while (hd) {
+      if (compiledRules.highlightDomains.has(hd)) return 'highlight';
+      const dot = hd.indexOf('.');
+      if (dot === -1) break;
+      hd = hd.substring(dot + 1);
+    }
+    for (let re of compiledRules.highlightUrls) {
+      if (re.test(url) || re.test(domain)) return 'highlight';
+    }
+    if (title) {
+      for (let re of compiledRules.highlightTitles) {
+        if (re.test(title)) return 'highlight';
+      }
+    }
+    if (snippet) {
+      for (let re of compiledRules.highlightTexts) {
+        if (re.test(snippet)) return 'highlight';
+      }
+    }
+    for (let item of compiledRules.highlightConditionalRules) {
+      let condMet = true;
+      for (let cond of item.conditions) {
+        if (cond.type === 'title' && cond.op === '*=') {
+          if (!title || !title.includes(cond.val)) {
+            condMet = false;
+            break;
+          }
+        }
+      }
+      if (!condMet) continue;
+      if (item.type === 'domain') {
+        let d2 = domain.toLowerCase();
+        while (d2) {
+          if (d2 === item.domain) return 'highlight';
+          const dot = d2.indexOf('.');
+          if (dot === -1) break;
+          d2 = d2.substring(dot + 1);
+        }
+      } else {
+        if (item.regex.test(url) || item.regex.test(domain)) return 'highlight';
+      }
+    }
+
     let d = domain.toLowerCase();
     while (d) {
       if (compiledRules.whitelistDomains.has(d)) return false;
@@ -1845,9 +1978,23 @@
     const title = getResultTitle(result, engine);
     const snippet = getResultSnippet(result, engine);
 
-    const shouldBlock = checkRuleMatchOptimized(url, domain, title, snippet);
+    const matchResult = checkRuleMatchOptimized(url, domain, title, snippet);
 
-    if (shouldBlock) {
+    // 高亮优先
+    if (matchResult === 'highlight') {
+      result.style.display = '';
+      result.classList.add('searchfilter-highlighted');
+      result.classList.remove('searchfilter-blocked-visible');
+      result.setAttribute('data-blocker-processed', 'true');
+      result.setAttribute('data-is-highlighted', 'true');
+      result.removeAttribute('data-is-blocked');
+      if (currentConfig.showBlockBtn) {
+        injectBlockButton(result, engine, url, domain);
+      }
+      return false;
+    }
+
+    if (matchResult === true) {
       result.style.display = showHiddenResults ? '' : 'none';
       result.setAttribute('data-blocker-processed', 'true');
       result.setAttribute('data-is-blocked', 'true');
@@ -1957,7 +2104,9 @@
       el.removeAttribute('data-observed');
       el.removeAttribute('data-blocker-processed');
       el.removeAttribute('data-is-blocked');
+      el.removeAttribute('data-is-highlighted');
       el.classList.remove('searchfilter-blocked-visible');
+      el.classList.remove('searchfilter-highlighted');
       el.style.display = '';
       const label = el.querySelector('.searchfilter-matched-rule');
       if (label) label.remove();
@@ -3080,6 +3229,7 @@
       });
     };
 
+    // webdav上传
     document.getElementById('webdav-upload').onclick = async () => {
       const url = urlInput.value.trim();
       if (!url) {
@@ -3122,6 +3272,7 @@
       GM_setValue(WEBDAV_AUTO_SYNC_KEY, e.target.checked);
     };
 
+    // webdav下载
     document.getElementById('webdav-download').onclick = async () => {
       const url = urlInput.value.trim();
       if (!url) {
