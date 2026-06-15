@@ -4,7 +4,7 @@
 [中文](README.md) | [English](README.en.md)  
 This script is trying to replicate the functionality of uBlacklist on mobile browsers that only support script installation. It also works on desktop browsers or mobile browsers with extension support, though [uBlacklist](https://addons.mozilla.org/zh-CN/firefox/addon/ublacklist) is the preferred option in those environments.  
 
-Supports Bing, Google, DuckDuckGo and Yandex, with potential support for more search engines in the future. It includes uBlacklist basic rule compatibility as well as regex matching, URL matching, title matching, whitelist matching, and matching against the snippet text of search results.  
+Supports Bing, Google, DuckDuckGo and Yandex, with potential support for more search engines in the future. It includes uBlacklist basic rule compatibility as well as regex matching, URL matching, title matching, whitelist matching, highlighting rules and matching against the snippet text of search results.  
 
 **Current Features:**  
 - One-click domain blocking via a block button  
@@ -64,7 +64,11 @@ Rules tend to favor titles and regular matches. For convenience, you can add rul
 `@if (site = "google.com.hk") { *://*.example.com/* }` - Block example.com only on Google HK  
 `@if(Google) { *://*.example.com/* @if(title *= "keyword") @if(site = "google.com") }` - Block results from example.com whose title contains the keyword, only on Google  
   
-**Screenshots：**  
+**Highlighting Rules:**  
+'@1 *://*.example.com/*' – Adds color borders to 'example.com' and its subdomains  
+'@1 title/.*example.*/' – Add a color border to the result matched to the title with 'example'  
+  
+### Screenshots：  
 
 <img width="464" height="300" alt="01" src="https://github.com/user-attachments/assets/998e772f-32be-4d0c-95de-7c2d65a4abd3" />  
 
