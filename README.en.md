@@ -61,8 +61,8 @@ Rules tend to favor titles and regular matches. For convenience, you can add rul
 `@if(Google) { *://*.example.com/* @if(title *= "keyword") @if(site = "google.com") }` - Block results from example.com whose title contains the keyword, only on Google  
   
 **Highlighting Rules:**  
-'@1 *://*.example.com/*' – Adds color borders to 'example.com' and its subdomains  
-'@1 title/.*example.*/' – Add a color border to the result matched to the title with 'example'  
+`@1 *://*.example.com/*` – Adds color borders to `example.com` and its subdomains  
+`@1 title/.*example.*/` – Add a color border to the result matched to the title with `example`  
   
 **Snippet Matching:**  
 `text/.*example.*/` – matches results whose snippet/description contains `example`. This rule does not match titles.  
