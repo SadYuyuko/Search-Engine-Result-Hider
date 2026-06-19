@@ -59,7 +59,7 @@ Rules tend to favor titles and regular matches. For convenience, you can add rul
 `@1 title/.*example.*/` – Add a color border to the result matched to the title with `example`  
 Note: highlight rules have a whitelist effect, the priority is highlight > whitelist > blacklist  
   
-**Composite rules:**  
+**Composite Rules:**  
 `*://*.example.com/* @if(title *= "keyword")` - Block results from example.com whose title contains the keyword in search results  
 `@if (Google) { *://*.example.com/* }` - Block this example.com only on Google  
 `@if (site = "google.com.hk") { *://*.example.com/* }` - Block example.com only on Google HK  
