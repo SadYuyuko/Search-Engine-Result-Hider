@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.8.0
+// @version      6.8.1
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -2632,7 +2632,11 @@
 
     // 白名单列表
     if (whitelistRules.length > 0) {
-      resultHTML += `<div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #e2e8f0;"><strong style="color: #2d3748;">${t('whitelistRules')} (${whitelistRules.length})</strong><br>`;
+      resultHTML += `<div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #e2e8f0;">`;
+      resultHTML += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #cbd5e0;">`;
+      resultHTML += `<span style="font-weight: bold; color: #2d3748; font-size: 14px;">${t('whitelistRules')}</span>`;
+      resultHTML += `<span style="background: #2c5282; color: white; padding: 2px 10px; border-radius: 12px; font-size: 12px;">${t('stateEnabled')} ${whitelistRules.length} ${t('matchedCountUnit')}</span>`;
+      resultHTML += `</div>`;
       whitelistRules.forEach(rule => {
         resultHTML += `<div style="font-size: 11px; color: #4a5568; word-break: break-all; font-family: 'Consolas', monospace;">@${rule}</div>`;
       });
