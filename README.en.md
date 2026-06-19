@@ -57,6 +57,7 @@ Rules tend to favor titles and regular matches. For convenience, you can add rul
 **Highlighting Rules:**  
 `@1 *://*.example.com/*` – Adds color borders to `example.com` and its subdomains  
 `@1 title/.*example.*/` – Add a color border to the result matched to the title with `example`  
+Note: highlight rules have a whitelist effect, the priority is highlight > whitelist > blacklist  
   
 **Composite rules:**  
 `*://*.example.com/* @if(title *= "keyword")` - Block results from example.com whose title contains the keyword in search results  
