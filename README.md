@@ -53,16 +53,16 @@
 `@*://example.com/abc/*` – 只放行`example.com`特定路径  
 `@*://*.example.com/abc/*` – 只放行`example.com`子域名特定路径，屏蔽其他路径和主站  
   
+  **高亮规则：**  
+`@1 *://*.example.com/*` – 给`example.com`及其子域名的搜索结果加上颜色边框  
+`@1 title/.*示例.*/` – 给匹配到标题带有`示例`的结果加上颜色边框  
+  
 **复合规则：**  
 `*://*.example.com/* @if(title *= "示例")` - 屏蔽`example.com`的搜索结果中标题含有`示例`的结果  
 `@if (Google) { *://*.example.com/* }` - 仅在Google中屏蔽该`example.com`  
 `@if (site = "google.com.hk") { *://*.example.com/* }` - 仅在Google HK中屏蔽`example.com`  
 `@if(Google) { *://*.example.com/* @if(title *= "示例") @if(site = "google.com") }` - 仅在Google中，屏蔽`example.com`的搜索结果中标题含有`示例`的结果  
   
-**高亮规则：**  
-`@1 *://*.example.com/*` – 给`example.com`及其子域名的搜索结果加上颜色边框  
-`@1 title/.*示例.*/` – 给匹配到标题带有`示例`的结果加上颜色边框  
-
 **正文匹配：**  
 `text/.*示例.*/` – 匹配结果词条的网页描述内容中包含`示例`的搜索结果，此规则不会匹配标题  
 `text/.*示例abc.*/i` – 同上，加i忽略大小写  
