@@ -54,15 +54,15 @@ Rules tend to favor titles and regular matches. For convenience, you can add rul
 `@*://example.com/abc/*` – allow only the specific path `/abc` on `example.com`  
 `@*://*.example.com/abc/*` – allow only the specific path `/abc` on subdomains of `example.com`; block other paths and the main site  
   
+**Highlighting Rules:**  
+`@1 *://*.example.com/*` – Adds color borders to `example.com` and its subdomains  
+`@1 title/.*example.*/` – Add a color border to the result matched to the title with `example`  
+  
 **Composite rules:**  
 `*://*.example.com/* @if(title *= "keyword")` - Block results from example.com whose title contains the keyword in search results  
 `@if (Google) { *://*.example.com/* }` - Block this example.com only on Google  
 `@if (site = "google.com.hk") { *://*.example.com/* }` - Block example.com only on Google HK  
 `@if(Google) { *://*.example.com/* @if(title *= "keyword") @if(site = "google.com") }` - Block results from example.com whose title contains the keyword, only on Google  
-  
-**Highlighting Rules:**  
-`@1 *://*.example.com/*` – Adds color borders to `example.com` and its subdomains  
-`@1 title/.*example.*/` – Add a color border to the result matched to the title with `example`  
   
 **Snippet Matching:**  
 `text/.*example.*/` – matches results whose snippet/description contains `example`. This rule does not match titles.  
