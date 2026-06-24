@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.8.1
+// @version      6.8.2
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -252,7 +252,7 @@
       statsErrors: 'Found {count} rule errors:',
       statsRule: 'Rule:',
       matchedCountLabel: 'Hits',
-      matchedCountUnit: 'Result',
+      matchedCountUnit: 'Rule',
       menuBubbleStateShow: 'Show',
       menuBubbleStateHide: 'Hide',
       menuBubbleActionOpen: 'Open Panel',
@@ -960,7 +960,7 @@
       dynamicConditionsList.push({
         type: 'title',
         op: '*=',
-        val: titleMatch[1]
+        val: titleMatch[1].toLowerCase()
       });
       return true;
     }
@@ -1456,7 +1456,6 @@
 
   // 规则匹配
   function checkRuleMatchOptimized(url, domain, title, snippet) {
-    // 优先检查高亮
     let hd = domain.toLowerCase();
     while (hd) {
       if (compiledRules.highlightDomains.has(hd)) return 'highlight';
@@ -1481,7 +1480,7 @@
       let condMet = true;
       for (let cond of item.conditions) {
         if (cond.type === 'title' && cond.op === '*=') {
-          if (!title || !title.includes(cond.val)) {
+          if (!title || !title.toLowerCase().includes(cond.val)) {
             condMet = false;
             break;
           }
@@ -1545,7 +1544,7 @@
       for (let j = 0; j < ruleObj.conditions.length; j++) {
         const cond = ruleObj.conditions[j];
         if (cond.type === 'title' && cond.op === '*=') {
-          if (!title || !title.includes(cond.val)) {
+          if (!title || !title.toLowerCase().includes(cond.val)) {
             conditionsMet = false;
             break;
           }
@@ -1587,7 +1586,7 @@
           for (let j = 0; j < item.conditions.length; j++) {
             const cond = item.conditions[j];
             if (cond.type === 'title' && cond.op === '*=') {
-              if (!title || !title.includes(cond.val)) {
+              if (!title || !title.toLowerCase().includes(cond.val)) {
                 conditionsMet = false;
                 break;
               }
