@@ -59,7 +59,7 @@
 注意：高亮规则具有白名单效果，优先级 高亮>白名单>黑名单  
   
 **复合规则：**  
-`*://*.example.com/* @if(title *= "示例")` - 屏蔽`example.com`的搜索结果中标题含有`示例`的结果  
+`*://*.example.com/* @if(title *= "示例")` - 屏蔽`example.com`的搜索结果中标题含有`示例`的结果，复合规则的标题规则默认忽略大小写  
 `@if (Google) { *://*.example.com/* }` - 仅在Google中屏蔽该`example.com`  
 `@if (site = "google.com.hk") { *://*.example.com/* }` - 仅在Google HK中屏蔽`example.com`  
 `@if(Google) { *://*.example.com/* @if(title *= "示例") @if(site = "google.com") }` - 仅在Google中，屏蔽`example.com`的搜索结果中标题含有`示例`的结果  
