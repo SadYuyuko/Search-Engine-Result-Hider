@@ -60,7 +60,7 @@ Rules tend to favor titles and regular matches. For convenience, you can add rul
 Note: highlight rules have a whitelist effect, the priority is highlight > whitelist > blacklist  
   
 **Composite Rules:**  
-`*://*.example.com/* @if(title *= "keyword")` - Block results from example.com whose title contains the keyword in search results  
+`*://*.example.com/* @if(title *= "keyword")` - Block results from example.com whose title contains the keyword in search results, Its title rule ignores case  
 `@if (Google) { *://*.example.com/* }` - Block this example.com only on Google  
 `@if (site = "google.com.hk") { *://*.example.com/* }` - Block example.com only on Google HK  
 `@if(Google) { *://*.example.com/* @if(title *= "keyword") @if(site = "google.com") }` - Block results from example.com whose title contains the keyword, only on Google  
