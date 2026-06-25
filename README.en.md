@@ -52,7 +52,7 @@ Rules tend to favor titles and regular matches. For convenience, you can add rul
 `@*://example.com/*` – allow the main site `example.com`  
 `@*://*.example.com/*` – allow `example.com` and all its subdomains  
 `@*://example.com/abc/*` – allow only the specific path `/abc` on `example.com`  
-`@*://*.example.com/abc/*` – allow only the specific path `/abc` on subdomains of `example.com`; block other paths and the main site  
+`@*://*.example.com/abc/*` – allow only the specific path `/abc` on subdomains of `example.com`  
   
 **Highlighting Rules:**  
 `@1 *://*.example.com/*` – Adds color borders to `example.com` and its subdomains  
