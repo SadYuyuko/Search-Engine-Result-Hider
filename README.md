@@ -51,7 +51,7 @@
 `@*://example.com/*` – 放行`example.com`主站  
 `@*://*.example.com/*` – 放行`example.com`及其所有子域名  
 `@*://example.com/abc/*` – 只放行`example.com`特定路径  
-`@*://*.example.com/abc/*` – 只放行`example.com`子域名特定路径，屏蔽其他路径和主站  
+`@*://*.example.com/abc/*` – 只放行`example.com`子域名特定路径
   
   **高亮规则：**  
 `@1 *://*.example.com/*` – 给`example.com`及其子域名的搜索结果加上颜色边框  
