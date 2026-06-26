@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.8.2
+// @version      6.8.3
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -177,6 +177,7 @@
       webdavUrlEmpty: 'WebDAV地址为空',
       delete: '删除',
       togglePassword: '显示/隐藏密码',
+      highlightRules: '高亮规则',
     },
     'en': {
       enableBlock: 'Enable Block',
@@ -278,6 +279,7 @@
       webdavUrlEmpty: 'WebDAV URL is empty',
       delete: 'Delete',
       togglePassword: 'Show/Hide Password',
+      highlightRules: 'Highlight Rules',
     }
   };
 
@@ -1278,7 +1280,7 @@
 
     allRules.forEach(rule => {
 
-      // @1高亮规则
+      // @N高亮规则
       if (rule.trim().startsWith('@1')) {
         let hlRule = rule.trim().substring(2).trim();
         if (!hlRule) return;
@@ -1286,7 +1288,7 @@
         if (!parsed.staticPass) return;
         let coreRule = parsed.coreRule;
 
-        // @1域名规则
+        // @N域名规则
         let domainMatch = coreRule.match(/^\*:\/\/\*\.([^\/]+)\/\*$/);
         if (!domainMatch) domainMatch = coreRule.match(/^\*:\/\/([^\/]+)\/\*$/);
         if (domainMatch) {
@@ -1304,7 +1306,7 @@
           }
         }
 
-        // @1正则/标题/正文/URL规则
+        // @N其他规则
         try {
           let type, regex, ruleObj = {
             conditions: parsed.dynamicConditions
@@ -1454,52 +1456,9 @@
     });
   }
 
-  // 规则匹配
+  // 规则匹配优先级
   function checkRuleMatchOptimized(url, domain, title, snippet) {
-    let hd = domain.toLowerCase();
-    while (hd) {
-      if (compiledRules.highlightDomains.has(hd)) return 'highlight';
-      const dot = hd.indexOf('.');
-      if (dot === -1) break;
-      hd = hd.substring(dot + 1);
-    }
-    for (let re of compiledRules.highlightUrls) {
-      if (re.test(url) || re.test(domain)) return 'highlight';
-    }
-    if (title) {
-      for (let re of compiledRules.highlightTitles) {
-        if (re.test(title)) return 'highlight';
-      }
-    }
-    if (snippet) {
-      for (let re of compiledRules.highlightTexts) {
-        if (re.test(snippet)) return 'highlight';
-      }
-    }
-    for (let item of compiledRules.highlightConditionalRules) {
-      let condMet = true;
-      for (let cond of item.conditions) {
-        if (cond.type === 'title' && cond.op === '*=') {
-          if (!title || !title.toLowerCase().includes(cond.val)) {
-            condMet = false;
-            break;
-          }
-        }
-      }
-      if (!condMet) continue;
-      if (item.type === 'domain') {
-        let d2 = domain.toLowerCase();
-        while (d2) {
-          if (d2 === item.domain) return 'highlight';
-          const dot = d2.indexOf('.');
-          if (dot === -1) break;
-          d2 = d2.substring(dot + 1);
-        }
-      } else {
-        if (item.regex.test(url) || item.regex.test(domain)) return 'highlight';
-      }
-    }
-
+    // 白名单
     let d = domain.toLowerCase();
     while (d) {
       if (compiledRules.whitelistDomains.has(d)) return false;
@@ -1514,6 +1473,7 @@
       }
     }
 
+    // 黑名单
     d = domain.toLowerCase();
     while (d) {
       if (compiledRules.domains.has(d)) return true;
@@ -1571,6 +1531,51 @@
         if (ruleObj.regex.test(title)) return true;
       } else if (ruleObj.type === 'text' && snippet) {
         if (ruleObj.regex.test(snippet)) return true;
+      }
+    }
+
+    // 高亮规则
+    let hd = domain.toLowerCase();
+    while (hd) {
+      if (compiledRules.highlightDomains.has(hd)) return 'highlight';
+      const dot = hd.indexOf('.');
+      if (dot === -1) break;
+      hd = hd.substring(dot + 1);
+    }
+    for (let re of compiledRules.highlightUrls) {
+      if (re.test(url) || re.test(domain)) return 'highlight';
+    }
+    if (title) {
+      for (let re of compiledRules.highlightTitles) {
+        if (re.test(title)) return 'highlight';
+      }
+    }
+    if (snippet) {
+      for (let re of compiledRules.highlightTexts) {
+        if (re.test(snippet)) return 'highlight';
+      }
+    }
+    for (let item of compiledRules.highlightConditionalRules) {
+      let condMet = true;
+      for (let cond of item.conditions) {
+        if (cond.type === 'title' && cond.op === '*=') {
+          if (!title || !title.toLowerCase().includes(cond.val)) {
+            condMet = false;
+            break;
+          }
+        }
+      }
+      if (!condMet) continue;
+      if (item.type === 'domain') {
+        let d2 = domain.toLowerCase();
+        while (d2) {
+          if (d2 === item.domain) return 'highlight';
+          const dot = d2.indexOf('.');
+          if (dot === -1) break;
+          d2 = d2.substring(dot + 1);
+        }
+      } else {
+        if (item.regex.test(url) || item.regex.test(domain)) return 'highlight';
       }
     }
 
@@ -1635,7 +1640,7 @@
     return null;
   }
 
-  // 处理google追踪
+  // google重定向
   function getCleanUrlAndFixDOM(link, engine) {
     if (!link || !link.href) return '';
     let url = link.href;
@@ -2522,6 +2527,7 @@
     statsPanel.style.display = 'flex';
   }
 
+  // 统计分类
   function updateStatsContent() {
     const statsContent = document.getElementById('searchfilter-stats-content');
     if (!statsContent) return;
@@ -2532,7 +2538,7 @@
     const localRules = filterValidRuleLines(rawLines);
     const activeRules = localRules.filter(rule => !rule.startsWith('#'));
 
-    // 静态语法检查
+    // 静态语法
     const ruleErrors = {};
     activeRules.forEach(rule => {
       if (!cachedValidateRule(rule)) {
@@ -2540,12 +2546,15 @@
       }
     });
 
-    // 规则统计
     const whitelistRules = activeRules
-      .filter(rule => rule.startsWith('@') && !rule.toLowerCase().startsWith('@if'))
+      .filter(rule => rule.startsWith('@') && !rule.toLowerCase().startsWith('@if') && !rule.startsWith('@1'))
       .map(rule => rule.substring(1).trim());
 
-    const compoundRules = activeRules.filter(rule => /@if\s*\(/i.test(rule));
+    const highlightRules = activeRules
+      .filter(rule => rule.startsWith('@1'))
+      .map(rule => rule.substring(2).trim());
+
+    const compoundRules = activeRules.filter(rule => /@if\s*\(/i.test(rule) && !rule.startsWith('@1'));
 
     const engine = getSearchEngine();
     const selector = getContainerSelector(engine);
@@ -2584,7 +2593,7 @@
       resultHTML += '</div>';
     }
 
-    // 匹配规则统计
+    // 匹配规则
     const sourceOrder = [`${t('subscription')}1`, `${t('subscription')}2`, `${t('subscription')}3`, t('localRule')];
     let hasMatches = false;
 
@@ -2603,7 +2612,9 @@
 
       sortedRules.forEach(([rule, count]) => {
         let ruleType = t('urlRule');
-        if (/@if\s*\(/i.test(rule)) {
+        if (rule.startsWith('@1')) {
+          ruleType = t('highlightRules');
+        } else if (/@if\s*\(/i.test(rule)) {
           ruleType = t('statsCompound');
         } else if (rule.startsWith('title/')) {
           ruleType = t('titleRule');
@@ -2629,7 +2640,7 @@
       resultHTML = `<div style="color: #38a169; padding: 10px; border-radius: 4px; font-size: 12px; background: #f0fff4; text-align: center;">${t('noMatch')}</div>`;
     }
 
-    // 白名单列表
+    // 白名单
     if (whitelistRules.length > 0) {
       resultHTML += `<div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #e2e8f0;">`;
       resultHTML += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #cbd5e0;">`;
@@ -2638,6 +2649,19 @@
       resultHTML += `</div>`;
       whitelistRules.forEach(rule => {
         resultHTML += `<div style="font-size: 11px; color: #4a5568; word-break: break-all; font-family: 'Consolas', monospace;">@${rule}</div>`;
+      });
+      resultHTML += `</div>`;
+    }
+
+    // 高亮
+    if (highlightRules.length > 0) {
+      resultHTML += `<div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #e2e8f0;">`;
+      resultHTML += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #cbd5e0;">`;
+      resultHTML += `<span style="font-weight: bold; color: #2d3748; font-size: 14px;">${t('highlightRules')}</span>`;
+      resultHTML += `<span style="background: #2c5282; color: white; padding: 2px 10px; border-radius: 12px; font-size: 12px;">${t('stateEnabled')} ${highlightRules.length} ${t('matchedCountUnit')}</span>`;
+      resultHTML += `</div>`;
+      highlightRules.forEach(rule => {
+        resultHTML += `<div style="font-size: 11px; color: #4a5568; word-break: break-all; font-family: 'Consolas', monospace;">@1${rule}</div>`;
       });
       resultHTML += `</div>`;
     }
