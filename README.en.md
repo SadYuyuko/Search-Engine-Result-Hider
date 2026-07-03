@@ -16,7 +16,8 @@ Supports Bing, Google, DuckDuckGo and Yandex, with potential support for more se
   ┣ Toggle blocking on/off  
   ┣ Toggle block confirmation  
   ┣ Toggle floating bubble visibility  
-  ┣ Language switching  
+  ┣ Language switching
+  ┣ Edit highlighting rules color
   ┣ Toggle panel centering: centered by default; when disabled, the panel appears in one of four corners based on the floating bubble's position  
   ┗ Toggle floating bubble function: default click opens the panel; when toggled, click toggles visibility of blocked results. In this mode, long press the floating ball to open the configuration panel, and clicking the block button on a blocked result allows unblocking  
 
@@ -58,6 +59,7 @@ Rules tend to favor titles and regular matches. For convenience, you can add rul
 `@1 *://*.example.com/*` – Adds color borders to `example.com` and its subdomains  
 `@1 title/.*example.*/` – Add a color border to the result matched to the title with `example`  
  Priority: whitelist > blacklist > highlight  
+ Note: only 5 colors are supported, namely '@1'~'@5'. Open the custom color panel through the script menu  
   
 **Composite Rules:**  
 `*://*.example.com/* @if(title *= "keyword")` - Block results from `example.com` whose title contains the `keyword` in search results, Its title rule ignores case  
