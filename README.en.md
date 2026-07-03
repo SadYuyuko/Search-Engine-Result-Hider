@@ -17,7 +17,7 @@ Supports Bing, Google, DuckDuckGo and Yandex, with potential support for more se
   ┣ Toggle block confirmation  
   ┣ Toggle floating bubble visibility  
   ┣ Language switching  
-  ┣ Edit highlighting rules color
+  ┣ Edit highlighting rules color  
   ┣ Toggle panel centering: centered by default; when disabled, the panel appears in one of four corners based on the floating bubble's position  
   ┗ Toggle floating bubble function: default click opens the panel; when toggled, click toggles visibility of blocked results. In this mode, long press the floating ball to open the configuration panel, and clicking the block button on a blocked result allows unblocking  
 
