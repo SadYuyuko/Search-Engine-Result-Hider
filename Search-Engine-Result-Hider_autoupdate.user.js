@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.8.3
+// @version      6.9.0
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -62,7 +62,8 @@
     bubbleState: null,
     panelCentered: true,
     bubbleAction: 'openPanel',
-    language: 'zh-CN'
+    language: 'zh-CN',
+    highlightColors: {1:'#CE2029', 2:'#FF8C00', 3:'#FFD700', 4:'#228B22', 5:'#1E90FF', 6:'#8B008B', 7:'#008080', 8:'#696969', 9:'#87CEEB'}
   });
 
   // 兼容旧配置
@@ -73,6 +74,7 @@
   if (currentConfig.panelCentered === undefined) currentConfig.panelCentered = true;
   if (currentConfig.bubbleAction === undefined) currentConfig.bubbleAction = 'openPanel';
   if (currentConfig.language === undefined) currentConfig.language = 'zh-CN';
+  if (currentConfig.highlightColors === undefined) currentConfig.highlightColors = {1:'#CE2029', 2:'#FF8C00', 3:'#FFD700', 4:'#228B22', 5:'#1E90FF', 6:'#8B008B', 7:'#008080', 8:'#696969', 9:'#87CEEB'};
   let showHiddenResults = false;
 
   // 文本映射
@@ -178,6 +180,12 @@
       delete: '删除',
       togglePassword: '显示/隐藏密码',
       highlightRules: '高亮规则',
+      menuHighlightColor: '🎨 高亮颜色',
+      hlColorTitle: '高亮颜色设置',
+      hlColorHex: '颜色代码',
+      hlColorSaved: '高亮颜色已保存',
+      hlColorReset: '重置',
+      errorword: '错误',
     },
     'en': {
       enableBlock: 'Enable Block',
@@ -280,6 +288,12 @@
       delete: 'Delete',
       togglePassword: 'Show/Hide Password',
       highlightRules: 'Highlight Rules',
+      menuHighlightColor: '🎨 Highlight Colors',
+      hlColorTitle: 'Highlight Color Settings',
+      hlColorHex: 'Color Code',
+      hlColorSaved: 'Highlight colors saved',
+      hlColorReset: 'Reset',
+      errorword: 'Error',
     }
   };
 
@@ -347,7 +361,12 @@
     whitelistDomains: new Set(),
     whitelistUrlPatterns: [],
     rulesList: [],
-    conditionalRules: []
+    conditionalRules: [],
+    highlightDomains: new Map(),
+    highlightUrls: [],
+    highlightTitles: [],
+    highlightTexts: [],
+    highlightConditionalRules: []
   };
 
   // UI
@@ -575,7 +594,8 @@
         /* 面板隔离 */
         #searchfilter-panel,
         #searchfilter-webdav-panel,
-        #searchfilter-subscription-panel {
+        #searchfilter-subscription-panel,
+        #searchfilter-hlcolor-panel {
         box-sizing: border-box !important;
         background: #ffffff !important;
         color: #2d3748 !important;
@@ -589,7 +609,8 @@
 
         #searchfilter-panel *,
         #searchfilter-webdav-panel *,
-        #searchfilter-subscription-panel * {
+        #searchfilter-subscription-panel *,
+        #searchfilter-hlcolor-panel * {
         box-sizing: border-box !important;
         }
 
@@ -646,9 +667,10 @@
         }
 
         #searchfilter-webdav-panel h3,
-        #searchfilter-subscription-panel h3 {
-            margin: 0 0 12px 0 !important;
-            font-size: 16px !important;
+        #searchfilter-subscription-panel h3,
+        #searchfilter-hlcolor-panel h3 {
+            margin: 0 0 8px 0 !important;
+            font-size: 14px !important;
             color: inherit !important;
             font-weight: 600 !important;
             padding: 0 !important;
@@ -706,7 +728,8 @@
         }
 
         #searchfilter-webdav-panel .searchfilter-button,
-        #searchfilter-subscription-panel .searchfilter-button {
+        #searchfilter-subscription-panel .searchfilter-button,
+        #searchfilter-hlcolor-panel .searchfilter-button {
             height: 30px !important;
             padding: 0 12px !important;
             font-size: 13px !important;
@@ -739,7 +762,8 @@
         /* Webdav订阅面板深色 */
         @media (prefers-color-scheme: dark) {
             #searchfilter-webdav-panel,
-            #searchfilter-subscription-panel {
+            #searchfilter-subscription-panel,
+            #searchfilter-hlcolor-panel {
                 background: #171717 !important; 
                 color: #f3f4f6 !important; 
                 border-color: #374151 !important;
@@ -747,21 +771,38 @@
             }
 
             #searchfilter-webdav-panel label,
-            #searchfilter-subscription-panel label {
+            #searchfilter-subscription-panel label,
+            #searchfilter-hlcolor-panel .hlcolor-row label {
                 color: #9ca3af !important; 
             }
 
             #searchfilter-webdav-panel input[type="text"],
             #searchfilter-webdav-panel input[type="password"],
-            #searchfilter-subscription-panel input[type="text"] {
+            #searchfilter-subscription-panel input[type="text"],
+            #searchfilter-hlcolor-panel .hlcolor-row input {
                 background: #374151 !important;
                 border-color: #4b5563 !important;
                 color: #f3f4f6 !important;
             }
 
             #searchfilter-webdav-panel input:focus,
-            #searchfilter-subscription-panel input:focus {
+            #searchfilter-subscription-panel input:focus,
+            #searchfilter-hlcolor-panel .hlcolor-row input:focus {
                 border-color: #60a5fa !important; 
+            }
+            #searchfilter-hlcolor-panel .hlcolor-row .hlcolor-preview {
+                border-color: #4b5563 !important;
+            }
+            #hlcolor-current-preview {
+                border-color: #4b5563 !important;
+            }
+            #hlcolor-sv-canvas, #hlcolor-hue-canvas {
+                border-color: #4b5563 !important;
+            }
+            #searchfilter-hlcolor-panel .hlcolor-current-code {
+                background: #374151 !important;
+                border-color: #4b5563 !important;
+                color: #f3f4f6 !important;
             }
             #webdav-status {
                 color: #9ca3af !important;
@@ -770,6 +811,7 @@
             #subscription-status {
                 color: #9ca3af !important;
             }
+
         }
 
         /* 面板渐入渐出动画 */
@@ -790,6 +832,9 @@
             transition: opacity 0.2s ease;
         }
         #searchfilter-subscription-panel:not(.searchfilter-panel-fade) {
+            transition: opacity 0.2s ease;
+        }
+        #searchfilter-hlcolor-panel:not(.searchfilter-panel-fade) {
             transition: opacity 0.2s ease;
         }
 
@@ -899,9 +944,73 @@
         }
 
         /* 高亮边框 */
-        .searchfilter-highlighted {
-            outline: 2px solid #CE2029 !important;
-            outline-offset: -2px !important;
+        #searchfilter-hlcolor-panel .hlcolor-row {
+            margin-bottom: 4px !important;
+            padding: 0 !important;
+            border: none !important;
+            background: transparent !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 4px !important;
+        }
+        #searchfilter-hlcolor-panel .hlcolor-row label {
+            min-width: 20px !important;
+            font-size: 12px !important;
+            color: #4a5568 !important;
+            font-weight: 600 !important;
+            margin: 0 !important;
+            line-height: 1.2 !important;
+        }
+        #searchfilter-hlcolor-panel .hlcolor-row .hlcolor-preview {
+            width: 12px !important;
+            height: 12px !important;
+            border-radius: 2px !important;
+            border: 1px solid #e2e8f0 !important;
+            flex-shrink: 0 !important;
+        }
+        #searchfilter-hlcolor-panel .hlcolor-row input {
+            width: 70px !important;
+            flex: none !important;
+            padding: 2px 4px !important;
+            margin: 0 !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 3px !important;
+            font-size: 11px !important;
+            font-family: 'Consolas', monospace !important;
+            background: #ffffff !important;
+            color: #2d3748 !important;
+            height: 20px !important;
+            line-height: normal !important;
+            box-shadow: none !important;
+            outline: none !important;
+        }
+        #searchfilter-hlcolor-panel .hlcolor-row input:focus {
+            border-color: #3182ce !important;
+        }
+        #searchfilter-hlcolor-panel .hlcolor-picker-wrapper {
+            display: flex !important;
+            gap: 6px !important;
+            align-items: stretch !important;
+            margin: 3px 0 !important;
+        }
+        #hlcolor-sv-canvas, #hlcolor-hue-canvas {
+            cursor: crosshair !important;
+            border-radius: 3px !important;
+            border: 1px solid #e2e8f0 !important;
+        }
+        #searchfilter-hlcolor-panel .hlcolor-current-code {
+            font-size: 12px !important;
+            font-family: 'Consolas', monospace !important;
+            padding: 2px 4px !important;
+            user-select: text !important;
+            text-align: center !important;
+            background: #f7fafc !important;
+            border-radius: 3px !important;
+            border: 1px solid #e2e8f0 !important;
+            margin-bottom: 2px !important;
+        }
+        #hlcolor-current-preview {
+            flex-shrink: 0 !important;
         }
     `);
 
@@ -1090,6 +1199,13 @@
       }
     }
 
+    // 高亮规则 @N
+    const hlValMatch = ruleToCheck.match(/^@\d+/);
+    if (hlValMatch) {
+      ruleToCheck = ruleToCheck.substring(hlValMatch[0].length).trim();
+      if (!ruleToCheck) return true;
+    }
+
     // 白名单规则
     if (ruleToCheck.startsWith('@')) {
       ruleToCheck = ruleToCheck.substring(1).trim();
@@ -1257,7 +1373,7 @@
       whitelistUrlPatterns: [],
       rulesList: [],
       conditionalRules: [],
-      highlightDomains: new Set(),
+      highlightDomains: new Map(),
       highlightUrls: [],
       highlightTitles: [],
       highlightTexts: [],
@@ -1281,8 +1397,10 @@
     allRules.forEach(rule => {
 
       // @N高亮规则
-      if (rule.trim().startsWith('@1')) {
-        let hlRule = rule.trim().substring(2).trim();
+      const hlMatch = rule.trim().match(/^@(\d+)/);
+      if (hlMatch) {
+        const N = parseInt(hlMatch[1]);
+        let hlRule = rule.trim().substring(hlMatch[0].length).trim();
         if (!hlRule) return;
         const parsed = parseRuleWithConditions(hlRule);
         if (!parsed.staticPass) return;
@@ -1295,11 +1413,12 @@
           const domain = domainMatch[1].toLowerCase();
           if (!domain.includes('/')) {
             if (!parsed.dynamicConditions.length)
-              compiledRules.highlightDomains.add(domain);
+              compiledRules.highlightDomains.set(domain, N);
             else
               compiledRules.highlightConditionalRules.push({
                 type: 'domain',
                 domain,
+                N,
                 conditions: parsed.dynamicConditions
               });
             return;
@@ -1309,7 +1428,8 @@
         // @N其他规则
         try {
           let type, regex, ruleObj = {
-            conditions: parsed.dynamicConditions
+            conditions: parsed.dynamicConditions,
+            N
           };
           if (coreRule.startsWith('/')) {
             type = 'url';
@@ -1344,9 +1464,9 @@
           ruleObj.regex = regex;
 
           if (!parsed.dynamicConditions.length) {
-            if (type === 'url') compiledRules.highlightUrls.push(regex);
-            else if (type === 'title') compiledRules.highlightTitles.push(regex);
-            else if (type === 'text') compiledRules.highlightTexts.push(regex);
+            if (type === 'url') compiledRules.highlightUrls.push({regex, N});
+            else if (type === 'title') compiledRules.highlightTitles.push({regex, N});
+            else if (type === 'text') compiledRules.highlightTexts.push({regex, N});
           } else {
             compiledRules.highlightConditionalRules.push(ruleObj);
           }
@@ -1537,22 +1657,22 @@
     // 高亮规则
     let hd = domain.toLowerCase();
     while (hd) {
-      if (compiledRules.highlightDomains.has(hd)) return 'highlight';
+      if (compiledRules.highlightDomains.has(hd)) return compiledRules.highlightDomains.get(hd);
       const dot = hd.indexOf('.');
       if (dot === -1) break;
       hd = hd.substring(dot + 1);
     }
-    for (let re of compiledRules.highlightUrls) {
-      if (re.test(url) || re.test(domain)) return 'highlight';
+    for (let {regex, N} of compiledRules.highlightUrls) {
+      if (regex.test(url) || regex.test(domain)) return N;
     }
     if (title) {
-      for (let re of compiledRules.highlightTitles) {
-        if (re.test(title)) return 'highlight';
+      for (let {regex, N} of compiledRules.highlightTitles) {
+        if (regex.test(title)) return N;
       }
     }
     if (snippet) {
-      for (let re of compiledRules.highlightTexts) {
-        if (re.test(snippet)) return 'highlight';
+      for (let {regex, N} of compiledRules.highlightTexts) {
+        if (regex.test(snippet)) return N;
       }
     }
     for (let item of compiledRules.highlightConditionalRules) {
@@ -1569,13 +1689,13 @@
       if (item.type === 'domain') {
         let d2 = domain.toLowerCase();
         while (d2) {
-          if (d2 === item.domain) return 'highlight';
+          if (d2 === item.domain) return item.N;
           const dot = d2.indexOf('.');
           if (dot === -1) break;
           d2 = d2.substring(dot + 1);
         }
       } else {
-        if (item.regex.test(url) || item.regex.test(domain)) return 'highlight';
+        if (item.regex.test(url) || item.regex.test(domain)) return item.N;
       }
     }
 
@@ -1985,12 +2105,15 @@
     const matchResult = checkRuleMatchOptimized(url, domain, title, snippet);
 
     // 高亮优先
-    if (matchResult === 'highlight') {
+    if (typeof matchResult === 'number') {
+      const color = currentConfig.highlightColors[matchResult] || '#CE2029';
       result.style.display = '';
-      result.classList.add('searchfilter-highlighted');
+      result.style.outline = `2px solid ${color}`;
+      result.style.outlineOffset = '-2px';
       result.classList.remove('searchfilter-blocked-visible');
       result.setAttribute('data-blocker-processed', 'true');
       result.setAttribute('data-is-highlighted', 'true');
+      result.setAttribute('data-highlight-n', matchResult);
       result.removeAttribute('data-is-blocked');
       if (currentConfig.showBlockBtn) {
         injectBlockButton(result, engine, url, domain);
@@ -2109,8 +2232,10 @@
       el.removeAttribute('data-blocker-processed');
       el.removeAttribute('data-is-blocked');
       el.removeAttribute('data-is-highlighted');
+      el.removeAttribute('data-highlight-n');
       el.classList.remove('searchfilter-blocked-visible');
-      el.classList.remove('searchfilter-highlighted');
+      el.style.outline = '';
+      el.style.outlineOffset = '';
       el.style.display = '';
       const label = el.querySelector('.searchfilter-matched-rule');
       if (label) label.remove();
@@ -2546,15 +2671,15 @@
       }
     });
 
+    const hlStatsRegex = /^@\d+/;
     const whitelistRules = activeRules
-      .filter(rule => rule.startsWith('@') && !rule.toLowerCase().startsWith('@if') && !rule.startsWith('@1'))
+      .filter(rule => rule.startsWith('@') && !rule.toLowerCase().startsWith('@if') && !hlStatsRegex.test(rule))
       .map(rule => rule.substring(1).trim());
 
     const highlightRules = activeRules
-      .filter(rule => rule.startsWith('@1'))
-      .map(rule => rule.substring(2).trim());
+      .filter(rule => hlStatsRegex.test(rule));
 
-    const compoundRules = activeRules.filter(rule => /@if\s*\(/i.test(rule) && !rule.startsWith('@1'));
+    const compoundRules = activeRules.filter(rule => /@if\s*\(/i.test(rule) && !hlStatsRegex.test(rule));
 
     const engine = getSearchEngine();
     const selector = getContainerSelector(engine);
@@ -2612,7 +2737,7 @@
 
       sortedRules.forEach(([rule, count]) => {
         let ruleType = t('urlRule');
-        if (rule.startsWith('@1')) {
+        if (hlStatsRegex.test(rule)) {
           ruleType = t('highlightRules');
         } else if (/@if\s*\(/i.test(rule)) {
           ruleType = t('statsCompound');
@@ -2661,7 +2786,7 @@
       resultHTML += `<span style="background: #2c5282; color: white; padding: 2px 10px; border-radius: 12px; font-size: 12px;">${t('stateEnabled')} ${highlightRules.length} ${t('matchedCountUnit')}</span>`;
       resultHTML += `</div>`;
       highlightRules.forEach(rule => {
-        resultHTML += `<div style="font-size: 11px; color: #4a5568; word-break: break-all; font-family: 'Consolas', monospace;">@1${rule}</div>`;
+        resultHTML += `<div style="font-size: 11px; color: #4a5568; word-break: break-all; font-family: 'Consolas', monospace;">${rule}</div>`;
       });
       resultHTML += `</div>`;
     }
@@ -2878,7 +3003,7 @@
 
     const closeHandler = (e) => {
       if (preventPanelClose) return;
-      if (!panel.contains(e.target) && !e.target.closest('#searchfilter-status') && !e.target.closest('#searchfilter-webdav-panel') && !e.target.closest('#searchfilter-subscription-panel')) {
+      if (!panel.contains(e.target) && !e.target.closest('#searchfilter-status') && !e.target.closest('#searchfilter-webdav-panel') && !e.target.closest('#searchfilter-subscription-panel') && !e.target.closest('#searchfilter-hlcolor-panel')) {
         closePanel();
       }
     };
@@ -3486,6 +3611,273 @@
     preventPanelClose = false;
   }
 
+  // 高亮颜色面板
+    function showHighlightColorPanel() {
+      const existing = document.getElementById('searchfilter-hlcolor-panel');
+      if (existing) {
+        existing.remove();
+        return;
+      }
+
+    function hslToRgb(h, s, v) {
+      h /= 360;
+      let r, g, b;
+      const i = Math.floor(h * 6);
+      const f = h * 6 - i;
+      const p = v * (1 - s);
+      const q = v * (1 - f * s);
+      const t = v * (1 - (1 - f) * s);
+      switch (i % 6) {
+        case 0: r=v; g=t; b=p; break;
+        case 1: r=q; g=v; b=p; break;
+        case 2: r=p; g=v; b=t; break;
+        case 3: r=p; g=q; b=v; break;
+        case 4: r=t; g=p; b=v; break;
+        case 5: r=v; g=p; b=q; break;
+      }
+      return [Math.round(r*255), Math.round(g*255), Math.round(b*255)];
+    }
+
+    function rgbToHsv(r, g, b) {
+      r /= 255; g /= 255; b /= 255;
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      const d = max - min;
+      let h = 0;
+      if (d !== 0) {
+        if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) * 60;
+        else if (max === g) h = ((b - r) / d + 2) * 60;
+        else h = ((r - g) / d + 4) * 60;
+      }
+      return [Math.round(h), max === 0 ? 0 : d / max, max];
+    }
+
+    function hexToRgb(hex) {
+      return [parseInt(hex.slice(1,3), 16), parseInt(hex.slice(3,5), 16), parseInt(hex.slice(5,7), 16)];
+    }
+
+    function rgbToHex(r, g, b) {
+      return '#' + [r,g,b].map(x => x.toString(16).padStart(2,'0').toUpperCase()).join('');
+    }
+
+    const panel = document.createElement('div');
+    panel.id = 'searchfilter-hlcolor-panel';
+    panel.classList.add('searchfilter-panel-fade');
+    panel.style.cssText = `
+        position: fixed;
+        ${getPanelPositionStyles()}
+        width: 350px;
+        z-index: 10001;
+        padding: 6px;
+        display: flex;
+        flex-direction: column;
+    `;
+
+    const colors = currentConfig.highlightColors || {};
+    let rowsHtml = '';
+    for (let i = 1; i <= 5; i++) {
+      const hex = (colors[i] || '#CE2029').toUpperCase();
+      rowsHtml += `<div class="hlcolor-row">
+        <label>@${i}</label>
+        <span class="hlcolor-preview" id="hlcolor-preview-${i}" style="background:${hex}"></span>
+        <input type="text" id="hlcolor-input-${i}" value="${hex}" placeholder="#RRGGBB" maxlength="7">
+      </div>`;
+    }
+
+    const defaultHex = (colors[1] || '#CE2029').toUpperCase();
+    const [ir, ig, ib] = hexToRgb(defaultHex);
+    let [currentHue, currentSat, currentVal] = rgbToHsv(ir, ig, ib);
+
+    panel.innerHTML = `
+      <h3 style="margin:0 0 3px;font-size:13px;color:#2d3748;font-weight:600;">${t('hlColorTitle')}</h3>
+      <div style="display:flex;gap:4px;align-items:stretch;">
+        <div id="hlcolor-left" style="flex:1;min-width:0;display:flex;flex-direction:column;">
+          ${rowsHtml}
+          <div style="display:flex;align-items:center;gap:4px;margin-top:3px;">
+            <span id="hlcolor-current-preview" style="width:16px;height:16px;border-radius:2px;border:1px solid #e2e8f0;background:${defaultHex};flex-shrink:0;"></span>
+            <span id="hlcolor-code-text" style="font-size:12px;font-family:'Consolas',monospace;padding:2px 4px;background:#f7fafc;border-radius:3px;border:1px solid #e2e8f0;flex:0 0 auto;min-width:70px;text-align:center;">${defaultHex}</span>
+          </div>
+        </div>
+        <div class="hlcolor-picker-wrapper" style="display:flex;gap:4px;align-items:stretch;flex-shrink:0;">
+          <canvas id="hlcolor-sv-canvas"></canvas>
+          <canvas id="hlcolor-hue-canvas" width="22"></canvas>
+        </div>
+      </div>
+      <div style="display:flex;gap:4px;justify-content:flex-end;margin-top:2px;">
+        <button id="hlcolor-save" class="searchfilter-button searchfilter-button-primary" style="flex:1;padding:4px 6px;font-size:11px;">${t('save')}</button>
+        <button id="hlcolor-reset" class="searchfilter-button searchfilter-button-secondary" style="flex:1;padding:4px 6px;font-size:11px;">${t('hlColorReset')}</button>
+        <button id="hlcolor-cancel" class="searchfilter-button searchfilter-button-secondary" style="flex:1;padding:4px 6px;font-size:11px;">${t('cancel')}</button>
+      </div>
+    `;
+
+    document.body.appendChild(panel);
+    requestAnimationFrame(() => panel.classList.add('show'));
+
+    function resizeCanvasToMatch() {
+      const left = document.getElementById('hlcolor-left');
+      const svCanvas = document.getElementById('hlcolor-sv-canvas');
+      const hueCanvas = document.getElementById('hlcolor-hue-canvas');
+      if (!left || !svCanvas || !hueCanvas) return;
+      const height = left.getBoundingClientRect().height;
+      if (height <= 0) return;
+      svCanvas.width = svCanvas.height = height;
+      hueCanvas.height = height;
+      drawSVCanvas(currentHue);
+      drawHueCanvas();
+    }
+    requestAnimationFrame(() => {
+      resizeCanvasToMatch();
+      updatePickedColor();
+    });
+
+    function drawSVCanvas(hue) {
+      const canvas = document.getElementById('hlcolor-sv-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width, h = canvas.height;
+      const imageData = ctx.createImageData(w, h);
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const s = x / w, v = 1 - y / h;
+          const [r, g, b] = hslToRgb(hue, s, v);
+          const idx = (y * w + x) * 4;
+          imageData.data[idx] = r;
+          imageData.data[idx+1] = g;
+          imageData.data[idx+2] = b;
+          imageData.data[idx+3] = 255;
+        }
+      }
+      ctx.putImageData(imageData, 0, 0);
+    }
+
+    function drawHueCanvas() {
+      const canvas = document.getElementById('hlcolor-hue-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width, h = canvas.height;
+      for (let y = 0; y < h; y++) {
+        const [r, g, b] = hslToRgb((y / h) * 360, 1, 1);
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillRect(0, y, w, 1);
+      }
+    }
+
+    function updatePickedColor() {
+      const [r, g, b] = hslToRgb(currentHue, currentSat, currentVal);
+      const hex = rgbToHex(r, g, b);
+      const el = document.getElementById('hlcolor-code-text');
+      if (el) el.textContent = hex;
+      const preview = document.getElementById('hlcolor-current-preview');
+      if (preview) preview.style.background = hex;
+    }
+
+    const svCanvas = document.getElementById('hlcolor-sv-canvas');
+    let svDragging = false;
+
+    function onSVMove(clientX, clientY) {
+      const rect = svCanvas.getBoundingClientRect();
+      const x = Math.max(0, Math.min(svCanvas.width, clientX - rect.left));
+      const y = Math.max(0, Math.min(svCanvas.height, clientY - rect.top));
+      currentSat = x / svCanvas.width;
+      currentVal = 1 - y / svCanvas.height;
+      updatePickedColor();
+    }
+
+    svCanvas.addEventListener('mousedown', (e) => { svDragging = true; onSVMove(e.clientX, e.clientY); });
+    document.addEventListener('mousemove', (e) => { if (svDragging) onSVMove(e.clientX, e.clientY); });
+    document.addEventListener('mouseup', () => { svDragging = false; });
+
+    const hueCanvas = document.getElementById('hlcolor-hue-canvas');
+    let hueDragging = false;
+
+    function onHueMove(clientY) {
+      const rect = hueCanvas.getBoundingClientRect();
+      const y = Math.max(0, Math.min(hueCanvas.height, clientY - rect.top));
+      currentHue = (y / hueCanvas.height) * 360;
+      drawSVCanvas(currentHue);
+      updatePickedColor();
+    }
+
+    hueCanvas.addEventListener('mousedown', (e) => { hueDragging = true; onHueMove(e.clientY); });
+    document.addEventListener('mousemove', (e) => { if (hueDragging) onHueMove(e.clientY); });
+    document.addEventListener('mouseup', () => { hueDragging = false; });
+
+    function updatePreview(i) {
+      const input = document.getElementById(`hlcolor-input-${i}`);
+      const preview = document.getElementById(`hlcolor-preview-${i}`);
+      if (input && preview && /^#[0-9a-fA-F]{6}$/.test(input.value)) {
+        preview.style.background = input.value;
+      }
+    }
+
+    for (let i = 1; i <= 5; i++) {
+      document.getElementById(`hlcolor-input-${i}`).addEventListener('input', () => updatePreview(i));
+    }
+
+    document.getElementById('hlcolor-save').onclick = () => {
+      const newColors = {...currentConfig.highlightColors};
+      let hasError = false;
+      for (let i = 1; i <= 5; i++) {
+        const input = document.getElementById(`hlcolor-input-${i}`);
+        const val = input.value.trim();
+        if (val === '') continue;
+        if (!/^#[0-9a-fA-F]{6}$/.test(val)) {
+          const saveBtn = document.getElementById('hlcolor-save');
+          const originalText = saveBtn.textContent;
+          saveBtn.textContent = t('errorword');
+          saveBtn.style.backgroundColor = '#c53030';
+          setTimeout(() => {
+            saveBtn.textContent = originalText;
+            saveBtn.style.backgroundColor = '';
+          }, 1500);
+          hasError = true;
+          break;
+        }
+        newColors[i] = val;
+      }
+      if (hasError) return;
+      currentConfig.highlightColors = newColors;
+      GM_setValue(CONFIG_KEY, currentConfig);
+      buildRuleIndex();
+      forceReprocessAll();
+      const saveBtn = document.getElementById('hlcolor-save');
+      saveBtn.style.backgroundColor = '#276749';
+      setTimeout(() => {
+        saveBtn.style.backgroundColor = '';
+      }, 800);
+    };
+
+    document.getElementById('hlcolor-reset').onclick = () => {
+      const defaults = {1:'#CE2029', 2:'#FF8C00', 3:'#FFD700', 4:'#228B22', 5:'#1E90FF'};
+      for (let i = 1; i <= 5; i++) {
+        document.getElementById(`hlcolor-input-${i}`).value = defaults[i];
+        document.getElementById(`hlcolor-preview-${i}`).style.background = defaults[i];
+      }
+      const [r, g, b] = hexToRgb('#CE2029');
+      [currentHue, currentSat, currentVal] = rgbToHsv(r, g, b);
+      drawSVCanvas(currentHue);
+      updatePickedColor();
+    };
+
+    document.getElementById('hlcolor-cancel').onclick = (e) => {
+      e.stopPropagation();
+      panel.classList.remove('show');
+      panel.addEventListener('transitionend', () => {
+        panel.remove();
+      }, {once: true});
+    };
+
+    const closeHandler = (e) => {
+      if (!panel.contains(e.target)) {
+        panel.classList.remove('show');
+        panel.addEventListener('transitionend', () => {
+          panel.remove();
+          document.removeEventListener('click', closeHandler);
+        }, {once: true});
+      }
+    };
+    setTimeout(() => document.addEventListener('click', closeHandler), 200);
+  }
+
   // 管理器菜单
   function registerMenu() {
     GM_registerMenuCommand(t('menuOpenPanel'), () => showConfigPanel());
@@ -3520,6 +3912,7 @@
       GM_setValue(CONFIG_KEY, currentConfig);
       location.reload();
     });
+    GM_registerMenuCommand(t('menuHighlightColor'), () => showHighlightColorPanel());
   }
 
   // 初始化
