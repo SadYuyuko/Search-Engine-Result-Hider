@@ -103,8 +103,8 @@
       scrollTop: '回到顶部',
       scrollBottom: '回到底部',
       panelTitle: '订阅管理',
-      addSubscription: '➕ 添加订阅',
-      saveSub: '保存',
+      addSubscription: `${svgIcon('plus')}添加订阅`,
+      saveSub: 'Save',
       importSub: '导入',
       cancel: '取消',
       webdavTitle: 'WebDAV同步设置',
@@ -185,6 +185,7 @@
       hlColorHex: '颜色代码',
       hlColorSaved: '高亮颜色已保存',
       hlColorReset: '重置',
+      hlColorClick: '点击选择颜色',
       errorword: '错误',
     },
     'en': {
@@ -211,7 +212,7 @@
       scrollTop: 'Scroll to Top',
       scrollBottom: 'Scroll to Bottom',
       panelTitle: 'Subscription Manager',
-      addSubscription: '➕ Add Subscription',
+      addSubscription: `${svgIcon('plus')}Add Subscription`,
       saveSub: 'Save',
       importSub: 'Import',
       cancel: 'Cancel',
@@ -293,6 +294,7 @@
       hlColorHex: 'Color Code',
       hlColorSaved: 'Highlight colors saved',
       hlColorReset: 'Reset',
+      hlColorClick: 'Click to pick color',
       errorword: 'Error',
     }
   };
@@ -350,6 +352,21 @@
       text = text.replaceAll(`{${k}}`, v);
     }
     return text;
+  }
+
+  // 内联SVG图标（避免依赖外部CDN，解决CSP限制）
+  function svgIcon(name) {
+    const icons = {
+      'eye-off': '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>',
+      'ban': '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>',
+      'plus': '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+      'arrow-up-circle': '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/></svg>',
+      'arrow-down-circle': '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 12 16 16 12"/><line x1="12" y1="8" x2="12" y2="16"/></svg>',
+      'alert-triangle': '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+      'eye': '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>'
+    };
+    const svg = icons[name] || '';
+    return `<span style="display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; flex-shrink: 0; line-height: 0;">${svg}</span>`;
   }
 
   // Set
@@ -913,6 +930,65 @@
 
         .bubble-number {
         color: #000000 !important;
+        }
+
+        /* Switch开关样式 */
+        .searchfilter-switch {
+            position: relative;
+            display: inline-block;
+            width: 28px;
+            height: 16px;
+            margin-right: 6px;
+            flex-shrink: 0;
+        }
+
+        .searchfilter-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            position: absolute;
+        }
+
+        .searchfilter-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #cbd5e0;
+            transition: .2s;
+            border-radius: 16px;
+        }
+
+        .searchfilter-slider:before {
+            position: absolute;
+            content: "";
+            height: 12px;
+            width: 12px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .2s;
+            border-radius: 50%;
+        }
+
+        .searchfilter-switch input:checked + .searchfilter-slider {
+            background-color: #2c5282;
+        }
+
+        .searchfilter-switch input:checked + .searchfilter-slider:before {
+            transform: translateX(12px);
+        }
+
+        /* 暗色模式适配 */
+        @media (prefers-color-scheme: dark) {
+            .searchfilter-slider {
+                background-color: #4b5563;
+            }
+            .searchfilter-switch input:checked + .searchfilter-slider {
+                background-color: #60a5fa;
+            }
         }
 
         /* 匹配规则标签 */
@@ -2289,36 +2365,27 @@
 
   // 悬浮球大小
   function applyBubbleSize(element) {
-    let fontSize, padding, lineHeight;
-    switch (currentConfig.bubbleSize) {
-      case 'medium':
-        fontSize = '18px';
-        padding = '5px 5px';
-        lineHeight = '1.3';
-        break;
-      case 'large':
-        fontSize = '20px';
-        padding = '5px 5px';
-        lineHeight = '1.4';
-        break;
-      case 'larger':
-        fontSize = '22px';
-        padding = '5px 5px';
-        lineHeight = '1.5';
-        break;
-      case 'xlarge':
-        fontSize = '26px';
-        padding = '5px 5px';
-        lineHeight = '1.6';
-        break;
-      default:
-        fontSize = '20px';
-        padding = '5px 5px';
-        lineHeight = '1.4';
+    // 将现有的 bubbleSize 配置作为数值处理（默认20，支持 medium(18), large(20), larger(22), xlarge(26) 等旧配置）
+    let size = 20;
+    if (typeof currentConfig.bubbleSize === 'number') {
+      size = currentConfig.bubbleSize;
+    } else {
+      switch (currentConfig.bubbleSize) {
+        case 'medium': size = 18; break;
+        case 'large': size = 20; break;
+        case 'larger': size = 22; break;
+        case 'xlarge': size = 26; break;
+        default:
+          const parsed = parseInt(currentConfig.bubbleSize);
+          size = isNaN(parsed) ? 20 : parsed;
+      }
     }
-    element.style.fontSize = fontSize;
-    element.style.padding = padding;
-    element.style.lineHeight = lineHeight;
+    // 限制范围在 12px ~ 40px 之间
+    size = Math.max(12, Math.min(40, size));
+    
+    element.style.fontSize = size + 'px';
+    element.style.padding = '5px 5px';
+    element.style.lineHeight = (1 + (size - 12) * 0.015).toFixed(2); // 根据大小自适应行高
   }
 
   // 悬浮球内容
@@ -2326,7 +2393,10 @@
     const isLeft = currentConfig.bubbleState ? currentConfig.bubbleState.isLeftHalf : false;
     const isToggleMode = currentConfig.bubbleAction === 'toggleHidden';
 
-    const icon = isToggleMode ? '⭕' : '🚫';
+    // 悬浮球图标使用加粗线条，确保在小尺寸下清晰可见
+    const icon = isToggleMode
+      ? `<span style="display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; flex-shrink: 0; line-height: 0;"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></span>`
+      : `<span style="display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; flex-shrink: 0; line-height: 0;"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></span>`;
 
     if (currentConfig.showCount) {
       if (isLeft) {
@@ -2596,7 +2666,7 @@
       for (let i = 0; i < lines.length; i++) {
         const rule = lines[i];
         const isValid = cachedValidateRule(rule);
-        const warnIcon = isValid ? '' : `<span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 10px; cursor: help; background: #edf2f7; z-index: 1;" title="${t('syntaxError')}">⚠️</span>`;
+        const warnIcon = isValid ? '' : `<span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 10px; cursor: help; background: #edf2f7; z-index: 1; display: inline-flex; align-items: center; justify-content: center; color: #e53e3e;" title="${t('syntaxError')}">${svgIcon('alert-triangle')}</span>`;
         html += `<div style="position: relative; color: #a0aec0;">${i + 1}${warnIcon}</div>`;
       }
       lineNums.innerHTML = html;
@@ -2616,7 +2686,7 @@
     for (let i = 0; i < lines.length; i++) {
       const rule = lines[i];
       const isValid = cachedValidateRule(rule);
-      const warnIcon = isValid ? '' : `<span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 10px; cursor: help; background: #edf2f7; z-index: 1;" title="${t('syntaxError')}">⚠️</span>`;
+      const warnIcon = isValid ? '' : `<span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 10px; cursor: help; background: #edf2f7; z-index: 1; display: inline-flex; align-items: center; justify-content: center; color: #e53e3e;" title="${t('syntaxError')}">${svgIcon('alert-triangle')}</span>`;
       children[i].innerHTML = `${i + 1}${warnIcon}`;
     }
   }
@@ -2711,7 +2781,7 @@
     let resultHTML = '';
 
     if (ruleErrorsArray.length > 0) {
-      resultHTML += `<div style="color: #c53030; background: #fff5f5; padding: 8px; border-radius: 4px; margin-bottom: 12px;"><strong>⚠️ ${t('statsErrors', {count: ruleErrorsArray.length})}</strong><br>`;
+      resultHTML += `<div style="color: #c53030; background: #fff5f5; padding: 8px; border-radius: 4px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px;"><strong>${svgIcon('alert-triangle')}${t('statsErrors', {count: ruleErrorsArray.length})}</strong>`;
       ruleErrorsArray.forEach(item => {
         resultHTML += `<div style="margin: 4px 0; font-size: 11px;"><div style="color: #2d3748;"><strong>${t('statsRule')}</strong>${item.rule}</div><div style="color: #c53030;"><strong>${t('statsError')}</strong>${item.errors.join(', ')}</div></div>`;
       });
@@ -2848,54 +2918,75 @@
         flex-direction: column;
     `;
 
-    const sizeOptions = [{
-      value: 'medium',
-      label: t('sizeMedium')
-    }, {
-      value: 'large',
-      label: t('sizeLarge')
-    }, {
-      value: 'larger',
-      label: t('sizeLarger')
-    }, {
-      value: 'xlarge',
-      label: t('sizeXLarge')
-    }];
+    // 解析已有的 bubbleSize 为数值作为 slider 初始值
+    let initialSize = 20;
+    if (typeof currentConfig.bubbleSize === 'number') {
+      initialSize = currentConfig.bubbleSize;
+    } else {
+      switch (currentConfig.bubbleSize) {
+        case 'medium': initialSize = 18; break;
+        case 'large': initialSize = 20; break;
+        case 'larger': initialSize = 22; break;
+        case 'xlarge': initialSize = 26; break;
+        default:
+          const parsed = parseInt(currentConfig.bubbleSize);
+          initialSize = isNaN(parsed) ? 20 : parsed;
+      }
+    }
+    initialSize = Math.max(12, Math.min(40, initialSize));
 
     panel.innerHTML = `
             <div style="display: flex; gap: 8px; margin-top: 0px; margin-bottom: 8px;">
-                <label style="display: flex; align-items: center; flex: 1; justify-content: flex-start; white-space: nowrap;">
-                    <input type="checkbox" id="searchfilter-enabled" ${currentConfig.enabled ? 'checked' : ''} style="margin-right: 4px;">
+                <label style="display: flex; align-items: center; flex: 1; justify-content: flex-start; white-space: nowrap; cursor: pointer; font-size: 12px; color: #4a5568;">
+                    <span class="searchfilter-switch">
+                        <input type="checkbox" id="searchfilter-enabled" ${currentConfig.enabled ? 'checked' : ''}>
+                        <span class="searchfilter-slider"></span>
+                    </span>
                     <span>${t('enableBlock')}</span>
                 </label>
-                <label style="display: flex; align-items: center; flex: 1; justify-content: center; white-space: nowrap;">
-                    <input type="checkbox" id="searchfilter-show-count" ${currentConfig.showCount ? 'checked' : ''} style="margin-right: 4px;">
+                <label style="display: flex; align-items: center; flex: 1; justify-content: center; white-space: nowrap; cursor: pointer; font-size: 12px; color: #4a5568;">
+                    <span class="searchfilter-switch">
+                        <input type="checkbox" id="searchfilter-show-count" ${currentConfig.showCount ? 'checked' : ''}>
+                        <span class="searchfilter-slider"></span>
+                    </span>
                     <span>${t('showCount')}</span>
                 </label>
-                <label style="display: flex; align-items: center; flex: 1; justify-content: flex-end; white-space: nowrap;">
-                    <input type="checkbox" id="searchfilter-debug" ${currentConfig.debug ? 'checked' : ''} style="margin-right: 4px;">
+                <label style="display: flex; align-items: center; flex: 1; justify-content: flex-end; white-space: nowrap; cursor: pointer; font-size: 12px; color: #4a5568;">
+                    <span class="searchfilter-switch">
+                        <input type="checkbox" id="searchfilter-debug" ${currentConfig.debug ? 'checked' : ''}>
+                        <span class="searchfilter-slider"></span>
+                    </span>
                     <span>${t('debugMode')}</span>
                 </label>
             </div>
             
             <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-                <label style="display: flex; align-items: center; flex: 1; justify-content: flex-start; white-space: nowrap;">
-                    <input type="checkbox" id="searchfilter-show-block-btn" ${currentConfig.showBlockBtn ? 'checked' : ''} style="margin-right: 4px;">
+                <label style="display: flex; align-items: center; flex: 1; justify-content: flex-start; white-space: nowrap; cursor: pointer; font-size: 12px; color: #4a5568;">
+                    <span class="searchfilter-switch">
+                        <input type="checkbox" id="searchfilter-show-block-btn" ${currentConfig.showBlockBtn ? 'checked' : ''}>
+                        <span class="searchfilter-slider"></span>
+                    </span>
                     <span>${t('oneClickBlock')}</span>
                 </label>
-                <label style="display: flex; align-items: center; flex: 1; justify-content: center; white-space: nowrap;">
-                    <input type="checkbox" id="searchfilter-block-domain" ${currentConfig.blockDomain ? 'checked' : ''} style="margin-right: 4px;">
+                <label style="display: flex; align-items: center; flex: 1; justify-content: center; white-space: nowrap; cursor: pointer; font-size: 12px; color: #4a5568;">
+                    <span class="searchfilter-switch">
+                        <input type="checkbox" id="searchfilter-block-domain" ${currentConfig.blockDomain ? 'checked' : ''}>
+                        <span class="searchfilter-slider"></span>
+                    </span>
                     <span>${t('blockDomain')}</span>
                 </label>
-                <label style="display: flex; align-items: center; flex: 1; justify-content: flex-end; white-space: nowrap;">
-                    <input type="checkbox" id="searchfilter-block-confirm" ${currentConfig.blockConfirm ? 'checked' : ''} style="margin-right: 4px;">
+                <label style="display: flex; align-items: center; flex: 1; justify-content: flex-end; white-space: nowrap; cursor: pointer; font-size: 12px; color: #4a5568;">
+                    <span class="searchfilter-switch">
+                        <input type="checkbox" id="searchfilter-block-confirm" ${currentConfig.blockConfirm ? 'checked' : ''}>
+                        <span class="searchfilter-slider"></span>
+                    </span>
                     <span>${t('doubleConfirm')}</span>
                 </label>
             </div>
             
-            <div class="option-row">
-                <span class="option-label">${t('bubbleSize')}</span>
-                ${createOptionButtons('bubbleSize', currentConfig.bubbleSize, sizeOptions)}
+            <div class="option-row" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 8px;">
+                <span class="option-label" style="margin-bottom: 0;">${t('bubbleSize')} <span id="searchfilter-bubble-size-val">${initialSize}px</span></span>
+                <input type="range" id="searchfilter-bubble-size-slider" min="12" max="40" value="${initialSize}" style="flex: 1; max-width: 160px; height: 4px; background: #cbd5e0; border-radius: 2px; outline: none; -webkit-appearance: none; cursor: pointer;">
             </div>
             
             <div style="margin-bottom: 0px;">
@@ -2911,8 +3002,8 @@
                 <div class="rules-container">
                     <div id="searchfilter-line-numbers"></div>
                     <textarea id="searchfilter-rules" placeholder="${t('placeholder')}" wrap="off">${currentConfig.rules.join('\n')}</textarea>
-                    <div id="searchfilter-scroll-top" class="searchfilter-scroll-btn" style="top: 2px;" title="${t('scrollTop')}">⬆️</div>
-                    <div id="searchfilter-scroll-bottom" class="searchfilter-scroll-btn" style="bottom: 1px;" title="${t('scrollBottom')}">⬇️</div>
+                    <div id="searchfilter-scroll-top" class="searchfilter-scroll-btn" style="top: 2px;" title="${t('scrollTop')}">${svgIcon('arrow-up-circle')}</div>
+                    <div id="searchfilter-scroll-bottom" class="searchfilter-scroll-btn" style="bottom: 1px;" title="${t('scrollBottom')}">${svgIcon('arrow-down-circle')}</div>
             </div>
             
             <div style="display: flex; gap: 6px; margin-top: 8px;" id="searchfilter-panel-footer">
@@ -2984,26 +3075,25 @@
       behavior: 'smooth'
     });
 
-    // 悬浮球大小设置
-    panel.querySelectorAll('.option-button').forEach(button => {
-      button.addEventListener('click', function() {
-        const name = this.dataset.name;
-        const value = this.dataset.value;
-        currentConfig[name] = value;
-        const buttons = panel.querySelectorAll(`[data-name="${name}"]`);
-        buttons.forEach(btn => btn.classList.toggle('active', btn.dataset.value === value));
-
-        if (name === 'bubbleSize') {
-          const statusBtn = document.getElementById('searchfilter-status');
-          if (statusBtn) applyBubbleSize(statusBtn);
-          GM_setValue(CONFIG_KEY, currentConfig);
+    // 悬浮球大小滑动条设置
+    const sizeSlider = panel.querySelector('#searchfilter-bubble-size-slider');
+    const sizeValueDisplay = panel.querySelector('#searchfilter-bubble-size-val');
+    if (sizeSlider) {
+      sizeSlider.addEventListener('input', function() {
+        const value = parseInt(this.value);
+        currentConfig.bubbleSize = value;
+        if (sizeValueDisplay) {
+          sizeValueDisplay.textContent = `${value}px`;
         }
+        const statusBtn = document.getElementById('searchfilter-status');
+        if (statusBtn) applyBubbleSize(statusBtn);
+        GM_setValue(CONFIG_KEY, currentConfig);
       });
-    });
+    }
 
     const closeHandler = (e) => {
       if (preventPanelClose) return;
-      if (!panel.contains(e.target) && !e.target.closest('#searchfilter-status') && !e.target.closest('#searchfilter-webdav-panel') && !e.target.closest('#searchfilter-subscription-panel') && !e.target.closest('#searchfilter-hlcolor-panel')) {
+      if (!panel.contains(e.target) && !e.target.closest('#searchfilter-status') && !e.target.closest('#searchfilter-webdav-panel') && !e.target.closest('#searchfilter-subscription-panel') && !e.target.closest('#searchfilter-hlcolor-panel') && !e.target.closest('#searchfilter-hlcolor-popup')) {
         closePanel();
       }
     };
@@ -3321,7 +3411,7 @@
         <label>${t('webdavPass')}</label>
         <div style="position: relative; display: flex; align-items: center;">
             <input id="webdav-password" type="password" value="${webdavConfig.password}" style="padding-right: 35px !important;">
-            <button id="webdav-toggle-password" type="button" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; font-size: 16px; line-height: 1; color: #718096; display: flex; align-items: center; justify-content: center; z-index: 1;" title="${t('togglePassword')}">🐵</button>
+            <button id="webdav-toggle-password" type="button" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; font-size: 14px; line-height: 1; color: #718096; display: flex; align-items: center; justify-content: center; z-index: 1;" title="${t('togglePassword')}">${svgIcon('eye')}</button>
         </div>
     </div>
     <div class="webdav-row"><label>${t('filename')}</label><input id="webdav-filename" type="text" placeholder="rules.txt" value="${webdavConfig.filename}"></div>
@@ -3351,7 +3441,7 @@
         e.stopPropagation();
         const type = passwordInput.type === 'password' ? 'text' : 'password';
         passwordInput.type = type;
-        togglePasswordBtn.textContent = type === 'password' ? '🐵' : '🙈';
+        togglePasswordBtn.innerHTML = type === 'password' ? `${svgIcon('eye')}` : `${svgIcon('eye-off')}`;
       });
     }
 
@@ -3611,14 +3701,7 @@
     preventPanelClose = false;
   }
 
-  // 高亮颜色面板
-    function showHighlightColorPanel() {
-      const existing = document.getElementById('searchfilter-hlcolor-panel');
-      if (existing) {
-        existing.remove();
-        return;
-      }
-
+  // HSV 辅助函数
     function hslToRgb(h, s, v) {
       h /= 360;
       let r, g, b;
@@ -3659,206 +3742,252 @@
       return '#' + [r,g,b].map(x => x.toString(16).padStart(2,'0').toUpperCase()).join('');
     }
 
+    // 弹出 HSV 取色板弹窗
+    function showColorPickerPopup(targetIndex, currentHex, defaults, onSave) {
+      const existingPopup = document.getElementById('searchfilter-hlcolor-popup');
+      if (existingPopup) existingPopup.remove();
+
+      const popup = document.createElement('div');
+      popup.id = 'searchfilter-hlcolor-popup';
+      popup.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        z-index: 10002; display: flex; align-items: center; justify-content: center;
+      `;
+
+      const [ir, ig, ib] = hexToRgb(currentHex);
+      let [currentHue, currentSat, currentVal] = rgbToHsv(ir, ig, ib);
+
+      popup.innerHTML = `
+        <div style="position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.3);" id="hlcolor-popup-overlay"></div>
+        <div style="position:relative;background:#fff;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,0.2);padding:12px;width:290px;display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:13px;font-weight:600;color:#2d3748;">${t('hlColorTitle')} @${targetIndex}</span>
+            <div style="display:flex;align-items:center;gap:4px;">
+              <span id="hlcolor-popup-preview" style="display:inline-block;width:16px;height:16px;border-radius:3px;border:1px solid #e2e8f0;background:${currentHex};flex-shrink:0;"></span>
+              <span id="hlcolor-popup-hex" style="font-size:12px;font-family:'Consolas',monospace;padding:2px 6px;background:#f7fafc;border-radius:3px;border:1px solid #e2e8f0;">${currentHex}</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:stretch;">
+            <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+              <canvas id="hlcolor-popup-sv" style="width:180px;height:180px;border-radius:4px;border:1px solid #e2e8f0;cursor:crosshair;"></canvas>
+            </div>
+            <canvas id="hlcolor-popup-hue" style="width:20px;height:180px;border-radius:4px;border:1px solid #e2e8f0;cursor:pointer;"></canvas>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button id="hlcolor-popup-save" class="searchfilter-button searchfilter-button-primary" style="flex:1;padding:5px;font-size:12px;">${t('save')}</button>
+            <button id="hlcolor-popup-cancel" class="searchfilter-button searchfilter-button-secondary" style="flex:1;padding:5px;font-size:12px;">${t('cancel')}</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(popup);
+
+      // 初始化 Canvas
+      const svCanvas = document.getElementById('hlcolor-popup-sv');
+      const hueCanvas = document.getElementById('hlcolor-popup-hue');
+      const svCtx = svCanvas.getContext('2d');
+      const hueCtx = hueCanvas.getContext('2d');
+      const svW = 180, svH = 180, hueW = 20, hueH = 180;
+      svCanvas.width = svW; svCanvas.height = svH;
+      hueCanvas.width = hueW; hueCanvas.height = hueH;
+
+      function drawSVCanvas(hue, sat, val) {
+        const imageData = svCtx.createImageData(svW, svH);
+        for (let y = 0; y < svH; y++) {
+          for (let x = 0; x < svW; x++) {
+            const s = x / svW, v = 1 - y / svH;
+            const [r, g, b] = hslToRgb(hue, s, v);
+            const idx = (y * svW + x) * 4;
+            imageData.data[idx] = r;
+            imageData.data[idx+1] = g;
+            imageData.data[idx+2] = b;
+            imageData.data[idx+3] = 255;
+          }
+        }
+        svCtx.putImageData(imageData, 0, 0);
+        // 绘制当前颜色位置的指示器（圆圈）
+        const ix = sat * svW;
+        const iy = (1 - val) * svH;
+        svCtx.beginPath();
+        svCtx.arc(ix, iy, 5, 0, Math.PI * 2);
+        svCtx.strokeStyle = '#fff';
+        svCtx.lineWidth = 2;
+        svCtx.stroke();
+        svCtx.beginPath();
+        svCtx.arc(ix, iy, 5, 0, Math.PI * 2);
+        svCtx.strokeStyle = 'rgba(0,0,0,0.4)';
+        svCtx.lineWidth = 1;
+        svCtx.stroke();
+      }
+
+      function drawHueCanvas(hue) {
+        for (let y = 0; y < hueH; y++) {
+          const [r, g, b] = hslToRgb((y / hueH) * 360, 1, 1);
+          hueCtx.fillStyle = `rgb(${r},${g},${b})`;
+          hueCtx.fillRect(0, y, hueW, 1);
+        }
+        // 绘制当前 Hue 位置的指示器（三角形箭头）
+        const iy = (hue / 360) * hueH;
+        hueCtx.fillStyle = '#fff';
+        hueCtx.beginPath();
+        hueCtx.moveTo(0, iy - 4);
+        hueCtx.lineTo(0, iy + 4);
+        hueCtx.lineTo(6, iy);
+        hueCtx.closePath();
+        hueCtx.fill();
+        hueCtx.strokeStyle = 'rgba(0,0,0,0.4)';
+        hueCtx.lineWidth = 1;
+        hueCtx.stroke();
+      }
+
+      function updateDisplay() {
+        const [r, g, b] = hslToRgb(currentHue, currentSat, currentVal);
+        const hex = rgbToHex(r, g, b);
+        const el = document.getElementById('hlcolor-popup-hex');
+        if (el) el.textContent = hex;
+        const preview = document.getElementById('hlcolor-popup-preview');
+        if (preview) preview.style.background = hex;
+        drawSVCanvas(currentHue, currentSat, currentVal);
+        drawHueCanvas(currentHue);
+      }
+
+      drawSVCanvas(currentHue, currentSat, currentVal);
+      drawHueCanvas(currentHue);
+      updateDisplay();
+
+      // SV 拖动
+      let svDragging = false;
+      function onSVMove(clientX, clientY) {
+        const rect = svCanvas.getBoundingClientRect();
+        const scaleX = svW / rect.width;
+        const scaleY = svH / rect.height;
+        const x = Math.max(0, Math.min(svW, (clientX - rect.left) * scaleX));
+        const y = Math.max(0, Math.min(svH, (clientY - rect.top) * scaleY));
+        currentSat = x / svW;
+        currentVal = 1 - y / svH;
+        updateDisplay();
+      }
+      svCanvas.addEventListener('mousedown', (e) => { e.stopPropagation(); svDragging = true; onSVMove(e.clientX, e.clientY); });
+      document.addEventListener('mousemove', (e) => { if (svDragging) onSVMove(e.clientX, e.clientY); });
+      document.addEventListener('mouseup', () => { svDragging = false; });
+
+      // Hue 拖动
+      let hueDragging = false;
+      function onHueMove(clientY) {
+        const rect = hueCanvas.getBoundingClientRect();
+        const scaleY = hueH / rect.height;
+        const y = Math.max(0, Math.min(hueH, (clientY - rect.top) * scaleY));
+        currentHue = (y / hueH) * 360;
+        updateDisplay();
+      }
+      hueCanvas.addEventListener('mousedown', (e) => { e.stopPropagation(); hueDragging = true; onHueMove(e.clientY); });
+      document.addEventListener('mousemove', (e) => { if (hueDragging) onHueMove(e.clientY); });
+      document.addEventListener('mouseup', () => { hueDragging = false; });
+
+      // 保存
+      document.getElementById('hlcolor-popup-save').onclick = (e) => {
+        e.stopPropagation();
+        const [r, g, b] = hslToRgb(currentHue, currentSat, currentVal);
+        const hex = rgbToHex(r, g, b);
+        onSave(targetIndex, hex);
+        popup.remove();
+      };
+
+      // 取消 / 点击外部关闭
+      function closePopup(e) { e?.stopPropagation(); popup.remove(); }
+      document.getElementById('hlcolor-popup-cancel').onclick = closePopup;
+      document.getElementById('hlcolor-popup-overlay').onclick = closePopup;
+    }
+
+    // 高亮颜色主面板
+    function showHighlightColorPanel() {
+      const existing = document.getElementById('searchfilter-hlcolor-panel');
+      if (existing) {
+        existing.remove();
+        return;
+      }
+
     const panel = document.createElement('div');
     panel.id = 'searchfilter-hlcolor-panel';
     panel.classList.add('searchfilter-panel-fade');
     panel.style.cssText = `
         position: fixed;
         ${getPanelPositionStyles()}
-        width: 350px;
+        width: 240px;
         z-index: 10001;
-        padding: 6px;
+        padding: 10px;
         display: flex;
         flex-direction: column;
     `;
 
     const colors = currentConfig.highlightColors || {};
-    let rowsHtml = '';
+    const defaults = {1:'#CE2029', 2:'#FF8C00', 3:'#FFD700', 4:'#228B22', 5:'#1E90FF'};
+
+    // 5个大色块按钮，横向排列
+    let swatchesHtml = '';
     for (let i = 1; i <= 5; i++) {
-      const hex = (colors[i] || '#CE2029').toUpperCase();
-      rowsHtml += `<div class="hlcolor-row">
-        <label>@${i}</label>
-        <span class="hlcolor-preview" id="hlcolor-preview-${i}" style="background:${hex}"></span>
-        <input type="text" id="hlcolor-input-${i}" value="${hex}" placeholder="#RRGGBB" maxlength="7">
+      const hex = (colors[i] || defaults[i]).toUpperCase();
+      swatchesHtml += `<div class="hlcolor-swatch" id="hlcolor-preview-${i}" style="display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;flex:1;" title="${t('hlColorClick')}">
+        <div style="width:100%;aspect-ratio:1;border-radius:6px;border:2px solid #e2e8f0;background:${hex};transition:transform 0.15s, box-shadow 0.15s;"></div>
+        <span style="font-size:10px;font-weight:600;color:#4a5568;">@${i}</span>
       </div>`;
     }
 
-    const defaultHex = (colors[1] || '#CE2029').toUpperCase();
-    const [ir, ig, ib] = hexToRgb(defaultHex);
-    let [currentHue, currentSat, currentVal] = rgbToHsv(ir, ig, ib);
-
     panel.innerHTML = `
-      <h3 style="margin:0 0 3px;font-size:13px;color:#2d3748;font-weight:600;">${t('hlColorTitle')}</h3>
-      <div style="display:flex;gap:4px;align-items:stretch;">
-        <div id="hlcolor-left" style="flex:1;min-width:0;display:flex;flex-direction:column;">
-          ${rowsHtml}
-          <div style="display:flex;align-items:center;gap:4px;margin-top:3px;">
-            <span id="hlcolor-current-preview" style="width:16px;height:16px;border-radius:2px;border:1px solid #e2e8f0;background:${defaultHex};flex-shrink:0;"></span>
-            <span id="hlcolor-code-text" style="font-size:12px;font-family:'Consolas',monospace;padding:2px 4px;background:#f7fafc;border-radius:3px;border:1px solid #e2e8f0;flex:0 0 auto;min-width:70px;text-align:center;">${defaultHex}</span>
-          </div>
-        </div>
-        <div class="hlcolor-picker-wrapper" style="display:flex;gap:4px;align-items:stretch;flex-shrink:0;">
-          <canvas id="hlcolor-sv-canvas"></canvas>
-          <canvas id="hlcolor-hue-canvas" width="22"></canvas>
-        </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <h3 style="margin:0;font-size:13px;color:#2d3748;font-weight:600;">${t('hlColorTitle')}</h3>
+        <button id="hlcolor-reset" class="searchfilter-button searchfilter-button-secondary" style="padding:2px 6px;font-size:10px;border:1px solid #e2e8f0;">${t('hlColorReset')}</button>
       </div>
-      <div style="display:flex;gap:4px;justify-content:flex-end;margin-top:2px;">
-        <button id="hlcolor-save" class="searchfilter-button searchfilter-button-primary" style="flex:1;padding:4px 6px;font-size:11px;">${t('save')}</button>
-        <button id="hlcolor-reset" class="searchfilter-button searchfilter-button-secondary" style="flex:1;padding:4px 6px;font-size:11px;">${t('hlColorReset')}</button>
-        <button id="hlcolor-cancel" class="searchfilter-button searchfilter-button-secondary" style="flex:1;padding:4px 6px;font-size:11px;">${t('cancel')}</button>
+      <div style="display:flex;gap:6px;">
+        ${swatchesHtml}
+      </div>
+      <div style="display:flex;gap:4px;justify-content:flex-end;margin-top:6px;">
+        <button id="hlcolor-close" class="searchfilter-button searchfilter-button-secondary" style="flex:1;padding:3px 6px;font-size:11px;">${t('close')}</button>
       </div>
     `;
 
     document.body.appendChild(panel);
     requestAnimationFrame(() => panel.classList.add('show'));
 
-    function resizeCanvasToMatch() {
-      const left = document.getElementById('hlcolor-left');
-      const svCanvas = document.getElementById('hlcolor-sv-canvas');
-      const hueCanvas = document.getElementById('hlcolor-hue-canvas');
-      if (!left || !svCanvas || !hueCanvas) return;
-      const height = left.getBoundingClientRect().height;
-      if (height <= 0) return;
-      svCanvas.width = svCanvas.height = height;
-      hueCanvas.height = height;
-      drawSVCanvas(currentHue);
-      drawHueCanvas();
-    }
-    requestAnimationFrame(() => {
-      resizeCanvasToMatch();
-      updatePickedColor();
-    });
-
-    function drawSVCanvas(hue) {
-      const canvas = document.getElementById('hlcolor-sv-canvas');
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      const w = canvas.width, h = canvas.height;
-      const imageData = ctx.createImageData(w, h);
-      for (let y = 0; y < h; y++) {
-        for (let x = 0; x < w; x++) {
-          const s = x / w, v = 1 - y / h;
-          const [r, g, b] = hslToRgb(hue, s, v);
-          const idx = (y * w + x) * 4;
-          imageData.data[idx] = r;
-          imageData.data[idx+1] = g;
-          imageData.data[idx+2] = b;
-          imageData.data[idx+3] = 255;
-        }
-      }
-      ctx.putImageData(imageData, 0, 0);
-    }
-
-    function drawHueCanvas() {
-      const canvas = document.getElementById('hlcolor-hue-canvas');
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      const w = canvas.width, h = canvas.height;
-      for (let y = 0; y < h; y++) {
-        const [r, g, b] = hslToRgb((y / h) * 360, 1, 1);
-        ctx.fillStyle = `rgb(${r},${g},${b})`;
-        ctx.fillRect(0, y, w, 1);
-      }
-    }
-
-    function updatePickedColor() {
-      const [r, g, b] = hslToRgb(currentHue, currentSat, currentVal);
-      const hex = rgbToHex(r, g, b);
-      const el = document.getElementById('hlcolor-code-text');
-      if (el) el.textContent = hex;
-      const preview = document.getElementById('hlcolor-current-preview');
-      if (preview) preview.style.background = hex;
-    }
-
-    const svCanvas = document.getElementById('hlcolor-sv-canvas');
-    let svDragging = false;
-
-    function onSVMove(clientX, clientY) {
-      const rect = svCanvas.getBoundingClientRect();
-      const x = Math.max(0, Math.min(svCanvas.width, clientX - rect.left));
-      const y = Math.max(0, Math.min(svCanvas.height, clientY - rect.top));
-      currentSat = x / svCanvas.width;
-      currentVal = 1 - y / svCanvas.height;
-      updatePickedColor();
-    }
-
-    svCanvas.addEventListener('mousedown', (e) => { svDragging = true; onSVMove(e.clientX, e.clientY); });
-    document.addEventListener('mousemove', (e) => { if (svDragging) onSVMove(e.clientX, e.clientY); });
-    document.addEventListener('mouseup', () => { svDragging = false; });
-
-    const hueCanvas = document.getElementById('hlcolor-hue-canvas');
-    let hueDragging = false;
-
-    function onHueMove(clientY) {
-      const rect = hueCanvas.getBoundingClientRect();
-      const y = Math.max(0, Math.min(hueCanvas.height, clientY - rect.top));
-      currentHue = (y / hueCanvas.height) * 360;
-      drawSVCanvas(currentHue);
-      updatePickedColor();
-    }
-
-    hueCanvas.addEventListener('mousedown', (e) => { hueDragging = true; onHueMove(e.clientY); });
-    document.addEventListener('mousemove', (e) => { if (hueDragging) onHueMove(e.clientY); });
-    document.addEventListener('mouseup', () => { hueDragging = false; });
-
-    function updatePreview(i) {
-      const input = document.getElementById(`hlcolor-input-${i}`);
-      const preview = document.getElementById(`hlcolor-preview-${i}`);
-      if (input && preview && /^#[0-9a-fA-F]{6}$/.test(input.value)) {
-        preview.style.background = input.value;
-      }
-    }
-
+    // 点击色块弹出 HSV 取色板
     for (let i = 1; i <= 5; i++) {
-      document.getElementById(`hlcolor-input-${i}`).addEventListener('input', () => updatePreview(i));
+      const swatch = document.getElementById(`hlcolor-preview-${i}`);
+      const colorDiv = swatch.querySelector('div');
+      swatch.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const currentHex = (currentConfig.highlightColors && currentConfig.highlightColors[i]) || defaults[i];
+        showColorPickerPopup(i, currentHex, defaults, (idx, hex) => {
+          // 更新色块预览
+          const s = document.getElementById(`hlcolor-preview-${idx}`);
+          if (s) s.querySelector('div').style.background = hex;
+          // 保存配置
+          const newColors = {...(currentConfig.highlightColors || {})};
+          newColors[idx] = hex;
+          currentConfig.highlightColors = newColors;
+          GM_setValue(CONFIG_KEY, currentConfig);
+          buildRuleIndex();
+          forceReprocessAll();
+        });
+      });
+      swatch.addEventListener('mouseenter', () => { colorDiv.style.transform = 'scale(1.12)'; colorDiv.style.boxShadow = '0 2px 8px rgba(0,0,0,0.25)'; });
+      swatch.addEventListener('mouseleave', () => { colorDiv.style.transform = 'scale(1)'; colorDiv.style.boxShadow = 'none'; });
     }
 
-    document.getElementById('hlcolor-save').onclick = () => {
-      const newColors = {...currentConfig.highlightColors};
-      let hasError = false;
+    // 重置所有颜色为默认值
+    document.getElementById('hlcolor-reset').onclick = (e) => {
+      e.stopPropagation();
       for (let i = 1; i <= 5; i++) {
-        const input = document.getElementById(`hlcolor-input-${i}`);
-        const val = input.value.trim();
-        if (val === '') continue;
-        if (!/^#[0-9a-fA-F]{6}$/.test(val)) {
-          const saveBtn = document.getElementById('hlcolor-save');
-          const originalText = saveBtn.textContent;
-          saveBtn.textContent = t('errorword');
-          saveBtn.style.backgroundColor = '#c53030';
-          setTimeout(() => {
-            saveBtn.textContent = originalText;
-            saveBtn.style.backgroundColor = '';
-          }, 1500);
-          hasError = true;
-          break;
-        }
-        newColors[i] = val;
+        const swatch = document.getElementById(`hlcolor-preview-${i}`);
+        if (swatch) swatch.querySelector('div').style.background = defaults[i];
       }
-      if (hasError) return;
-      currentConfig.highlightColors = newColors;
+      currentConfig.highlightColors = {...defaults};
       GM_setValue(CONFIG_KEY, currentConfig);
       buildRuleIndex();
       forceReprocessAll();
-      const saveBtn = document.getElementById('hlcolor-save');
-      saveBtn.style.backgroundColor = '#276749';
-      setTimeout(() => {
-        saveBtn.style.backgroundColor = '';
-      }, 800);
     };
 
-    document.getElementById('hlcolor-reset').onclick = () => {
-      const defaults = {1:'#CE2029', 2:'#FF8C00', 3:'#FFD700', 4:'#228B22', 5:'#1E90FF'};
-      for (let i = 1; i <= 5; i++) {
-        document.getElementById(`hlcolor-input-${i}`).value = defaults[i];
-        document.getElementById(`hlcolor-preview-${i}`).style.background = defaults[i];
-      }
-      const [r, g, b] = hexToRgb('#CE2029');
-      [currentHue, currentSat, currentVal] = rgbToHsv(r, g, b);
-      drawSVCanvas(currentHue);
-      updatePickedColor();
-    };
-
-    document.getElementById('hlcolor-cancel').onclick = (e) => {
+    // 关闭按钮
+    document.getElementById('hlcolor-close').onclick = (e) => {
       e.stopPropagation();
       panel.classList.remove('show');
       panel.addEventListener('transitionend', () => {
@@ -3866,8 +3995,10 @@
       }, {once: true});
     };
 
+    // 点击外部关闭
     const closeHandler = (e) => {
-      if (!panel.contains(e.target)) {
+      const popup = document.getElementById('searchfilter-hlcolor-popup');
+      if (!panel.contains(e.target) && (!popup || !popup.contains(e.target))) {
         panel.classList.remove('show');
         panel.addEventListener('transitionend', () => {
           panel.remove();
