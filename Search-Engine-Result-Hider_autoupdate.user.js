@@ -3,11 +3,11 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.0.0
+// @version      7.0.1
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
-// @icon         data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdib3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMmM1MjgyIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iNyI+PC9jaXJjbGU+PGxpbmUgeDE9IjcuNDUiIHkxPSI3LjQ1IiB4Mj0iMTYuNTUiIHkyPSIxNi41NSI+PC9saW5lPjwvc3ZnPg==
+// @icon         data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjQgNCAxNiAxNiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMmM1MjgyIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgc3R5bGU9Im92ZXJmbG93OnZpc2libGUhaW1wb3J0YW50OyI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iNyI+PC9jaXJjbGU+PGxpbmUgeDE9IjcuNDUiIHkxPSI3LjQ1IiB4Mj0iMTYuNTUiIHkyPSIxNi41NSI+PC9saW5lPjwvc3ZnPg==
 // @author       南雪莲
 // @homepageURL  https://greasyfork.org/zh-CN/scripts/552394
 // @homepageURL  https://github.com/SadYuyuko/Search-Engine-Result-Hider
@@ -2820,7 +2820,7 @@
         flex-direction: column;
     `;
 
-    // 解析已有的 bubbleSize 为数值作为 slider 初始值
+    // 兼容旧悬浮球设置
     let initialSize = 20;
     if (typeof currentConfig.bubbleSize === 'number') {
       initialSize = currentConfig.bubbleSize;
@@ -2977,7 +2977,7 @@
       behavior: 'smooth'
     });
 
-    // 悬浮球大小滑动条设置
+    // 悬浮球大小滑动条
     const sizeSlider = panel.querySelector('#searchfilter-bubble-size-slider');
     const sizeValueDisplay = panel.querySelector('#searchfilter-bubble-size-val');
     if (sizeSlider) {
@@ -3623,8 +3623,11 @@
     panel.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0;">
         <h3 style="margin:0;font-size:16px;color:#2d3748;line-height:1;">${t('webdavTitle')}</h3>
-        <label style="display:flex;align-items:baseline;font-size:12px;color:#4a5568;cursor:pointer;margin:0;white-space:nowrap;line-height:1;">
-            <input type="checkbox" id="webdav-auto-sync" ${autoSyncEnabled ? 'checked' : ''} style="margin:0 5px 0 0;cursor:pointer;vertical-align:middle;position:relative;top:0;">
+        <label style="display:flex !important;align-items:center;font-size:12px;color:#4a5568;cursor:pointer;margin:0;white-space:nowrap;line-height:1;">
+            <span class="searchfilter-switch">
+                <input type="checkbox" id="webdav-auto-sync" ${autoSyncEnabled ? 'checked' : ''}>
+                <span class="searchfilter-slider"></span>
+            </span>
             <span style="line-height:1;">${t('autoSync')}</span>
         </label>
     </div>
