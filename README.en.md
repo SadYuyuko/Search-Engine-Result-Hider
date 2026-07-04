@@ -14,7 +14,6 @@ Supports Bing, Google, DuckDuckGo and Yandex, with potential support for more se
 - Script manager menu settings  
   ┣ Directly open the configuration panel  
   ┣ Toggle blocking on/off  
-  ┣ Toggle block confirmation  
   ┣ Toggle floating bubble visibility  
   ┣ Language switching  
   ┣ Edit highlighting rules color  
