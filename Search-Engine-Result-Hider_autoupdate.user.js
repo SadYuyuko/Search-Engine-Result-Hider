@@ -3,11 +3,11 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      6.9.0
+// @version      7.0.0
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
-// @icon         data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZWQiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCI+PC9jaXJjbGU+PGxpbmUgeDE9IjQuOTMiIHkxPSI0LjkzIiB4Mj0iMTkuMDciIHkyPSIxOS4wNyI+PC9saW5lPjwvc3ZnPg==
+// @icon         data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdib3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMmM1MjgyIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iNyI+PC9jaXJjbGU+PGxpbmUgeDE9IjcuNDUiIHkxPSI3LjQ1IiB4Mj0iMTYuNTUiIHkyPSIxNi41NSI+PC9saW5lPjwvc3ZnPg==
 // @author       南雪莲
 // @homepageURL  https://greasyfork.org/zh-CN/scripts/552394
 // @homepageURL  https://github.com/SadYuyuko/Search-Engine-Result-Hider
@@ -53,7 +53,7 @@
     rules: ['*://*.example.com/*'],
     enabled: true,
     showCount: false,
-    bubbleSize: 'large',
+    bubbleSize: 20,
     debug: false,
     showBlockBtn: false,
     blockDomain: false,
@@ -63,7 +63,7 @@
     panelCentered: true,
     bubbleAction: 'openPanel',
     language: 'zh-CN',
-    highlightColors: {1:'#CE2029', 2:'#FF8C00', 3:'#FFD700', 4:'#228B22', 5:'#1E90FF', 6:'#8B008B', 7:'#008080', 8:'#696969', 9:'#87CEEB'}
+    highlightColors: {1:'#CE2029', 2:'#FF8C00', 3:'#FFD700', 4:'#228B22', 5:'#1E90FF'}
   });
 
   // 兼容旧配置
@@ -74,7 +74,7 @@
   if (currentConfig.panelCentered === undefined) currentConfig.panelCentered = true;
   if (currentConfig.bubbleAction === undefined) currentConfig.bubbleAction = 'openPanel';
   if (currentConfig.language === undefined) currentConfig.language = 'zh-CN';
-  if (currentConfig.highlightColors === undefined) currentConfig.highlightColors = {1:'#CE2029', 2:'#FF8C00', 3:'#FFD700', 4:'#228B22', 5:'#1E90FF', 6:'#8B008B', 7:'#008080', 8:'#696969', 9:'#87CEEB'};
+  if (currentConfig.highlightColors === undefined) currentConfig.highlightColors = {1:'#CE2029', 2:'#FF8C00', 3:'#FFD700', 4:'#228B22', 5:'#1E90FF'};
   let showHiddenResults = false;
 
   // 文本映射
@@ -100,11 +100,9 @@
       test: '统计',
       close: '关闭',
       placeholder: '每行一个规则',
-      scrollTop: '回到顶部',
-      scrollBottom: '回到底部',
       panelTitle: '订阅管理',
-      addSubscription: `${svgIcon('plus')}添加订阅`,
-      saveSub: 'Save',
+      addSubscription: '➕ 添加订阅',
+      saveSub: '保存',
       importSub: '导入',
       cancel: '取消',
       webdavTitle: 'WebDAV同步设置',
@@ -121,23 +119,16 @@
       titleRule: '标题规则',
       textRule: '正文规则',
       regexRule: '正则规则',
-      matchedCount: '匹配',
+      statsCompound: '复合规则',
       noMatch: '无匹配项',
       whitelistRules: '白名单规则',
-      ruleErrors: '个规则错误',
       menuOpenPanel: '⚙️ 打开配置面板',
       menuEnable: '屏蔽功能',
-      menuConfirm: '二次确认',
       menuCenter: '面板居中',
       menuBubble: '悬浮球状态',
       menuBubbleAction: '悬浮球功能',
       menuLang: 'Language：中文',
       menuLangEn: 'Language: English',
-      bubbleTitleHide: '点击隐藏已屏蔽结果',
-      bubbleTitleShow: '点击显示已屏蔽结果',
-      bubbleTitlePanel: '拖动边缘吸附，点击打开配置面板',
-      blockBtnTitle: '屏蔽此词条',
-      unblockBtnTitle: '取消屏蔽此域名规则',
       subscriptionSuccess: '订阅成功！已更新 {count} 条有效规则。',
       subscriptionSaved: '订阅配置已保存',
       importDone: '导入操作完成',
@@ -145,11 +136,6 @@
       downloadSuccess: '下载成功！规则已加载到编辑区，保存生效',
       noRulesExport: '没有规则可导出',
       confirmBlock: '确定要屏蔽并添加规则 [ {rule} ] 吗？',
-      statsSourceLocal: '本地规则',
-      statsSourceSub: '订阅',
-      statsWhitelist: '白名单规则',
-      statsCompound: '复合规则',
-      statsNoMatch: '无匹配项',
       statsErrors: '发现 {count} 个规则错误：',
       statsRule: '规则：',
       matchedCountLabel: '匹配',
@@ -170,22 +156,16 @@
       webdavUploadFailed: '上传失败：',
       webdavDownloadFailed: '下载失败：',
       webdavHttpsRequired: '安全起见，WebDAV地址必须使用https',
-      syntaxError: '语法错误',
       networkError: '网络错误',
       requestTimeout: '请求超时',
       subLinkInvalid: '链接错误',
       importing: '导入中',
       autoSync: '自动同步',
       webdavUrlEmpty: 'WebDAV地址为空',
-      delete: '删除',
-      togglePassword: '显示/隐藏密码',
       highlightRules: '高亮规则',
       menuHighlightColor: '🎨 高亮颜色',
       hlColorTitle: '高亮颜色设置',
-      hlColorHex: '颜色代码',
-      hlColorSaved: '高亮颜色已保存',
       hlColorReset: '重置',
-      hlColorClick: '点击选择颜色',
       errorword: '错误',
     },
     'en': {
@@ -209,10 +189,8 @@
       test: 'Stats',
       close: 'Close',
       placeholder: 'One rule per line',
-      scrollTop: 'Scroll to Top',
-      scrollBottom: 'Scroll to Bottom',
       panelTitle: 'Subscription Manager',
-      addSubscription: `${svgIcon('plus')}Add Subscription`,
+      addSubscription: '➕ Add Subscription',
       saveSub: 'Save',
       importSub: 'Import',
       cancel: 'Cancel',
@@ -230,23 +208,16 @@
       titleRule: 'Title Rule',
       textRule: 'Text Rule',
       regexRule: 'Regex Rule',
-      matchedCount: 'Matches',
+      statsCompound: 'Compound Rule',
       noMatch: 'No matches',
       whitelistRules: 'Whitelist Rules',
-      ruleErrors: 'rule errors',
       menuOpenPanel: '⚙️ Open Panel',
       menuEnable: 'Block',
-      menuConfirm: 'Confirm',
       menuCenter: 'Center Panel',
       menuBubble: 'Bubble',
       menuBubbleAction: 'Bubble Action',
       menuLang: 'Language：中文',
       menuLangEn: 'Language: English',
-      bubbleTitleHide: 'Click to hide blocked results',
-      bubbleTitleShow: 'Click to show blocked results',
-      bubbleTitlePanel: 'Drag to snap edge, click to open panel',
-      blockBtnTitle: 'Block this entry',
-      unblockBtnTitle: 'Unblock this domain rule',
       subscriptionSuccess: 'Subscription successful! Updated {count} valid rules.',
       subscriptionSaved: 'Subscription config saved',
       importDone: 'Import completed',
@@ -254,11 +225,6 @@
       downloadSuccess: 'Download successful! Rules loaded into editor, save to apply.',
       noRulesExport: 'No rules to export',
       confirmBlock: 'Add block rule [ {rule} ] ?',
-      statsSourceLocal: 'Local Rules',
-      statsSourceSub: 'Subscription',
-      statsWhitelist: 'Whitelist Rules',
-      statsCompound: 'Compound Rules',
-      statsNoMatch: 'No matches',
       statsErrors: 'Found {count} rule errors:',
       statsRule: 'Rule:',
       matchedCountLabel: 'Hits',
@@ -267,8 +233,6 @@
       menuBubbleStateHide: 'Hide',
       menuBubbleActionOpen: 'Open Panel',
       menuBubbleActionToggle: 'Toggle Results',
-      stateEnabled: 'Enabled',
-      stateDisabled: 'Disabled',
       statsError: 'Error:',
       subLinkEmpty: 'URL is empty',
       subImportSuccess: 'Import success, {count} rules imported',
@@ -279,22 +243,16 @@
       webdavUploadFailed: 'Upload failed: ',
       webdavDownloadFailed: 'Download failed: ',
       webdavHttpsRequired: 'For security, WebDAV server must use HTTPS',
-      syntaxError: 'Syntax error',
       networkError: 'Network error',
       requestTimeout: 'Request timeout',
       subLinkInvalid: 'Invalid URL',
       importing: 'Importing',
       autoSync: 'Auto Sync',
       webdavUrlEmpty: 'WebDAV URL is empty',
-      delete: 'Delete',
-      togglePassword: 'Show/Hide Password',
       highlightRules: 'Highlight Rules',
       menuHighlightColor: '🎨 Highlight Colors',
       hlColorTitle: 'Highlight Color Settings',
-      hlColorHex: 'Color Code',
-      hlColorSaved: 'Highlight colors saved',
       hlColorReset: 'Reset',
-      hlColorClick: 'Click to pick color',
       errorword: 'Error',
     }
   };
@@ -328,6 +286,26 @@
     }
   };
 
+  // Set
+  let compiledRules = {
+    domains: new Set(),
+    urls: [],
+    titles: [],
+    texts: [],
+    whitelistDomains: new Set(),
+    whitelistUrlPatterns: [],
+    rulesList: [],
+    conditionalRules: [],
+    highlightDomains: new Map(),
+    highlightUrls: [],
+    highlightTitles: [],
+    highlightTexts: [],
+    highlightConditionalRules: []
+  };
+
+  const validationCache = new Map();
+  let lineUpdateRaf = null;
+
   // 引擎检测
   function getSearchEngine() {
     const hostname = window.location.hostname;
@@ -354,774 +332,11 @@
     return text;
   }
 
-  // 内联SVG图标（避免依赖外部CDN，解决CSP限制）
-  function svgIcon(name) {
-    const icons = {
-      'eye-off': '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>',
-      'ban': '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>',
-      'plus': '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
-      'arrow-up-circle': '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/></svg>',
-      'arrow-down-circle': '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 12 16 16 12"/><line x1="12" y1="8" x2="12" y2="16"/></svg>',
-      'alert-triangle': '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
-      'eye': '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>'
-    };
-    const svg = icons[name] || '';
-    return `<span style="display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; flex-shrink: 0; line-height: 0;">${svg}</span>`;
-  }
-
-  // Set
-  let compiledRules = {
-    domains: new Set(),
-    urls: [],
-    titles: [],
-    texts: [],
-    whitelistDomains: new Set(),
-    whitelistUrlPatterns: [],
-    rulesList: [],
-    conditionalRules: [],
-    highlightDomains: new Map(),
-    highlightUrls: [],
-    highlightTitles: [],
-    highlightTexts: [],
-    highlightConditionalRules: []
-  };
-
-  // UI
-  GM_addStyle(`
-        /* 预留翻页高度 */
-        body { min-height: 101vh !important; }
-        #rcnt, #rso { min-height: 60vh; }
-
-        #searchfilter-panel, #searchfilter-webdav-panel, #searchfilter-subscription-panel {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            font-size: 13px;
-            box-sizing: border-box;
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            transition: all 0.3s ease;
-        }
-
-        .searchfilter-button {
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 11px;
-            padding: 4px 8px;
-            transition: background-color 0.2s;
-            box-sizing: border-box;
-        }
-        .searchfilter-button-primary { background: #2c5282; color: white; }
-        .searchfilter-button-primary:hover { background: #1a365d; }
-        .searchfilter-button-secondary { background: #4a5568; color: white; }
-        .searchfilter-button-secondary:hover { background: #2d3748; }
-        .searchfilter-button-success { background: #276749; color: white; }
-        .searchfilter-button-success:hover { background: #22543d; }
-        .searchfilter-button-danger { background: #c53030; color: white; }
-        .searchfilter-button-danger:hover { background: #9b2c2c; }
-
-        .option-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            flex-wrap: wrap;
-        }
-        .option-label {
-            font-size: 12px;
-            color: #4a5568;
-            white-space: nowrap;
-            margin-bottom: 4px;
-        }
-        .option-buttons {
-            display: flex;
-            gap: 4px;
-            flex-wrap: wrap;
-        }
-        .option-button {
-            padding: 3px 8px;
-            font-size: 11px;
-            background: #f7fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 4px;
-            cursor: pointer;
-            color: #4a5568;
-            box-sizing: border-box;
-        }
-        .option-button.active {
-            background: #2c5282;
-            color: white;
-            border-color: #2c5282;
-        }
-        .compact-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        .action-button {
-            padding: 8px 12px;
-            font-size: 12px;
-            font-weight: 500;
-            box-sizing: border-box;
-        }
-
-        /* 规则栏输入 */
-        .rules-container {
-            display: flex;
-            border: 1px solid #e2e8f0;
-            border-radius: 4px;
-            background: #f8fafc;
-            height: 190px;
-            margin-bottom: 3px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* 规则栏行号 */
-        #searchfilter-line-numbers {
-            min-width: 20px;
-            padding: 8px 4px 8px 2px;
-            background: #edf2f7;
-            border-right: 1px solid #e2e8f0;
-            text-align: right;
-            color: #a0aec0;
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 11px;
-            line-height: 1.4;
-            white-space: nowrap;
-            overflow: hidden;
-            user-select: none;
-            flex-shrink: 0;
-            box-sizing: border-box;
-        }
-
-        #searchfilter-rules {
-            flex: 1;
-            height: 100%;
-            font-size: 11px;
-            padding: 8px;
-            border: none;
-            resize: none;
-            background: transparent;
-            box-sizing: border-box;
-            font-family: 'Consolas', 'Monaco', monospace;
-            line-height: 1.4;
-            white-space: pre;
-            overflow-x: auto;
-            overflow-y: auto;
-            outline: none;
-        }
-
-        #searchfilter-rules::-webkit-scrollbar { width: 6px; height: 0px; }
-        #searchfilter-rules::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
-        #searchfilter-rules::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
-        #searchfilter-rules::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
-
-        /* 统计面板 */
-        #searchfilter-stats-panel {
-            position: absolute;
-            top: 10px;
-            left: 15px;
-            right: 15px;
-            bottom: 50px;
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            z-index: 10;
-            display: none;
-            flex-direction: column;
-            overflow: hidden;
-            box-sizing: border-box;
-        }
-
-        #searchfilter-stats-content {
-            padding: 12px;
-            overflow-y: auto;
-            flex: 1;
-            scrollbar-width: thin;
-        }
-
-        #searchfilter-stats-content::-webkit-scrollbar { width: 6px; }
-        #searchfilter-stats-content::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
-        #searchfilter-stats-content::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
-        #searchfilter-stats-content::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
-
-        /* 屏蔽按钮 */
-        .searchfilter-quick-block {
-            position: absolute;
-            cursor: pointer;
-            z-index: 99;
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            background: transparent;
-            user-select: none;
-            color: #000000; 
-            transition: transform 0.2s;
-        }
-
-        .searchfilter-quick-block:hover {
-            transform: scale(1.1);
-        }
-
-        @media (prefers-color-scheme: dark) {
-            .searchfilter-quick-block {
-                color: #ffffff;
-            }
-        }
-
-        /* 快速滑动按钮 */
-        .searchfilter-scroll-btn {
-            position: absolute;
-            right: 7px;
-            cursor: pointer;
-            opacity: 0.5;
-            font-size: 14px;
-            user-select: none;
-            transition: opacity 0.2s, transform 0.2s;
-            background: transparent;
-            z-index: 10;
-        }
-
-        .searchfilter-scroll-btn:hover { opacity: 1; transform: scale(1.2); }
-        .searchfilter-quick-block:hover { transform: scale(1.1); opacity: 1; }
-
-        /* 非正文区域隐藏按钮 */
-        .isv-r .searchfilter-quick-block, 
-        .image-section .searchfilter-quick-block,
-        g-img .searchfilter-quick-block,
-        .is-extra-container .searchfilter-quick-block { display: none !important; }
-        header .searchfilter-quick-block,
-        [role="navigation"] .searchfilter-quick-block,
-        [role="tablist"] .searchfilter-quick-block,
-        [role="search"] .searchfilter-quick-block,
-        g-scrolling-carousel .searchfilter-quick-block,
-        #hdtb .searchfilter-quick-block,
-        #appbar .searchfilter-quick-block,
-        #searchform .searchfilter-quick-block,
-        #top_nav .searchfilter-quick-block,
-        #extabar .searchfilter-quick-block { display: none !important; }
-
-        /* 面板隔离 */
-        #searchfilter-panel,
-        #searchfilter-webdav-panel,
-        #searchfilter-subscription-panel,
-        #searchfilter-hlcolor-panel {
-        box-sizing: border-box !important;
-        background: #ffffff !important;
-        color: #2d3748 !important;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-        border: 1px solid #e2e8f0 !important;
-        border-radius: 8px !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
-        text-align: left !important;
-        line-height: 1.5 !important;
-        }
-
-        #searchfilter-panel *,
-        #searchfilter-webdav-panel *,
-        #searchfilter-subscription-panel *,
-        #searchfilter-hlcolor-panel * {
-        box-sizing: border-box !important;
-        }
-
-        /* 主面板深色 */
-        @media (prefers-color-scheme: dark) {
-        #searchfilter-panel {
-        background: #171717 !important; 
-        color: #f3f4f6 !important; 
-        border-color: #374151 !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
-        }
-
-        #searchfilter-panel .option-label,
-        #searchfilter-panel .compact-row span {
-            color: #9ca3af !important;
-        }
-
-        #searchfilter-panel .rules-container {
-            border-color: #4b5563 !important;
-            background: #1E1F21 !important;
-        }
-
-        #searchfilter-line-numbers {
-            background: #222629 !important;
-            border-right-color: #4b5563 !important;
-            color: #9ca3af !important;
-        }
-
-        #searchfilter-rules {
-            background: #1E1F21 !important;
-            color: #f3f4f6 !important;
-        }
-
-        #searchfilter-rules::placeholder {
-            color: #6b7280 !important;
-        }
-
-        /* 统计面板深色 */
-        #searchfilter-stats-panel {
-            background: #171717 !important;
-            border-color: #374151 !important;
-        }
-        #searchfilter-stats-content {
-            color: #f3f4f6 !important;
-        }
-
-        #searchfilter-panel .searchfilter-button {
-        }
-        }
-
-        #searchfilter-webdav-panel *,
-        #searchfilter-subscription-panel * {
-            box-sizing: border-box !important;
-        }
-
-        #searchfilter-webdav-panel h3,
-        #searchfilter-subscription-panel h3,
-        #searchfilter-hlcolor-panel h3 {
-            margin: 0 0 8px 0 !important;
-            font-size: 14px !important;
-            color: inherit !important;
-            font-weight: 600 !important;
-            padding: 0 !important;
-            border: none !important;
-            background: transparent !important;
-            letter-spacing: normal !important;
-        }
-
-        #searchfilter-webdav-panel .webdav-row {
-            margin-bottom: 8px !important;
-            padding: 0 !important;
-            border: none !important;
-            background: transparent !important;
-            display: block !important;
-        }
-
-        #searchfilter-webdav-panel label,
-        #searchfilter-subscription-panel label {
-            display: block !important;
-            margin: 0 0 4px 0 !important;
-            color: #4a5568 !important;
-            font-size: 12px !important;
-            font-weight: normal !important;
-            line-height: 1.2 !important;
-        }
-
-        #searchfilter-webdav-panel input[type="text"],
-        #searchfilter-webdav-panel input[type="password"],
-        #searchfilter-subscription-panel input[type="text"] {
-            width: 100% !important;
-            padding: 6px 8px !important;
-            margin: 0 !important;
-            border: 1px solid #e2e8f0 !important;
-            border-radius: 4px !important;
-            font-size: 13px !important;
-            background: #ffffff !important;
-            color: #2d3748 !important;
-            height: 30px !important;
-            line-height: normal !important;
-            box-shadow: none !important;
-            outline: none !important;
-            display: block !important;
-        }
-
-        #searchfilter-webdav-panel input:focus,
-        #searchfilter-subscription-panel input:focus {
-            border-color: #3182ce !important;
-        }
-
-        #searchfilter-webdav-panel .webdav-btn-group {
-            display: flex !important;
-            gap: 8px !important;
-            justify-content: flex-end !important;
-            margin-top: 12px !important;
-        }
-
-        #searchfilter-webdav-panel .searchfilter-button,
-        #searchfilter-subscription-panel .searchfilter-button,
-        #searchfilter-hlcolor-panel .searchfilter-button {
-            height: 30px !important;
-            padding: 0 12px !important;
-            font-size: 13px !important;
-            margin: 0 !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-        }
-        
-        #searchfilter-webdav-panel .searchfilter-button {
-            flex: 1 !important;
-        }
-
-        #webdav-status {
-            margin-top: 8px !important;
-            font-size: 12px !important;
-            min-height: 18px !important;
-            line-height: 1.2 !important;
-            word-break: break-all !important;
-        }
-
-        #subscription-status {
-            margin-top: 8px !important;
-            font-size: 12px !important;
-            min-height: 18px !important;
-            line-height: 1.2 !important;
-            word-break: break-all !important;
-        }
-
-        /* Webdav订阅面板深色 */
-        @media (prefers-color-scheme: dark) {
-            #searchfilter-webdav-panel,
-            #searchfilter-subscription-panel,
-            #searchfilter-hlcolor-panel {
-                background: #171717 !important; 
-                color: #f3f4f6 !important; 
-                border-color: #374151 !important;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
-            }
-
-            #searchfilter-webdav-panel label,
-            #searchfilter-subscription-panel label,
-            #searchfilter-hlcolor-panel .hlcolor-row label {
-                color: #9ca3af !important; 
-            }
-
-            #searchfilter-webdav-panel input[type="text"],
-            #searchfilter-webdav-panel input[type="password"],
-            #searchfilter-subscription-panel input[type="text"],
-            #searchfilter-hlcolor-panel .hlcolor-row input {
-                background: #374151 !important;
-                border-color: #4b5563 !important;
-                color: #f3f4f6 !important;
-            }
-
-            #searchfilter-webdav-panel input:focus,
-            #searchfilter-subscription-panel input:focus,
-            #searchfilter-hlcolor-panel .hlcolor-row input:focus {
-                border-color: #60a5fa !important; 
-            }
-            #searchfilter-hlcolor-panel .hlcolor-row .hlcolor-preview {
-                border-color: #4b5563 !important;
-            }
-            #hlcolor-current-preview {
-                border-color: #4b5563 !important;
-            }
-            #hlcolor-sv-canvas, #hlcolor-hue-canvas {
-                border-color: #4b5563 !important;
-            }
-            #searchfilter-hlcolor-panel .hlcolor-current-code {
-                background: #374151 !important;
-                border-color: #4b5563 !important;
-                color: #f3f4f6 !important;
-            }
-            #webdav-status {
-                color: #9ca3af !important;
-            }
-
-            #subscription-status {
-                color: #9ca3af !important;
-            }
-
-        }
-
-        /* 面板渐入渐出动画 */
-        .searchfilter-panel-fade {
-            opacity: 0;
-            transform: translate(-50%, -48%);
-            transition: opacity 0.2s ease, transform 0.2s ease;
-        }
-        .searchfilter-panel-fade.show {
-            opacity: 1;
-            transform: translate(-50%, -50%);
-        }
-
-        #searchfilter-panel:not(.searchfilter-panel-fade) {
-            transition: opacity 0.2s ease;
-        }
-        #searchfilter-webdav-panel:not(.searchfilter-panel-fade) {
-            transition: opacity 0.2s ease;
-        }
-        #searchfilter-subscription-panel:not(.searchfilter-panel-fade) {
-            transition: opacity 0.2s ease;
-        }
-        #searchfilter-hlcolor-panel:not(.searchfilter-panel-fade) {
-            transition: opacity 0.2s ease;
-        }
-
-        /* 订阅布局 */
-        .subscription-row {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            margin-bottom: 12px;
-        }
-        .subscription-input-row {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .subscription-input-row input {
-            flex: 1;
-            margin: 0;
-        }
-        .delete-subscription-btn {
-            background: none;
-            border: none;
-            font-size: 16px;
-            cursor: pointer;
-            color: #c53030;
-            padding: 0 4px;
-            opacity: 0.7;
-            transition: opacity 0.2s;
-        }
-        .delete-subscription-btn:hover {
-            opacity: 1;
-        }
-        .subscription-status-message {
-            font-size: 11px;
-            color: #4a5568;
-            margin-left: 6px;
-            min-height: 18px;
-        }
-        .subscription-status-message.success {
-            color: #276749;
-        }
-        .subscription-status-message.error {
-            color: #c53030;
-        }
-        .add-subscription-btn {
-            margin-top: 4px;
-            margin-bottom: 16px;
-        }
-
-        /* 屏蔽结果灰底 */
-        .searchfilter-blocked-visible,
-        .g.searchfilter-blocked-visible,
-        .MjjYud.searchfilter-blocked-visible {
-            background-color: #d1d5db !important;
-            border-radius: 8px !important;
-            padding: 8px !important;
-            transition: background 0.2s;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            .searchfilter-blocked-visible,
-            .g.searchfilter-blocked-visible,
-            .MjjYud.searchfilter-blocked-visible {
-                background-color: #374151 !important; 
-            }
-        }
-
-        .searchfilter-blocked-visible div,
-        .searchfilter-blocked-visible .yuRUbf,
-        .searchfilter-blocked-visible div[data-sokoban-container],
-        .searchfilter-blocked-visible div[data-snc] {
-            background-color: transparent !important;
-            background: transparent !important;
-            background-image: none !important;
-        }
-
-        .bubble-number {
-        color: #000000 !important;
-        }
-
-        /* Switch开关样式 */
-        .searchfilter-switch {
-            position: relative;
-            display: inline-block;
-            width: 28px;
-            height: 16px;
-            margin-right: 6px;
-            flex-shrink: 0;
-        }
-
-        .searchfilter-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-            position: absolute;
-        }
-
-        .searchfilter-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #cbd5e0;
-            transition: .2s;
-            border-radius: 16px;
-        }
-
-        .searchfilter-slider:before {
-            position: absolute;
-            content: "";
-            height: 12px;
-            width: 12px;
-            left: 2px;
-            bottom: 2px;
-            background-color: white;
-            transition: .2s;
-            border-radius: 50%;
-        }
-
-        .searchfilter-switch input:checked + .searchfilter-slider {
-            background-color: #2c5282;
-        }
-
-        .searchfilter-switch input:checked + .searchfilter-slider:before {
-            transform: translateX(12px);
-        }
-
-        /* 暗色模式适配 */
-        @media (prefers-color-scheme: dark) {
-            .searchfilter-slider {
-                background-color: #4b5563;
-            }
-            .searchfilter-switch input:checked + .searchfilter-slider {
-                background-color: #60a5fa;
-            }
-        }
-
-        /* 匹配规则标签 */
-        .searchfilter-matched-rule {
-            position: absolute;
-            top: 2px;
-            left: 50%;
-            transform: translateX(-50%);
-            max-width: calc(100% - 70px);
-            background: rgba(0, 0, 0, 0.2);
-            color: #000000;
-            font-size: 12px;
-            padding: 2px 8px;
-            border-radius: 4px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            z-index: 98;
-            pointer-events: none;
-            font-family: monospace;
-            backdrop-filter: blur(2px);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-        }
-        @media (prefers-color-scheme: dark) {
-            .searchfilter-matched-rule {
-                background: rgba(0, 160, 0, 0.9);
-                color: #fff;
-            }
-        }
-
-        /* 高亮边框 */
-        #searchfilter-hlcolor-panel .hlcolor-row {
-            margin-bottom: 4px !important;
-            padding: 0 !important;
-            border: none !important;
-            background: transparent !important;
-            display: flex !important;
-            align-items: center !important;
-            gap: 4px !important;
-        }
-        #searchfilter-hlcolor-panel .hlcolor-row label {
-            min-width: 20px !important;
-            font-size: 12px !important;
-            color: #4a5568 !important;
-            font-weight: 600 !important;
-            margin: 0 !important;
-            line-height: 1.2 !important;
-        }
-        #searchfilter-hlcolor-panel .hlcolor-row .hlcolor-preview {
-            width: 12px !important;
-            height: 12px !important;
-            border-radius: 2px !important;
-            border: 1px solid #e2e8f0 !important;
-            flex-shrink: 0 !important;
-        }
-        #searchfilter-hlcolor-panel .hlcolor-row input {
-            width: 70px !important;
-            flex: none !important;
-            padding: 2px 4px !important;
-            margin: 0 !important;
-            border: 1px solid #e2e8f0 !important;
-            border-radius: 3px !important;
-            font-size: 11px !important;
-            font-family: 'Consolas', monospace !important;
-            background: #ffffff !important;
-            color: #2d3748 !important;
-            height: 20px !important;
-            line-height: normal !important;
-            box-shadow: none !important;
-            outline: none !important;
-        }
-        #searchfilter-hlcolor-panel .hlcolor-row input:focus {
-            border-color: #3182ce !important;
-        }
-        #searchfilter-hlcolor-panel .hlcolor-picker-wrapper {
-            display: flex !important;
-            gap: 6px !important;
-            align-items: stretch !important;
-            margin: 3px 0 !important;
-        }
-        #hlcolor-sv-canvas, #hlcolor-hue-canvas {
-            cursor: crosshair !important;
-            border-radius: 3px !important;
-            border: 1px solid #e2e8f0 !important;
-        }
-        #searchfilter-hlcolor-panel .hlcolor-current-code {
-            font-size: 12px !important;
-            font-family: 'Consolas', monospace !important;
-            padding: 2px 4px !important;
-            user-select: text !important;
-            text-align: center !important;
-            background: #f7fafc !important;
-            border-radius: 3px !important;
-            border: 1px solid #e2e8f0 !important;
-            margin-bottom: 2px !important;
-        }
-        #hlcolor-current-preview {
-            flex-shrink: 0 !important;
-        }
-    `);
-
-  function migrateSubscriptions() {
-    if (GM_getValue(SUBSCRIPTIONS_KEY) !== undefined) return;
-    const oldUrl = GM_getValue(SUBSCRIPTION_URL_KEY);
-    const oldRules = GM_getValue(SUBSCRIPTION_RULES_KEY, []);
-    const oldLastUpdate = GM_getValue(SUBSCRIPTION_LAST_UPDATE_KEY, 0);
-    const subscriptions = [];
-    if (oldUrl) {
-      subscriptions.push({
-        url: oldUrl,
-        enabled: true,
-        lastUpdate: oldLastUpdate,
-        rules: oldRules
-      });
-    }
-    GM_setValue(SUBSCRIPTIONS_KEY, subscriptions);
-  }
-
-  function getSubscriptions() {
-    return GM_getValue(SUBSCRIPTIONS_KEY, []);
-  }
-
-  function saveSubscriptions(subscriptions) {
-    GM_setValue(SUBSCRIPTIONS_KEY, subscriptions);
-  }
-
-  function getAllSubscriptionRules() {
-    const subs = getSubscriptions();
-    const rules = [];
-    subs.filter(s => s.enabled).forEach(s => {
-      if (s.rules && Array.isArray(s.rules)) rules.push(...s.rules);
-    });
-    return rules;
+  // 规则过滤
+  function filterValidRuleLines(lines) {
+    return lines
+      .map(line => line.trim())
+      .filter(line => line.length > 0);
   }
 
   // 解析规则
@@ -1275,7 +490,6 @@
       }
     }
 
-    // 高亮规则 @N
     const hlValMatch = ruleToCheck.match(/^@\d+/);
     if (hlValMatch) {
       ruleToCheck = ruleToCheck.substring(hlValMatch[0].length).trim();
@@ -1652,6 +866,13 @@
     });
   }
 
+  function cachedValidateRule(rule) {
+    if (validationCache.has(rule)) return validationCache.get(rule);
+    const result = validateRule(rule);
+    validationCache.set(rule, result);
+    return result;
+  }
+
   // 规则匹配优先级
   function checkRuleMatchOptimized(url, domain, title, snippet) {
     // 白名单
@@ -1836,35 +1057,6 @@
     return null;
   }
 
-  // google重定向
-  function getCleanUrlAndFixDOM(link, engine) {
-    if (!link || !link.href) return '';
-    let url = link.href;
-    if (engine === 'google') {
-      try {
-        const urlObj = new URL(url);
-        if (urlObj.hostname.includes('google.') && urlObj.pathname === '/url') {
-          const realUrl = urlObj.searchParams.get('q') || urlObj.searchParams.get('url');
-          if (realUrl) {
-            url = realUrl;
-            link.href = realUrl;
-          }
-        }
-      } catch (e) {}
-    }
-    return url;
-  }
-
-  // 正文选择器
-  function getResultSnippet(result, engine) {
-    const selectors = SELECTORS.snippets[engine] || SELECTORS.snippets.bing;
-    for (let selector of selectors) {
-      const elem = result.querySelector(selector);
-      if (elem && elem.textContent) return elem.textContent.trim();
-    }
-    return '';
-  }
-
   // 处理正文规则
   function checkTextRule(rule, snippet) {
     if (!snippet) return false;
@@ -1961,11 +1153,33 @@
     }
   }
 
-  // 规则过滤
-  function filterValidRuleLines(lines) {
-    return lines
-      .map(line => line.trim())
-      .filter(line => line.length > 0);
+  // google重定向
+  function getCleanUrlAndFixDOM(link, engine) {
+    if (!link || !link.href) return '';
+    let url = link.href;
+    if (engine === 'google') {
+      try {
+        const urlObj = new URL(url);
+        if (urlObj.hostname.includes('google.') && urlObj.pathname === '/url') {
+          const realUrl = urlObj.searchParams.get('q') || urlObj.searchParams.get('url');
+          if (realUrl) {
+            url = realUrl;
+            link.href = realUrl;
+          }
+        }
+      } catch (e) {}
+    }
+    return url;
+  }
+
+  // 正文选择器
+  function getResultSnippet(result, engine) {
+    const selectors = SELECTORS.snippets[engine] || SELECTORS.snippets.bing;
+    for (let selector of selectors) {
+      const elem = result.querySelector(selector);
+      if (elem && elem.textContent) return elem.textContent.trim();
+    }
+    return '';
   }
 
   // 选择器链接
@@ -2016,7 +1230,6 @@
     // 屏蔽按钮
     const iconColor = isBlocked ? '#3182ce' : 'currentColor';
     btn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>`;
-    btn.title = isBlocked ? t('unblockBtnTitle') : t('blockBtnTitle');
 
     if (window.getComputedStyle(result).position === 'static') result.style.position = 'relative';
     if (engine === 'bing') {
@@ -2130,32 +1343,9 @@
     const sourceText = result.dataset.matchedSource || t('matchedRule');
     const ruleText = result.dataset.matchedRule;
     label.textContent = `${sourceText}：${ruleText}`;
-    label.title = `${sourceText}：${ruleText}`;
     if (window.getComputedStyle(result).position === 'static') result.style.position = 'relative';
     result.appendChild(label);
   }
-
-  // 视口观察器
-  const resultObserver = new IntersectionObserver((entries, observer) => {
-    let newlyBlocked = 0;
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const result = entry.target;
-        const blocked = processSingleResult(result);
-        if (blocked) newlyBlocked++;
-        observer.unobserve(result);
-      }
-    });
-
-    if (newlyBlocked > 0) {
-      const totalBlocked = document.querySelectorAll('[data-is-blocked="true"]').length;
-      updateStatus(totalBlocked);
-    }
-  }, {
-    root: null,
-    rootMargin: '1000px 0px',
-    threshold: 0
-  });
 
   // 屏蔽过滤
   function processSingleResult(result) {
@@ -2236,6 +1426,28 @@
       return false;
     }
   }
+
+  // 视口观察器
+  const resultObserver = new IntersectionObserver((entries, observer) => {
+    let newlyBlocked = 0;
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const result = entry.target;
+        const blocked = processSingleResult(result);
+        if (blocked) newlyBlocked++;
+        observer.unobserve(result);
+      }
+    });
+
+    if (newlyBlocked > 0) {
+      const totalBlocked = document.querySelectorAll('[data-is-blocked="true"]').length;
+      updateStatus(totalBlocked);
+    }
+  }, {
+    root: null,
+    rootMargin: '1000px 0px',
+    threshold: 0
+  });
 
   // 增量扫描
   function scanNewResults() {
@@ -2341,12 +1553,733 @@
     updateStatus(totalBlocked);
   }
 
+  // UI
+  GM_addStyle(`
+        /* 预留翻页高度 */
+        body { min-height: 101vh !important; }
+        #rcnt, #rso { min-height: 60vh; }
+
+        #searchfilter-panel, #searchfilter-webdav-panel, #searchfilter-subscription-panel {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 13px;
+            box-sizing: border-box;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+        }
+
+        .searchfilter-button {
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            padding: 4px 8px;
+            transition: background-color 0.2s;
+            box-sizing: border-box;
+        }
+        .searchfilter-button-primary { background: #2c5282; color: white; }
+        .searchfilter-button-primary:hover { background: #1a365d; }
+        .searchfilter-button-secondary { background: #4a5568; color: white; }
+        .searchfilter-button-secondary:hover { background: #2d3748; }
+        .searchfilter-button-success { background: #276749; color: white; }
+        .searchfilter-button-success:hover { background: #22543d; }
+        .searchfilter-button-danger { background: #c53030; color: white; }
+        .searchfilter-button-danger:hover { background: #9b2c2c; }
+
+        .option-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .option-label {
+            font-size: 12px;
+            color: #4a5568;
+            white-space: nowrap;
+            margin-bottom: 4px;
+        }
+        .option-buttons {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        .option-button {
+            padding: 3px 8px;
+            font-size: 11px;
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #4a5568;
+            box-sizing: border-box;
+        }
+        .option-button.active {
+            background: #2c5282;
+            color: white;
+            border-color: #2c5282;
+        }
+        .compact-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .action-button {
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: 500;
+            box-sizing: border-box;
+        }
+
+        /* 规则栏输入 */
+        .rules-container {
+            display: flex;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            background: #f8fafc;
+            height: 190px;
+            margin-bottom: 3px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 规则栏行号 */
+        #searchfilter-line-numbers {
+            min-width: 20px;
+            padding: 8px 4px 8px 2px;
+            background: #edf2f7;
+            border-right: 1px solid #e2e8f0;
+            text-align: right;
+            color: #a0aec0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 11px;
+            line-height: 1.4;
+            white-space: nowrap;
+            overflow: hidden;
+            user-select: none;
+            flex-shrink: 0;
+            box-sizing: border-box;
+        }
+
+        #searchfilter-rules {
+            flex: 1;
+            height: 100%;
+            font-size: 11px;
+            padding: 8px;
+            border: none;
+            resize: none;
+            background: transparent;
+            box-sizing: border-box;
+            font-family: 'Consolas', 'Monaco', monospace;
+            line-height: 1.4;
+            white-space: pre;
+            overflow-x: auto;
+            overflow-y: auto;
+            outline: none;
+        }
+
+        #searchfilter-rules::-webkit-scrollbar { width: 6px; height: 0px; }
+        #searchfilter-rules::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+        #searchfilter-rules::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+        #searchfilter-rules::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+
+        /* 统计面板 */
+        #searchfilter-stats-panel {
+            position: absolute;
+            top: 10px;
+            left: 15px;
+            right: 15px;
+            bottom: 50px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            z-index: 10;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        #searchfilter-stats-content {
+            padding: 12px;
+            overflow-y: auto;
+            flex: 1;
+            scrollbar-width: thin;
+        }
+
+        #searchfilter-stats-content::-webkit-scrollbar { width: 6px; }
+        #searchfilter-stats-content::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+        #searchfilter-stats-content::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+        #searchfilter-stats-content::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+
+        /* 屏蔽按钮 */
+        .searchfilter-quick-block {
+            position: absolute;
+            cursor: pointer;
+            z-index: 99;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: transparent;
+            user-select: none;
+            color: #2c5282; 
+            transition: transform 0.2s;
+        }
+
+        .searchfilter-quick-block:hover {
+            transform: scale(1.1);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .searchfilter-quick-block {
+                color: #ffffff;
+            }
+        }
+
+        /* 快速滑动按钮 */
+        .searchfilter-scroll-btn {
+            position: absolute;
+            right: 7px;
+            cursor: pointer;
+            opacity: 0.5;
+            font-size: 14px;
+            user-select: none;
+            transition: opacity 0.2s, transform 0.2s;
+            background: transparent;
+            z-index: 10;
+        }
+
+        .searchfilter-scroll-btn:hover { opacity: 1; transform: scale(1.2); }
+        .searchfilter-quick-block:hover { transform: scale(1.1); opacity: 1; }
+
+        /* 非正文区域隐藏按钮 */
+        .isv-r .searchfilter-quick-block, 
+        .image-section .searchfilter-quick-block,
+        g-img .searchfilter-quick-block,
+        .is-extra-container .searchfilter-quick-block { display: none !important; }
+        header .searchfilter-quick-block,
+        [role="navigation"] .searchfilter-quick-block,
+        [role="tablist"] .searchfilter-quick-block,
+        [role="search"] .searchfilter-quick-block,
+        g-scrolling-carousel .searchfilter-quick-block,
+        #hdtb .searchfilter-quick-block,
+        #appbar .searchfilter-quick-block,
+        #searchform .searchfilter-quick-block,
+        #top_nav .searchfilter-quick-block,
+        #extabar .searchfilter-quick-block { display: none !important; }
+
+        /* 面板隔离 */
+        #searchfilter-panel,
+        #searchfilter-webdav-panel,
+        #searchfilter-subscription-panel,
+        #searchfilter-hlcolor-panel {
+        box-sizing: border-box !important;
+        background: #ffffff !important;
+        color: #2d3748 !important;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+        text-align: left !important;
+        line-height: 1.5 !important;
+        }
+
+        #searchfilter-panel *,
+        #searchfilter-webdav-panel *,
+        #searchfilter-subscription-panel *,
+        #searchfilter-hlcolor-panel * {
+        box-sizing: border-box !important;
+        }
+
+        /* 主面板深色 */
+        @media (prefers-color-scheme: dark) {
+        #searchfilter-panel {
+        background: #171717 !important; 
+        color: #f3f4f6 !important; 
+        border-color: #374151 !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
+        }
+
+        #searchfilter-panel .option-label,
+        #searchfilter-panel .compact-row span {
+            color: #9ca3af !important;
+        }
+
+        #searchfilter-panel .rules-container {
+            border-color: #4b5563 !important;
+            background: #1E1F21 !important;
+        }
+
+        #searchfilter-line-numbers {
+            background: #222629 !important;
+            border-right-color: #4b5563 !important;
+            color: #9ca3af !important;
+        }
+
+        #searchfilter-rules {
+            background: #1E1F21 !important;
+            color: #f3f4f6 !important;
+        }
+
+        #searchfilter-rules::placeholder {
+            color: #6b7280 !important;
+        }
+
+        /* 统计面板深色 */
+        #searchfilter-stats-panel {
+            background: #171717 !important;
+            border-color: #374151 !important;
+        }
+        #searchfilter-stats-content {
+            color: #f3f4f6 !important;
+        }
+
+        #searchfilter-panel .searchfilter-button {
+        }
+        }
+
+        #searchfilter-webdav-panel *,
+        #searchfilter-subscription-panel * {
+            box-sizing: border-box !important;
+        }
+
+        #searchfilter-webdav-panel h3,
+        #searchfilter-subscription-panel h3,
+        #searchfilter-hlcolor-panel h3 {
+            margin: 0 0 8px 0 !important;
+            font-size: 14px !important;
+            color: inherit !important;
+            font-weight: 600 !important;
+            padding: 0 !important;
+            border: none !important;
+            background: transparent !important;
+            letter-spacing: normal !important;
+        }
+
+        #searchfilter-webdav-panel .webdav-row {
+            margin-bottom: 8px !important;
+            padding: 0 !important;
+            border: none !important;
+            background: transparent !important;
+            display: block !important;
+        }
+
+        #searchfilter-webdav-panel label,
+        #searchfilter-subscription-panel label {
+            display: block !important;
+            margin: 0 0 4px 0 !important;
+            color: #4a5568 !important;
+            font-size: 12px !important;
+            font-weight: normal !important;
+            line-height: 1.2 !important;
+        }
+
+        #searchfilter-webdav-panel input[type="text"],
+        #searchfilter-webdav-panel input[type="password"],
+        #searchfilter-subscription-panel input[type="text"] {
+            width: 100% !important;
+            padding: 6px 8px !important;
+            margin: 0 !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 4px !important;
+            font-size: 13px !important;
+            background: #ffffff !important;
+            color: #2d3748 !important;
+            height: 30px !important;
+            line-height: normal !important;
+            box-shadow: none !important;
+            outline: none !important;
+            display: block !important;
+        }
+
+        #searchfilter-webdav-panel input:focus,
+        #searchfilter-subscription-panel input:focus {
+            border-color: #3182ce !important;
+        }
+
+        #searchfilter-webdav-panel .webdav-btn-group {
+            display: flex !important;
+            gap: 8px !important;
+            justify-content: flex-end !important;
+            margin-top: 12px !important;
+        }
+
+        #searchfilter-webdav-panel .searchfilter-button,
+        #searchfilter-subscription-panel .searchfilter-button,
+        #searchfilter-hlcolor-panel .searchfilter-button {
+            height: 30px !important;
+            padding: 0 12px !important;
+            font-size: 13px !important;
+            margin: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        
+        #searchfilter-webdav-panel .searchfilter-button {
+            flex: 1 !important;
+        }
+
+        #webdav-status {
+            margin-top: 8px !important;
+            font-size: 12px !important;
+            min-height: 18px !important;
+            line-height: 1.2 !important;
+            word-break: break-all !important;
+        }
+
+        #subscription-status {
+            margin-top: 8px !important;
+            font-size: 12px !important;
+            min-height: 18px !important;
+            line-height: 1.2 !important;
+            word-break: break-all !important;
+        }
+
+        /* Webdav订阅面板深色 */
+        @media (prefers-color-scheme: dark) {
+            #searchfilter-webdav-panel,
+            #searchfilter-subscription-panel,
+            #searchfilter-hlcolor-panel {
+                background: #171717 !important; 
+                color: #f3f4f6 !important; 
+                border-color: #374151 !important;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
+            }
+
+            #searchfilter-webdav-panel label,
+            #searchfilter-subscription-panel label,
+            #searchfilter-hlcolor-panel .hlcolor-row label {
+                color: #9ca3af !important; 
+            }
+
+            #searchfilter-webdav-panel input[type="text"],
+            #searchfilter-webdav-panel input[type="password"],
+            #searchfilter-subscription-panel input[type="text"],
+            #searchfilter-hlcolor-panel .hlcolor-row input {
+                background: #374151 !important;
+                border-color: #4b5563 !important;
+                color: #f3f4f6 !important;
+            }
+
+            #searchfilter-webdav-panel input:focus,
+            #searchfilter-subscription-panel input:focus,
+            #searchfilter-hlcolor-panel .hlcolor-row input:focus {
+                border-color: #60a5fa !important; 
+            }
+            #searchfilter-hlcolor-panel .hlcolor-row .hlcolor-preview {
+                border-color: #4b5563 !important;
+            }
+            #hlcolor-current-preview {
+                border-color: #4b5563 !important;
+            }
+            #hlcolor-sv-canvas, #hlcolor-hue-canvas {
+                border-color: #4b5563 !important;
+            }
+            #searchfilter-hlcolor-panel .hlcolor-current-code {
+                background: #374151 !important;
+                border-color: #4b5563 !important;
+                color: #f3f4f6 !important;
+            }
+            #webdav-status {
+                color: #9ca3af !important;
+            }
+
+            #subscription-status {
+                color: #9ca3af !important;
+            }
+
+        }
+
+        /* 面板渐入渐出动画 */
+        .searchfilter-panel-fade {
+            opacity: 0;
+            transform: translate(-50%, -48%);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        .searchfilter-panel-fade.show {
+            opacity: 1;
+            transform: translate(-50%, -50%);
+        }
+
+        #searchfilter-panel:not(.searchfilter-panel-fade) {
+            transition: opacity 0.2s ease;
+        }
+        #searchfilter-webdav-panel:not(.searchfilter-panel-fade) {
+            transition: opacity 0.2s ease;
+        }
+        #searchfilter-subscription-panel:not(.searchfilter-panel-fade) {
+            transition: opacity 0.2s ease;
+        }
+        #searchfilter-hlcolor-panel:not(.searchfilter-panel-fade) {
+            transition: opacity 0.2s ease;
+        }
+
+        /* 订阅布局 */
+        .subscription-row {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 12px;
+        }
+        .subscription-input-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .subscription-input-row input {
+            flex: 1;
+            margin: 0;
+        }
+        .delete-subscription-btn {
+            background: none;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            color: #c53030;
+            padding: 0 4px;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        .delete-subscription-btn:hover {
+            opacity: 1;
+        }
+        .subscription-status-message {
+            font-size: 11px;
+            color: #4a5568;
+            margin-left: 6px;
+            min-height: 18px;
+        }
+        .subscription-status-message.success {
+            color: #276749;
+        }
+        .subscription-status-message.error {
+            color: #c53030;
+        }
+        .add-subscription-btn {
+            margin-top: 4px;
+            margin-bottom: 16px;
+        }
+
+        /* 屏蔽结果灰底 */
+        .searchfilter-blocked-visible,
+        .g.searchfilter-blocked-visible,
+        .MjjYud.searchfilter-blocked-visible {
+            background-color: #d1d5db !important;
+            border-radius: 8px !important;
+            padding: 8px !important;
+            transition: background 0.2s;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .searchfilter-blocked-visible,
+            .g.searchfilter-blocked-visible,
+            .MjjYud.searchfilter-blocked-visible {
+                background-color: #374151 !important; 
+            }
+        }
+
+        .searchfilter-blocked-visible div,
+        .searchfilter-blocked-visible .yuRUbf,
+        .searchfilter-blocked-visible div[data-sokoban-container],
+        .searchfilter-blocked-visible div[data-snc] {
+            background-color: transparent !important;
+            background: transparent !important;
+            background-image: none !important;
+        }
+
+        .bubble-number {
+        color: #000000 !important;
+        }
+
+        /* 匹配规则标签 */
+        .searchfilter-matched-rule {
+            position: absolute;
+            top: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            max-width: calc(100% - 70px);
+            background: rgba(0, 0, 0, 0.2);
+            color: #000000;
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            z-index: 98;
+            pointer-events: none;
+            font-family: monospace;
+            backdrop-filter: blur(2px);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        @media (prefers-color-scheme: dark) {
+            .searchfilter-matched-rule {
+                background: rgba(0, 160, 0, 0.9);
+                color: #fff;
+            }
+        }
+
+        /* 高亮边框 */
+        #searchfilter-hlcolor-panel .hlcolor-row {
+            margin-bottom: 2px !important;
+            padding: 0 !important;
+            border: none !important;
+            background: transparent !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 4px !important;
+        }
+        #searchfilter-hlcolor-panel .hlcolor-row label {
+            min-width: 20px !important;
+            font-size: 12px !important;
+            color: #4a5568 !important;
+            font-weight: 600 !important;
+            margin: 0 !important;
+            line-height: 1.2 !important;
+        }
+        #searchfilter-hlcolor-panel .hlcolor-row .hlcolor-preview {
+            width: 12px !important;
+            height: 12px !important;
+            border-radius: 2px !important;
+            border: 1px solid #e2e8f0 !important;
+            flex-shrink: 0 !important;
+        }
+        #searchfilter-hlcolor-panel .hlcolor-row input {
+            width: 70px !important;
+            flex: none !important;
+            padding: 2px 4px !important;
+            margin: 0 !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 3px !important;
+            font-size: 11px !important;
+            font-family: 'Consolas', monospace !important;
+            background: #ffffff !important;
+            color: #2d3748 !important;
+            height: 20px !important;
+            line-height: normal !important;
+            box-shadow: none !important;
+            outline: none !important;
+        }
+        #searchfilter-hlcolor-panel .hlcolor-row input:focus {
+            border-color: #3182ce !important;
+        }
+        #searchfilter-hlcolor-panel .hlcolor-picker-wrapper {
+            display: flex !important;
+            align-items: stretch !important;
+            margin: 0 !important;
+        }
+        #hlcolor-sv-canvas, #hlcolor-hue-canvas {
+            cursor: crosshair !important;
+            border-radius: 3px !important;
+            border: 1px solid #e2e8f0 !important;
+        }
+        #searchfilter-hlcolor-panel .hlcolor-current-code {
+            font-size: 12px !important;
+            font-family: 'Consolas', monospace !important;
+            padding: 2px 4px !important;
+            user-select: text !important;
+            text-align: center !important;
+            background: #f7fafc !important;
+            border-radius: 3px !important;
+            border: 1px solid #e2e8f0 !important;
+            margin-bottom: 2px !important;
+        }
+        #hlcolor-current-preview {
+            flex-shrink: 0 !important;
+        }
+
+        /* Switch开关样式 */
+        .searchfilter-switch {
+            position: relative;
+            display: inline-block;
+            width: 28px;
+            height: 16px;
+            margin-right: 6px;
+            flex-shrink: 0;
+        }
+
+        .searchfilter-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            position: absolute;
+        }
+
+        .searchfilter-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #cbd5e0;
+            transition: .2s;
+            border-radius: 16px;
+        }
+
+        .searchfilter-slider:before {
+            position: absolute;
+            content: "";
+            height: 12px;
+            width: 12px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .2s;
+            border-radius: 50%;
+        }
+
+        .searchfilter-switch input:checked + .searchfilter-slider {
+            background-color: #2c5282;
+        }
+
+        .searchfilter-switch input:checked + .searchfilter-slider:before {
+            transform: translateX(12px);
+        }
+
+        /* 暗色模式适配 */
+        @media (prefers-color-scheme: dark) {
+            .searchfilter-slider {
+                background-color: #4b5563;
+            }
+            .searchfilter-switch input:checked + .searchfilter-slider {
+                background-color: #2c5282;
+            }
+        }
+
+        /* 悬浮球大小滑条 */
+        #searchfilter-bubble-size-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #2c5282;
+            cursor: pointer;
+        }
+        #searchfilter-bubble-size-slider::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #2c5282;
+            cursor: pointer;
+            border: none;
+        }
+    `);
+
   // 悬浮球样式
   function applyBubbleStyle(element) {
     element.style.cssText = `
             position: fixed;
             background: transparent;
-            color: #333;
+            color: #2c5282;
             border-radius: 4px;
             z-index: 10000;
             cursor: grab;
@@ -2365,7 +2298,6 @@
 
   // 悬浮球大小
   function applyBubbleSize(element) {
-    // 将现有的 bubbleSize 配置作为数值处理（默认20，支持 medium(18), large(20), larger(22), xlarge(26) 等旧配置）
     let size = 20;
     if (typeof currentConfig.bubbleSize === 'number') {
       size = currentConfig.bubbleSize;
@@ -2380,12 +2312,10 @@
           size = isNaN(parsed) ? 20 : parsed;
       }
     }
-    // 限制范围在 12px ~ 40px 之间
-    size = Math.max(12, Math.min(40, size));
-    
+    size = Math.max(15, Math.min(40, size));
     element.style.fontSize = size + 'px';
     element.style.padding = '5px 5px';
-    element.style.lineHeight = (1 + (size - 12) * 0.015).toFixed(2); // 根据大小自适应行高
+    element.style.lineHeight = (1 + (size - 12) * 0.015).toFixed(2);
   }
 
   // 悬浮球内容
@@ -2393,10 +2323,9 @@
     const isLeft = currentConfig.bubbleState ? currentConfig.bubbleState.isLeftHalf : false;
     const isToggleMode = currentConfig.bubbleAction === 'toggleHidden';
 
-    // 悬浮球图标使用加粗线条，确保在小尺寸下清晰可见
     const icon = isToggleMode
-      ? `<span style="display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; flex-shrink: 0; line-height: 0;"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></span>`
-      : `<span style="display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; flex-shrink: 0; line-height: 0;"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></span>`;
+      ? `<span style="display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; flex-shrink: 0; line-height: 0;"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg></span>`
+      : `<span style="display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; flex-shrink: 0; line-height: 0;"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></span>`;
 
     if (currentConfig.showCount) {
       if (isLeft) {
@@ -2405,16 +2334,8 @@
         statusBtn.innerHTML = `<span class="bubble-number">${blocked}</span> ${icon}`;
       }
     } else {
-      statusBtn.innerHTML = icon;
+    statusBtn.innerHTML = icon;
     }
-
-    if (isToggleMode) {
-      statusBtn.title = showHiddenResults ? t('bubbleTitleHide') : t('bubbleTitleShow');
-    } else {
-      statusBtn.title = t('bubbleTitlePanel');
-    }
-
-    statusBtn.style.color = '';
   }
 
   // 拖动与边缘吸附
@@ -2572,14 +2493,6 @@
         }
       }
 
-      status.onmouseover = () => {
-        status.style.opacity = '1';
-        status.style.textShadow = '0 0 8px rgba(255,255,255,0.5)';
-      };
-      status.onmouseout = () => {
-        status.style.opacity = '0.8';
-        status.style.textShadow = '';
-      };
       document.body.appendChild(status);
 
       if (currentConfig.bubbleState) {
@@ -2641,17 +2554,6 @@
   }
 
   // 行号与语法检查
-  const validationCache = new Map();
-
-  function cachedValidateRule(rule) {
-    if (validationCache.has(rule)) return validationCache.get(rule);
-    const result = validateRule(rule);
-    validationCache.set(rule, result);
-    return result;
-  }
-
-  let lineUpdateRaf = null;
-
   function updateLineNumbersIncremental() {
     const textarea = document.getElementById('searchfilter-rules');
     const lineNums = document.getElementById('searchfilter-line-numbers');
@@ -2666,7 +2568,7 @@
       for (let i = 0; i < lines.length; i++) {
         const rule = lines[i];
         const isValid = cachedValidateRule(rule);
-        const warnIcon = isValid ? '' : `<span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 10px; cursor: help; background: #edf2f7; z-index: 1; display: inline-flex; align-items: center; justify-content: center; color: #e53e3e;" title="${t('syntaxError')}">${svgIcon('alert-triangle')}</span>`;
+        const warnIcon = isValid ? '' : `<span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 10px; background: #edf2f7; z-index: 1;">⚠️</span>`;
         html += `<div style="position: relative; color: #a0aec0;">${i + 1}${warnIcon}</div>`;
       }
       lineNums.innerHTML = html;
@@ -2686,7 +2588,7 @@
     for (let i = 0; i < lines.length; i++) {
       const rule = lines[i];
       const isValid = cachedValidateRule(rule);
-      const warnIcon = isValid ? '' : `<span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 10px; cursor: help; background: #edf2f7; z-index: 1; display: inline-flex; align-items: center; justify-content: center; color: #e53e3e;" title="${t('syntaxError')}">${svgIcon('alert-triangle')}</span>`;
+      const warnIcon = isValid ? '' : `<span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 10px; background: #edf2f7; z-index: 1;">⚠️</span>`;
       children[i].innerHTML = `${i + 1}${warnIcon}`;
     }
   }
@@ -2781,7 +2683,7 @@
     let resultHTML = '';
 
     if (ruleErrorsArray.length > 0) {
-      resultHTML += `<div style="color: #c53030; background: #fff5f5; padding: 8px; border-radius: 4px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px;"><strong>${svgIcon('alert-triangle')}${t('statsErrors', {count: ruleErrorsArray.length})}</strong>`;
+      resultHTML += `<div style="color: #c53030; background: #fff5f5; padding: 8px; border-radius: 4px; margin-bottom: 12px;"><strong>⚠️ ${t('statsErrors', {count: ruleErrorsArray.length})}</strong><br>`;
       ruleErrorsArray.forEach(item => {
         resultHTML += `<div style="margin: 4px 0; font-size: 11px;"><div style="color: #2d3748;"><strong>${t('statsRule')}</strong>${item.rule}</div><div style="color: #c53030;"><strong>${t('statsError')}</strong>${item.errors.join(', ')}</div></div>`;
       });
@@ -2933,7 +2835,7 @@
           initialSize = isNaN(parsed) ? 20 : parsed;
       }
     }
-    initialSize = Math.max(12, Math.min(40, initialSize));
+    initialSize = Math.max(15, Math.min(40, initialSize));
 
     panel.innerHTML = `
             <div style="display: flex; gap: 8px; margin-top: 0px; margin-bottom: 8px;">
@@ -2986,24 +2888,24 @@
             
             <div class="option-row" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 8px;">
                 <span class="option-label" style="margin-bottom: 0;">${t('bubbleSize')} <span id="searchfilter-bubble-size-val">${initialSize}px</span></span>
-                <input type="range" id="searchfilter-bubble-size-slider" min="12" max="40" value="${initialSize}" style="flex: 1; max-width: 160px; height: 4px; background: #cbd5e0; border-radius: 2px; outline: none; -webkit-appearance: none; cursor: pointer;">
+                <input type="range" id="searchfilter-bubble-size-slider" min="15" max="40" value="${initialSize}" style="flex: 1; margin-left: 5px; height: 4px; background: #cbd5e0; border-radius: 2px; outline: none; -webkit-appearance: none; cursor: pointer;">
             </div>
             
             <div style="margin-bottom: 0px;">
                 <div class="compact-row">
                     <span style="font-size: 12px; color: #4a5568;">${t('blockRules')}</span>
                     <div style="display: flex; gap: 4px;">
-                        <button id="searchfilter-subscribe" class="searchfilter-button searchfilter-button-secondary" style="padding: 3px 8px; border: 1px solid transparent;" title="${t('subscribe')}">${t('subscribe')}</button>
-                        <button id="searchfilter-sync" class="searchfilter-button searchfilter-button-success" style="padding: 3px 8px; border: 1px solid transparent;" title="${t('sync')}">${t('sync')}</button>
-                        <button id="searchfilter-import-file" class="searchfilter-button searchfilter-button-secondary" style="padding: 3px 8px; border: 1px solid transparent;" title="${t('import')}">${t('import')}</button>
-                        <button id="searchfilter-export-file" class="searchfilter-button searchfilter-button-success" style="padding: 3px 8px; border: 1px solid transparent;" title="${t('export')}">${t('export')}</button>
+                        <button id="searchfilter-subscribe" class="searchfilter-button searchfilter-button-secondary" style="padding: 3px 8px; border: 1px solid transparent;">${t('subscribe')}</button>
+                        <button id="searchfilter-sync" class="searchfilter-button searchfilter-button-success" style="padding: 3px 8px; border: 1px solid transparent;">${t('sync')}</button>
+                        <button id="searchfilter-import-file" class="searchfilter-button searchfilter-button-secondary" style="padding: 3px 8px; border: 1px solid transparent;">${t('import')}</button>
+                        <button id="searchfilter-export-file" class="searchfilter-button searchfilter-button-success" style="padding: 3px 8px; border: 1px solid transparent;">${t('export')}</button>
                     </div>
                 </div>
                 <div class="rules-container">
                     <div id="searchfilter-line-numbers"></div>
                     <textarea id="searchfilter-rules" placeholder="${t('placeholder')}" wrap="off">${currentConfig.rules.join('\n')}</textarea>
-                    <div id="searchfilter-scroll-top" class="searchfilter-scroll-btn" style="top: 2px;" title="${t('scrollTop')}">${svgIcon('arrow-up-circle')}</div>
-                    <div id="searchfilter-scroll-bottom" class="searchfilter-scroll-btn" style="bottom: 1px;" title="${t('scrollBottom')}">${svgIcon('arrow-down-circle')}</div>
+                    <div id="searchfilter-scroll-top" class="searchfilter-scroll-btn" style="top: 2px;">⬆️</div>
+                    <div id="searchfilter-scroll-bottom" class="searchfilter-scroll-btn" style="bottom: 1px;">⬇️</div>
             </div>
             
             <div style="display: flex; gap: 6px; margin-top: 8px;" id="searchfilter-panel-footer">
@@ -3091,6 +2993,27 @@
       });
     }
 
+    // 滑块开关立即生效
+    const switchDefs = [
+      { id: 'searchfilter-enabled', key: 'enabled', apply: () => { forceReprocessAll(); } },
+      { id: 'searchfilter-show-count', key: 'showCount', apply: () => { const s = document.getElementById('searchfilter-status'); if (s) updateBubbleContent(s, parseInt(s.dataset.blockedCount || 0)); } },
+      { id: 'searchfilter-debug', key: 'debug', apply: null },
+      { id: 'searchfilter-show-block-btn', key: 'showBlockBtn', apply: () => { forceReprocessAll(); } },
+      { id: 'searchfilter-block-domain', key: 'blockDomain', apply: null },
+      { id: 'searchfilter-block-confirm', key: 'blockConfirm', apply: null },
+    ];
+    switchDefs.forEach(sw => {
+      const el = document.getElementById(sw.id);
+      if (el) {
+        el.addEventListener('change', function() {
+          currentConfig[sw.key] = this.checked;
+          GM_setValue(CONFIG_KEY, currentConfig);
+          GM_setValue(LOCAL_LAST_MODIFIED_KEY, Date.now());
+          if (sw.apply) sw.apply();
+        });
+      }
+    });
+
     const closeHandler = (e) => {
       if (preventPanelClose) return;
       if (!panel.contains(e.target) && !e.target.closest('#searchfilter-status') && !e.target.closest('#searchfilter-webdav-panel') && !e.target.closest('#searchfilter-subscription-panel') && !e.target.closest('#searchfilter-hlcolor-panel') && !e.target.closest('#searchfilter-hlcolor-popup')) {
@@ -3129,6 +3052,306 @@
     showHiddenResults = false;
     forceReprocessAll();
 
+  }
+
+  // 高亮颜色面板
+    function showHighlightColorPanel() {
+      const existing = document.getElementById('searchfilter-hlcolor-panel');
+      if (existing) {
+        existing.remove();
+        return;
+      }
+
+    function hslToRgb(h, s, v) {
+      h /= 360;
+      let r, g, b;
+      const i = Math.floor(h * 6);
+      const f = h * 6 - i;
+      const p = v * (1 - s);
+      const q = v * (1 - f * s);
+      const t = v * (1 - (1 - f) * s);
+      switch (i % 6) {
+        case 0: r=v; g=t; b=p; break;
+        case 1: r=q; g=v; b=p; break;
+        case 2: r=p; g=v; b=t; break;
+        case 3: r=p; g=q; b=v; break;
+        case 4: r=t; g=p; b=v; break;
+        case 5: r=v; g=p; b=q; break;
+      }
+      return [Math.round(r*255), Math.round(g*255), Math.round(b*255)];
+    }
+
+    function rgbToHsv(r, g, b) {
+      r /= 255; g /= 255; b /= 255;
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      const d = max - min;
+      let h = 0;
+      if (d !== 0) {
+        if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) * 60;
+        else if (max === g) h = ((b - r) / d + 2) * 60;
+        else h = ((r - g) / d + 4) * 60;
+      }
+      return [Math.round(h), max === 0 ? 0 : d / max, max];
+    }
+
+    function hexToRgb(hex) {
+      return [parseInt(hex.slice(1,3), 16), parseInt(hex.slice(3,5), 16), parseInt(hex.slice(5,7), 16)];
+    }
+
+    function rgbToHex(r, g, b) {
+      return '#' + [r,g,b].map(x => x.toString(16).padStart(2,'0').toUpperCase()).join('');
+    }
+
+    const panel = document.createElement('div');
+    panel.id = 'searchfilter-hlcolor-panel';
+    panel.classList.add('searchfilter-panel-fade');
+    panel.style.cssText = `
+        position: fixed;
+        ${getPanelPositionStyles()}
+        width: auto; max-width: 350px;
+        z-index: 10001;
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+    `;
+
+    const colors = currentConfig.highlightColors || {};
+    let rowsHtml = '';
+    for (let i = 1; i <= 5; i++) {
+      const hex = (colors[i] || '#CE2029').toUpperCase();
+      rowsHtml += `<div class="hlcolor-row">
+        <label>@${i}</label>
+        <span class="hlcolor-preview" id="hlcolor-preview-${i}" style="background:${hex}"></span>
+        <input type="text" id="hlcolor-input-${i}" value="${hex}" placeholder="#RRGGBB" maxlength="7">
+      </div>`;
+    }
+
+    const defaultHex = (colors[1] || '#CE2029').toUpperCase();
+    const [ir, ig, ib] = hexToRgb(defaultHex);
+    let [currentHue, currentSat, currentVal] = rgbToHsv(ir, ig, ib);
+
+    panel.innerHTML = `
+      <h3 style="margin:0 0 3px;font-size:13px;color:#2d3748;font-weight:600;">${t('hlColorTitle')}</h3>
+      <div style="display:flex;gap:2px;align-items:stretch;">
+        <div id="hlcolor-left" style="flex:0 0 auto;display:flex;flex-direction:column;height:132px;">
+          ${rowsHtml}
+          <div style="display:flex;align-items:center;gap:4px;margin-top:1px;">
+            <span style="min-width:20px;font-size:12px;color:#4a5568;font-weight:600;">🎨</span>
+            <span id="hlcolor-current-preview" style="width:12px;height:12px;border-radius:2px;border:1px solid #e2e8f0;background:${defaultHex};flex-shrink:0;"></span>
+            <span id="hlcolor-code-text" style="font-size:11px;font-family:'Consolas',monospace;padding:2px 4px;background:#f7fafc;border-radius:3px;border:1px solid #e2e8f0;width:70px;flex:none;text-align:center;">${defaultHex}</span>
+          </div>
+        </div>
+        <div class="hlcolor-picker-wrapper" style="display:flex;gap:2px;align-items:stretch;flex-shrink:0;">
+          <canvas id="hlcolor-sv-canvas"></canvas>
+          <canvas id="hlcolor-hue-canvas" width="22"></canvas>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:5px;">
+        <button id="hlcolor-save" class="searchfilter-button searchfilter-button-primary" style="flex:1;">${t('save')}</button>
+        <button id="hlcolor-reset" class="searchfilter-button searchfilter-button-secondary" style="flex:1;">${t('hlColorReset')}</button>
+        <button id="hlcolor-cancel" class="searchfilter-button searchfilter-button-secondary" style="flex:1;">${t('cancel')}</button>
+      </div>
+    `;
+
+    document.body.appendChild(panel);
+    requestAnimationFrame(() => panel.classList.add('show'));
+
+    function resizeCanvasToMatch() {
+      const left = document.getElementById('hlcolor-left');
+      const svCanvas = document.getElementById('hlcolor-sv-canvas');
+      const hueCanvas = document.getElementById('hlcolor-hue-canvas');
+      if (!left || !svCanvas || !hueCanvas) return;
+      svCanvas.width = svCanvas.height = left.clientHeight;
+      hueCanvas.height = left.clientHeight;
+      drawSVCanvas(currentHue);
+      drawHueCanvas();
+    }
+    requestAnimationFrame(() => {
+      resizeCanvasToMatch();
+      updatePickedColor();
+    });
+
+    function drawSVCanvas(hue) {
+      const canvas = document.getElementById('hlcolor-sv-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width, h = canvas.height;
+      const imageData = ctx.createImageData(w, h);
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const s = x / w, v = 1 - y / h;
+          const [r, g, b] = hslToRgb(hue, s, v);
+          const idx = (y * w + x) * 4;
+          imageData.data[idx] = r;
+          imageData.data[idx+1] = g;
+          imageData.data[idx+2] = b;
+          imageData.data[idx+3] = 255;
+        }
+      }
+      ctx.putImageData(imageData, 0, 0);
+    }
+
+    function drawHueCanvas() {
+      const canvas = document.getElementById('hlcolor-hue-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width, h = canvas.height;
+      for (let y = 0; y < h; y++) {
+        const [r, g, b] = hslToRgb((y / h) * 360, 1, 1);
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillRect(0, y, w, 1);
+      }
+    }
+
+    function updatePickedColor() {
+      const [r, g, b] = hslToRgb(currentHue, currentSat, currentVal);
+      const hex = rgbToHex(r, g, b);
+      const el = document.getElementById('hlcolor-code-text');
+      if (el) el.textContent = hex;
+      const preview = document.getElementById('hlcolor-current-preview');
+      if (preview) preview.style.background = hex;
+    }
+
+    const svCanvas = document.getElementById('hlcolor-sv-canvas');
+    let svDragging = false;
+
+    function onSVMove(clientX, clientY) {
+      const rect = svCanvas.getBoundingClientRect();
+      const x = Math.max(0, Math.min(svCanvas.width, clientX - rect.left));
+      const y = Math.max(0, Math.min(svCanvas.height, clientY - rect.top));
+      currentSat = x / svCanvas.width;
+      currentVal = 1 - y / svCanvas.height;
+      updatePickedColor();
+    }
+
+    svCanvas.addEventListener('mousedown', (e) => { svDragging = true; onSVMove(e.clientX, e.clientY); });
+    document.addEventListener('mousemove', (e) => { if (svDragging) onSVMove(e.clientX, e.clientY); });
+    document.addEventListener('mouseup', () => { svDragging = false; });
+
+    const hueCanvas = document.getElementById('hlcolor-hue-canvas');
+    let hueDragging = false;
+
+    function onHueMove(clientY) {
+      const rect = hueCanvas.getBoundingClientRect();
+      const y = Math.max(0, Math.min(hueCanvas.height, clientY - rect.top));
+      currentHue = (y / hueCanvas.height) * 360;
+      drawSVCanvas(currentHue);
+      updatePickedColor();
+    }
+
+    hueCanvas.addEventListener('mousedown', (e) => { hueDragging = true; onHueMove(e.clientY); });
+    document.addEventListener('mousemove', (e) => { if (hueDragging) onHueMove(e.clientY); });
+    document.addEventListener('mouseup', () => { hueDragging = false; });
+
+    function updatePreview(i) {
+      const input = document.getElementById(`hlcolor-input-${i}`);
+      const preview = document.getElementById(`hlcolor-preview-${i}`);
+      if (input && preview && /^#[0-9a-fA-F]{6}$/.test(input.value)) {
+        preview.style.background = input.value;
+      }
+    }
+
+    for (let i = 1; i <= 5; i++) {
+      document.getElementById(`hlcolor-input-${i}`).addEventListener('input', () => updatePreview(i));
+    }
+
+    document.getElementById('hlcolor-save').onclick = () => {
+      const newColors = {...currentConfig.highlightColors};
+      let hasError = false;
+      for (let i = 1; i <= 5; i++) {
+        const input = document.getElementById(`hlcolor-input-${i}`);
+        const val = input.value.trim();
+        if (val === '') continue;
+        if (!/^#[0-9a-fA-F]{6}$/.test(val)) {
+          const saveBtn = document.getElementById('hlcolor-save');
+          const originalText = saveBtn.textContent;
+          saveBtn.textContent = t('errorword');
+          saveBtn.style.backgroundColor = '#c53030';
+          setTimeout(() => {
+            saveBtn.textContent = originalText;
+            saveBtn.style.backgroundColor = '';
+          }, 1500);
+          hasError = true;
+          break;
+        }
+        newColors[i] = val;
+      }
+      if (hasError) return;
+      currentConfig.highlightColors = newColors;
+      GM_setValue(CONFIG_KEY, currentConfig);
+      buildRuleIndex();
+      forceReprocessAll();
+      const saveBtn = document.getElementById('hlcolor-save');
+      saveBtn.style.backgroundColor = '#276749';
+      setTimeout(() => {
+        saveBtn.style.backgroundColor = '';
+      }, 800);
+    };
+
+    document.getElementById('hlcolor-reset').onclick = () => {
+      const defaults = {1:'#CE2029', 2:'#FF8C00', 3:'#FFD700', 4:'#228B22', 5:'#1E90FF'};
+      for (let i = 1; i <= 5; i++) {
+        document.getElementById(`hlcolor-input-${i}`).value = defaults[i];
+        document.getElementById(`hlcolor-preview-${i}`).style.background = defaults[i];
+      }
+      const [r, g, b] = hexToRgb('#CE2029');
+      [currentHue, currentSat, currentVal] = rgbToHsv(r, g, b);
+      drawSVCanvas(currentHue);
+      updatePickedColor();
+    };
+
+    document.getElementById('hlcolor-cancel').onclick = (e) => {
+      e.stopPropagation();
+      panel.classList.remove('show');
+      panel.addEventListener('transitionend', () => {
+        panel.remove();
+      }, {once: true});
+    };
+
+    const closeHandler = (e) => {
+      if (!panel.contains(e.target)) {
+        panel.classList.remove('show');
+        panel.addEventListener('transitionend', () => {
+          panel.remove();
+          document.removeEventListener('click', closeHandler);
+        }, {once: true});
+      }
+    };
+    setTimeout(() => document.addEventListener('click', closeHandler), 200);
+  }
+
+  function migrateSubscriptions() {
+    if (GM_getValue(SUBSCRIPTIONS_KEY) !== undefined) return;
+    const oldUrl = GM_getValue(SUBSCRIPTION_URL_KEY);
+    const oldRules = GM_getValue(SUBSCRIPTION_RULES_KEY, []);
+    const oldLastUpdate = GM_getValue(SUBSCRIPTION_LAST_UPDATE_KEY, 0);
+    const subscriptions = [];
+    if (oldUrl) {
+      subscriptions.push({
+        url: oldUrl,
+        enabled: true,
+        lastUpdate: oldLastUpdate,
+        rules: oldRules
+      });
+    }
+    GM_setValue(SUBSCRIPTIONS_KEY, subscriptions);
+  }
+
+  function getSubscriptions() {
+    return GM_getValue(SUBSCRIPTIONS_KEY, []);
+  }
+
+  function saveSubscriptions(subscriptions) {
+    GM_setValue(SUBSCRIPTIONS_KEY, subscriptions);
+  }
+
+  function getAllSubscriptionRules() {
+    const subs = getSubscriptions();
+    const rules = [];
+    subs.filter(s => s.enabled).forEach(s => {
+      if (s.rules && Array.isArray(s.rules)) rules.push(...s.rules);
+    });
+    return rules;
   }
 
   // 订阅管理
@@ -3206,7 +3429,7 @@
       rowsHtml += `<div class="subscription-row" data-index="${index}">
                 <div class="subscription-input-row">
                     <input type="text" class="subscription-url" placeholder="https://example.com/rules.txt" value="${sub.url || ''}">
-                    <button class="delete-subscription-btn" title="${t('delete')}" data-index="${index}">❌</button>
+                    <button class="delete-subscription-btn" data-index="${index}">❌</button>
                 </div>
                 <div class="subscription-status-message"></div>
             </div>`;
@@ -3243,7 +3466,7 @@
       }
       const newRow = document.createElement('div');
       newRow.className = 'subscription-row';
-      newRow.innerHTML = `<div class="subscription-input-row"><input type="text" class="subscription-url" placeholder="https://example.com/rules.txt" value=""><button class="delete-subscription-btn" title="${t('delete')}">❌</button></div><div class="subscription-status-message"></div>`;
+      newRow.innerHTML = `<div class="subscription-input-row"><input type="text" class="subscription-url" placeholder="https://example.com/rules.txt" value=""><button class="delete-subscription-btn">❌</button></div><div class="subscription-status-message"></div>`;
       container.appendChild(newRow);
       updateAddButtonState();
       bindDeleteEvents();
@@ -3411,7 +3634,7 @@
         <label>${t('webdavPass')}</label>
         <div style="position: relative; display: flex; align-items: center;">
             <input id="webdav-password" type="password" value="${webdavConfig.password}" style="padding-right: 35px !important;">
-            <button id="webdav-toggle-password" type="button" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; font-size: 14px; line-height: 1; color: #718096; display: flex; align-items: center; justify-content: center; z-index: 1;" title="${t('togglePassword')}">${svgIcon('eye')}</button>
+            <button id="webdav-toggle-password" type="button" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; font-size: 16px; line-height: 1; color: #718096; display: flex; align-items: center; justify-content: center; z-index: 1;">🐵</button>
         </div>
     </div>
     <div class="webdav-row"><label>${t('filename')}</label><input id="webdav-filename" type="text" placeholder="rules.txt" value="${webdavConfig.filename}"></div>
@@ -3441,7 +3664,7 @@
         e.stopPropagation();
         const type = passwordInput.type === 'password' ? 'text' : 'password';
         passwordInput.type = type;
-        togglePasswordBtn.innerHTML = type === 'password' ? `${svgIcon('eye')}` : `${svgIcon('eye-off')}`;
+        togglePasswordBtn.textContent = type === 'password' ? '🐵' : '🙈';
       });
     }
 
@@ -3701,314 +3924,6 @@
     preventPanelClose = false;
   }
 
-  // HSV 辅助函数
-    function hslToRgb(h, s, v) {
-      h /= 360;
-      let r, g, b;
-      const i = Math.floor(h * 6);
-      const f = h * 6 - i;
-      const p = v * (1 - s);
-      const q = v * (1 - f * s);
-      const t = v * (1 - (1 - f) * s);
-      switch (i % 6) {
-        case 0: r=v; g=t; b=p; break;
-        case 1: r=q; g=v; b=p; break;
-        case 2: r=p; g=v; b=t; break;
-        case 3: r=p; g=q; b=v; break;
-        case 4: r=t; g=p; b=v; break;
-        case 5: r=v; g=p; b=q; break;
-      }
-      return [Math.round(r*255), Math.round(g*255), Math.round(b*255)];
-    }
-
-    function rgbToHsv(r, g, b) {
-      r /= 255; g /= 255; b /= 255;
-      const max = Math.max(r, g, b), min = Math.min(r, g, b);
-      const d = max - min;
-      let h = 0;
-      if (d !== 0) {
-        if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) * 60;
-        else if (max === g) h = ((b - r) / d + 2) * 60;
-        else h = ((r - g) / d + 4) * 60;
-      }
-      return [Math.round(h), max === 0 ? 0 : d / max, max];
-    }
-
-    function hexToRgb(hex) {
-      return [parseInt(hex.slice(1,3), 16), parseInt(hex.slice(3,5), 16), parseInt(hex.slice(5,7), 16)];
-    }
-
-    function rgbToHex(r, g, b) {
-      return '#' + [r,g,b].map(x => x.toString(16).padStart(2,'0').toUpperCase()).join('');
-    }
-
-    // 弹出 HSV 取色板弹窗
-    function showColorPickerPopup(targetIndex, currentHex, defaults, onSave) {
-      const existingPopup = document.getElementById('searchfilter-hlcolor-popup');
-      if (existingPopup) existingPopup.remove();
-
-      const popup = document.createElement('div');
-      popup.id = 'searchfilter-hlcolor-popup';
-      popup.style.cssText = `
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        z-index: 10002; display: flex; align-items: center; justify-content: center;
-      `;
-
-      const [ir, ig, ib] = hexToRgb(currentHex);
-      let [currentHue, currentSat, currentVal] = rgbToHsv(ir, ig, ib);
-
-      popup.innerHTML = `
-        <div style="position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.3);" id="hlcolor-popup-overlay"></div>
-        <div style="position:relative;background:#fff;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,0.2);padding:12px;width:290px;display:flex;flex-direction:column;gap:8px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;">
-            <span style="font-size:13px;font-weight:600;color:#2d3748;">${t('hlColorTitle')} @${targetIndex}</span>
-            <div style="display:flex;align-items:center;gap:4px;">
-              <span id="hlcolor-popup-preview" style="display:inline-block;width:16px;height:16px;border-radius:3px;border:1px solid #e2e8f0;background:${currentHex};flex-shrink:0;"></span>
-              <span id="hlcolor-popup-hex" style="font-size:12px;font-family:'Consolas',monospace;padding:2px 6px;background:#f7fafc;border-radius:3px;border:1px solid #e2e8f0;">${currentHex}</span>
-            </div>
-          </div>
-          <div style="display:flex;gap:6px;align-items:stretch;">
-            <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
-              <canvas id="hlcolor-popup-sv" style="width:180px;height:180px;border-radius:4px;border:1px solid #e2e8f0;cursor:crosshair;"></canvas>
-            </div>
-            <canvas id="hlcolor-popup-hue" style="width:20px;height:180px;border-radius:4px;border:1px solid #e2e8f0;cursor:pointer;"></canvas>
-          </div>
-          <div style="display:flex;gap:6px;">
-            <button id="hlcolor-popup-save" class="searchfilter-button searchfilter-button-primary" style="flex:1;padding:5px;font-size:12px;">${t('save')}</button>
-            <button id="hlcolor-popup-cancel" class="searchfilter-button searchfilter-button-secondary" style="flex:1;padding:5px;font-size:12px;">${t('cancel')}</button>
-          </div>
-        </div>
-      `;
-
-      document.body.appendChild(popup);
-
-      // 初始化 Canvas
-      const svCanvas = document.getElementById('hlcolor-popup-sv');
-      const hueCanvas = document.getElementById('hlcolor-popup-hue');
-      const svCtx = svCanvas.getContext('2d');
-      const hueCtx = hueCanvas.getContext('2d');
-      const svW = 180, svH = 180, hueW = 20, hueH = 180;
-      svCanvas.width = svW; svCanvas.height = svH;
-      hueCanvas.width = hueW; hueCanvas.height = hueH;
-
-      function drawSVCanvas(hue, sat, val) {
-        const imageData = svCtx.createImageData(svW, svH);
-        for (let y = 0; y < svH; y++) {
-          for (let x = 0; x < svW; x++) {
-            const s = x / svW, v = 1 - y / svH;
-            const [r, g, b] = hslToRgb(hue, s, v);
-            const idx = (y * svW + x) * 4;
-            imageData.data[idx] = r;
-            imageData.data[idx+1] = g;
-            imageData.data[idx+2] = b;
-            imageData.data[idx+3] = 255;
-          }
-        }
-        svCtx.putImageData(imageData, 0, 0);
-        // 绘制当前颜色位置的指示器（圆圈）
-        const ix = sat * svW;
-        const iy = (1 - val) * svH;
-        svCtx.beginPath();
-        svCtx.arc(ix, iy, 5, 0, Math.PI * 2);
-        svCtx.strokeStyle = '#fff';
-        svCtx.lineWidth = 2;
-        svCtx.stroke();
-        svCtx.beginPath();
-        svCtx.arc(ix, iy, 5, 0, Math.PI * 2);
-        svCtx.strokeStyle = 'rgba(0,0,0,0.4)';
-        svCtx.lineWidth = 1;
-        svCtx.stroke();
-      }
-
-      function drawHueCanvas(hue) {
-        for (let y = 0; y < hueH; y++) {
-          const [r, g, b] = hslToRgb((y / hueH) * 360, 1, 1);
-          hueCtx.fillStyle = `rgb(${r},${g},${b})`;
-          hueCtx.fillRect(0, y, hueW, 1);
-        }
-        // 绘制当前 Hue 位置的指示器（三角形箭头）
-        const iy = (hue / 360) * hueH;
-        hueCtx.fillStyle = '#fff';
-        hueCtx.beginPath();
-        hueCtx.moveTo(0, iy - 4);
-        hueCtx.lineTo(0, iy + 4);
-        hueCtx.lineTo(6, iy);
-        hueCtx.closePath();
-        hueCtx.fill();
-        hueCtx.strokeStyle = 'rgba(0,0,0,0.4)';
-        hueCtx.lineWidth = 1;
-        hueCtx.stroke();
-      }
-
-      function updateDisplay() {
-        const [r, g, b] = hslToRgb(currentHue, currentSat, currentVal);
-        const hex = rgbToHex(r, g, b);
-        const el = document.getElementById('hlcolor-popup-hex');
-        if (el) el.textContent = hex;
-        const preview = document.getElementById('hlcolor-popup-preview');
-        if (preview) preview.style.background = hex;
-        drawSVCanvas(currentHue, currentSat, currentVal);
-        drawHueCanvas(currentHue);
-      }
-
-      drawSVCanvas(currentHue, currentSat, currentVal);
-      drawHueCanvas(currentHue);
-      updateDisplay();
-
-      // SV 拖动
-      let svDragging = false;
-      function onSVMove(clientX, clientY) {
-        const rect = svCanvas.getBoundingClientRect();
-        const scaleX = svW / rect.width;
-        const scaleY = svH / rect.height;
-        const x = Math.max(0, Math.min(svW, (clientX - rect.left) * scaleX));
-        const y = Math.max(0, Math.min(svH, (clientY - rect.top) * scaleY));
-        currentSat = x / svW;
-        currentVal = 1 - y / svH;
-        updateDisplay();
-      }
-      svCanvas.addEventListener('mousedown', (e) => { e.stopPropagation(); svDragging = true; onSVMove(e.clientX, e.clientY); });
-      document.addEventListener('mousemove', (e) => { if (svDragging) onSVMove(e.clientX, e.clientY); });
-      document.addEventListener('mouseup', () => { svDragging = false; });
-
-      // Hue 拖动
-      let hueDragging = false;
-      function onHueMove(clientY) {
-        const rect = hueCanvas.getBoundingClientRect();
-        const scaleY = hueH / rect.height;
-        const y = Math.max(0, Math.min(hueH, (clientY - rect.top) * scaleY));
-        currentHue = (y / hueH) * 360;
-        updateDisplay();
-      }
-      hueCanvas.addEventListener('mousedown', (e) => { e.stopPropagation(); hueDragging = true; onHueMove(e.clientY); });
-      document.addEventListener('mousemove', (e) => { if (hueDragging) onHueMove(e.clientY); });
-      document.addEventListener('mouseup', () => { hueDragging = false; });
-
-      // 保存
-      document.getElementById('hlcolor-popup-save').onclick = (e) => {
-        e.stopPropagation();
-        const [r, g, b] = hslToRgb(currentHue, currentSat, currentVal);
-        const hex = rgbToHex(r, g, b);
-        onSave(targetIndex, hex);
-        popup.remove();
-      };
-
-      // 取消 / 点击外部关闭
-      function closePopup(e) { e?.stopPropagation(); popup.remove(); }
-      document.getElementById('hlcolor-popup-cancel').onclick = closePopup;
-      document.getElementById('hlcolor-popup-overlay').onclick = closePopup;
-    }
-
-    // 高亮颜色主面板
-    function showHighlightColorPanel() {
-      const existing = document.getElementById('searchfilter-hlcolor-panel');
-      if (existing) {
-        existing.remove();
-        return;
-      }
-
-    const panel = document.createElement('div');
-    panel.id = 'searchfilter-hlcolor-panel';
-    panel.classList.add('searchfilter-panel-fade');
-    panel.style.cssText = `
-        position: fixed;
-        ${getPanelPositionStyles()}
-        width: 240px;
-        z-index: 10001;
-        padding: 10px;
-        display: flex;
-        flex-direction: column;
-    `;
-
-    const colors = currentConfig.highlightColors || {};
-    const defaults = {1:'#CE2029', 2:'#FF8C00', 3:'#FFD700', 4:'#228B22', 5:'#1E90FF'};
-
-    // 5个大色块按钮，横向排列
-    let swatchesHtml = '';
-    for (let i = 1; i <= 5; i++) {
-      const hex = (colors[i] || defaults[i]).toUpperCase();
-      swatchesHtml += `<div class="hlcolor-swatch" id="hlcolor-preview-${i}" style="display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;flex:1;" title="${t('hlColorClick')}">
-        <div style="width:100%;aspect-ratio:1;border-radius:6px;border:2px solid #e2e8f0;background:${hex};transition:transform 0.15s, box-shadow 0.15s;"></div>
-        <span style="font-size:10px;font-weight:600;color:#4a5568;">@${i}</span>
-      </div>`;
-    }
-
-    panel.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-        <h3 style="margin:0;font-size:13px;color:#2d3748;font-weight:600;">${t('hlColorTitle')}</h3>
-        <button id="hlcolor-reset" class="searchfilter-button searchfilter-button-secondary" style="padding:2px 6px;font-size:10px;border:1px solid #e2e8f0;">${t('hlColorReset')}</button>
-      </div>
-      <div style="display:flex;gap:6px;">
-        ${swatchesHtml}
-      </div>
-      <div style="display:flex;gap:4px;justify-content:flex-end;margin-top:6px;">
-        <button id="hlcolor-close" class="searchfilter-button searchfilter-button-secondary" style="flex:1;padding:3px 6px;font-size:11px;">${t('close')}</button>
-      </div>
-    `;
-
-    document.body.appendChild(panel);
-    requestAnimationFrame(() => panel.classList.add('show'));
-
-    // 点击色块弹出 HSV 取色板
-    for (let i = 1; i <= 5; i++) {
-      const swatch = document.getElementById(`hlcolor-preview-${i}`);
-      const colorDiv = swatch.querySelector('div');
-      swatch.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const currentHex = (currentConfig.highlightColors && currentConfig.highlightColors[i]) || defaults[i];
-        showColorPickerPopup(i, currentHex, defaults, (idx, hex) => {
-          // 更新色块预览
-          const s = document.getElementById(`hlcolor-preview-${idx}`);
-          if (s) s.querySelector('div').style.background = hex;
-          // 保存配置
-          const newColors = {...(currentConfig.highlightColors || {})};
-          newColors[idx] = hex;
-          currentConfig.highlightColors = newColors;
-          GM_setValue(CONFIG_KEY, currentConfig);
-          buildRuleIndex();
-          forceReprocessAll();
-        });
-      });
-      swatch.addEventListener('mouseenter', () => { colorDiv.style.transform = 'scale(1.12)'; colorDiv.style.boxShadow = '0 2px 8px rgba(0,0,0,0.25)'; });
-      swatch.addEventListener('mouseleave', () => { colorDiv.style.transform = 'scale(1)'; colorDiv.style.boxShadow = 'none'; });
-    }
-
-    // 重置所有颜色为默认值
-    document.getElementById('hlcolor-reset').onclick = (e) => {
-      e.stopPropagation();
-      for (let i = 1; i <= 5; i++) {
-        const swatch = document.getElementById(`hlcolor-preview-${i}`);
-        if (swatch) swatch.querySelector('div').style.background = defaults[i];
-      }
-      currentConfig.highlightColors = {...defaults};
-      GM_setValue(CONFIG_KEY, currentConfig);
-      buildRuleIndex();
-      forceReprocessAll();
-    };
-
-    // 关闭按钮
-    document.getElementById('hlcolor-close').onclick = (e) => {
-      e.stopPropagation();
-      panel.classList.remove('show');
-      panel.addEventListener('transitionend', () => {
-        panel.remove();
-      }, {once: true});
-    };
-
-    // 点击外部关闭
-    const closeHandler = (e) => {
-      const popup = document.getElementById('searchfilter-hlcolor-popup');
-      if (!panel.contains(e.target) && (!popup || !popup.contains(e.target))) {
-        panel.classList.remove('show');
-        panel.addEventListener('transitionend', () => {
-          panel.remove();
-          document.removeEventListener('click', closeHandler);
-        }, {once: true});
-      }
-    };
-    setTimeout(() => document.addEventListener('click', closeHandler), 200);
-  }
-
   // 管理器菜单
   function registerMenu() {
     GM_registerMenuCommand(t('menuOpenPanel'), () => showConfigPanel());
@@ -4017,11 +3932,7 @@
       GM_setValue(CONFIG_KEY, currentConfig);
       location.reload();
     });
-    GM_registerMenuCommand((currentConfig.blockConfirm ? "🟢 " : "🔴 ") + t('menuConfirm') + (currentConfig.blockConfirm ? `：${t('stateEnabled')}` : `：${t('stateDisabled')}`), () => {
-      currentConfig.blockConfirm = !currentConfig.blockConfirm;
-      GM_setValue(CONFIG_KEY, currentConfig);
-      location.reload();
-    });
+
     GM_registerMenuCommand((currentConfig.panelCentered ? "🟢 " : "🔴 ") + t('menuCenter') + (currentConfig.panelCentered ? `：${t('stateEnabled')}` : `：${t('stateDisabled')}`), () => {
       currentConfig.panelCentered = !currentConfig.panelCentered;
       GM_setValue(CONFIG_KEY, currentConfig);
