@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.0.1
+// @version      7.0.2
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -197,7 +197,7 @@
       webdavTitle: 'WebDAV Sync Settings',
       webdavUrl: 'WebDAV URL',
       webdavUser: 'Username',
-      webdavPass: 'App Password',
+      webdavPass: 'Password',
       filename: 'Filename',
       upload: 'Upload',
       download: 'Download',
@@ -233,6 +233,8 @@
       menuBubbleStateHide: 'Hide',
       menuBubbleActionOpen: 'Open Panel',
       menuBubbleActionToggle: 'Toggle Results',
+      stateEnabled: 'Enabled',
+      stateDisabled: 'Disabled',
       statsError: 'Error:',
       subLinkEmpty: 'URL is empty',
       subImportSuccess: 'Import success, {count} rules imported',
@@ -3631,7 +3633,7 @@
             <span style="line-height:1;">${t('autoSync')}</span>
         </label>
     </div>
-    <div class="webdav-row"><label>${t('webdavUrl')}</label><input id="webdav-url" type="text" placeholder="https://example.com/remote.php/dav/files/user/" value="${webdavConfig.url}"></div>
+    <div class="webdav-row"><label>${t('webdavUrl')}</label><input id="webdav-url" type="text" placeholder="https://example.com/dav/files/" value="${webdavConfig.url}"></div>
     <div class="webdav-row"><label>${t('webdavUser')}</label><input id="webdav-username" type="text" value="${webdavConfig.username}"></div>
     <div class="webdav-row">
         <label>${t('webdavPass')}</label>
