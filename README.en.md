@@ -57,7 +57,7 @@ Rules tend to favor titles and regular matches. For convenience, you can add rul
 **Highlighting Rules:**  
 `@1 *://*.example.com/*` – Adds color borders to `example.com` and its subdomains  
 `@1 title/.*example.*/` – Add a color border to the result matched to the title with `example`  
- Priority: whitelist > blacklist > highlight  
+ Priority: highlight > whitelist, but blacklist > highlight  
  Note: only 5 colors are supported, namely `@1`~`@5`, Open the custom color panel through the script menu  
   
 **Composite Rules:**  
