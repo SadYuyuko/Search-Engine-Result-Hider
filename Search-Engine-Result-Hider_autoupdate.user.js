@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.0.2
+// @version      7.1.0
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -36,6 +36,7 @@
   'use strict';
 
   let preventPanelClose = false;
+  let yandexParentTimeouts = new Set();
 
   // 配置存储键
   const CONFIG_KEY = 'searchfilter_blocker';
@@ -47,6 +48,7 @@
   const WEBDAV_LAST_SYNC_KEY = 'searchfilter_webdav_last_sync';
   const LOCAL_LAST_MODIFIED_KEY = 'searchfilter_local_last_modified';
   const WEBDAV_AUTO_SYNC_KEY = 'searchfilter_webdav_auto_sync';
+  const HL_STATS_REGEX = /^@\d+/;
 
   // 默认配置
   let currentConfig = GM_getValue(CONFIG_KEY, {
@@ -166,7 +168,7 @@
       menuHighlightColor: '🎨 高亮颜色',
       hlColorTitle: '高亮颜色设置',
       hlColorReset: '重置',
-      errorword: '错误',
+      errorWord: '错误',
     },
     'en': {
       enableBlock: 'Enable Block',
@@ -255,7 +257,7 @@
       menuHighlightColor: '🎨 Highlight Colors',
       hlColorTitle: 'Highlight Color Settings',
       hlColorReset: 'Reset',
-      errorword: 'Error',
+      errorWord: 'Error',
     }
   };
 
@@ -288,25 +290,31 @@
     }
   };
 
-  // Set
+  // Map
   let compiledRules = {
-    domains: new Set(),
+    domains: new Map(),
     urls: [],
     titles: [],
     texts: [],
-    whitelistDomains: new Set(),
+    whitelistDomains: new Map(),
     whitelistUrlPatterns: [],
-    rulesList: [],
+    whitelistTitlePatterns: [],
+    whitelistTextPatterns: [],
     conditionalRules: [],
+    conditionalDomains: new Map(),
     highlightDomains: new Map(),
     highlightUrls: [],
     highlightTitles: [],
     highlightTexts: [],
-    highlightConditionalRules: []
+    highlightConditionalRules: [],
+    highlightConditionalDomains: new Map()
   };
 
   const validationCache = new Map();
+  const subdomainCache = new Map();
+  let cachedSubscriptionRules = null;
   let lineUpdateRaf = null;
+  let forceReprocessBatchId = 0;
 
   // 引擎检测
   function getSearchEngine() {
@@ -372,30 +380,30 @@
     return false;
   }
 
+  function extractBalancedParens(str, startIndex) {
+    if (str[startIndex] !== '(') return null;
+    let depth = 0;
+    for (let i = startIndex; i < str.length; i++) {
+      if (str[i] === '(') depth++;
+      else if (str[i] === ')') {
+        depth--;
+        if (depth === 0) {
+          return {
+            content: str.substring(startIndex + 1, i),
+            endIndex: i + 1
+          };
+        }
+      }
+    }
+    return null;
+  }
+
   function parseRuleWithConditions(ruleStr) {
     let coreRule = ruleStr.trim();
     let staticPass = true;
     let dynamicConditions = [];
 
-    function extractBalancedParens(str, startIndex) {
-      if (str[startIndex] !== '(') return null;
-      let depth = 0;
-      for (let i = startIndex; i < str.length; i++) {
-        if (str[i] === '(') depth++;
-        else if (str[i] === ')') {
-          depth--;
-          if (depth === 0) {
-            return {
-              content: str.substring(startIndex + 1, i),
-              endIndex: i + 1
-            };
-          }
-        }
-      }
-      return null;
-    }
-
-    // 处理前置@if
+    // 处理@if
     const prefixIfIdx = coreRule.search(/@if\s*\(/i);
     if (prefixIfIdx !== -1) {
       const parenResult = extractBalancedParens(coreRule, coreRule.indexOf('(', prefixIfIdx));
@@ -410,7 +418,6 @@
       }
     }
 
-    // 处理所有@if
     const ifRegex = /@if\s*\(/gi;
     let match;
     const ranges = [];
@@ -441,6 +448,10 @@
 
     coreRule = coreRule.replace(/\s{2,}/g, ' ').trim();
 
+    if (coreRule.startsWith('{') && coreRule.endsWith('}') && coreRule.length > 1) {
+      coreRule = coreRule.slice(1, -1).trim();
+    }
+
     return {
       coreRule,
       staticPass,
@@ -454,24 +465,15 @@
 
     let ruleToCheck = rule.trim();
 
-    function extractBalancedParens(str, startIndex) {
-      if (str[startIndex] !== '(') return null;
-      let depth = 0;
-      for (let i = startIndex; i < str.length; i++) {
-        if (str[i] === '(') depth++;
-        else if (str[i] === ')') {
-          depth--;
-          if (depth === 0) {
-            return {
-              content: str.substring(startIndex + 1, i),
-              endIndex: i + 1
-            };
-          }
-        }
-      }
-      return null;
+    const hlValMatch = ruleToCheck.match(/^@(\d+)/);
+    if (hlValMatch) {
+      const N = parseInt(hlValMatch[1]);
+      if (N < 1 || N > 5) return false;
+      ruleToCheck = ruleToCheck.substring(hlValMatch[0].length).trim();
+      if (!ruleToCheck) return true;
     }
 
+    // 前缀@if(){...}解包
     const prefixIfIdx = ruleToCheck.search(/@if\s*\(/i);
     if (prefixIfIdx !== -1) {
       const parenResult = extractBalancedParens(ruleToCheck, ruleToCheck.indexOf('(', prefixIfIdx));
@@ -482,20 +484,29 @@
           ruleToCheck = braceMatch[1].trim();
         }
       }
-    } else {
-      const lastPostfixIdx = ruleToCheck.lastIndexOf('@if(');
-      if (lastPostfixIdx !== -1) {
-        const parenResult = extractBalancedParens(ruleToCheck, lastPostfixIdx + 3);
-        if (parenResult) {
-          ruleToCheck = ruleToCheck.substring(0, lastPostfixIdx).trim();
-        }
-      }
     }
 
-    const hlValMatch = ruleToCheck.match(/^@\d+/);
-    if (hlValMatch) {
-      ruleToCheck = ruleToCheck.substring(hlValMatch[0].length).trim();
-      if (!ruleToCheck) return true;
+    // 正则循环剥离所有@if(...)
+    const ifRegex = /@if\s*\(/gi;
+    let match;
+    const ranges = [];
+    while ((match = ifRegex.exec(ruleToCheck)) !== null) {
+      const condStartIdx = match.index + match[0].length - 1;
+      const parenResult = extractBalancedParens(ruleToCheck, condStartIdx);
+      if (parenResult) {
+        ranges.push({ start: match.index, end: parenResult.endIndex });
+      }
+    }
+    if (ranges.length > 0) {
+      ranges.sort((a, b) => b.start - a.start);
+      for (const r of ranges) {
+        ruleToCheck = ruleToCheck.slice(0, r.start) + ruleToCheck.slice(r.end);
+      }
+      ruleToCheck = ruleToCheck.replace(/\s{2,}/g, ' ').trim();
+    }
+
+    if (ruleToCheck.startsWith('{') && ruleToCheck.endsWith('}') && ruleToCheck.length > 1) {
+      ruleToCheck = ruleToCheck.slice(1, -1).trim();
     }
 
     // 白名单规则
@@ -518,32 +529,8 @@
 
     // 标题/正文规则
     if (ruleToCheck.startsWith('text/') || ruleToCheck.startsWith('title/')) {
-      let remaining = ruleToCheck.startsWith('title/') ? ruleToCheck.substring(6) : ruleToCheck.substring(5);
-      let pattern, flags = '';
-      const lastSlashIndex = remaining.lastIndexOf('/');
-      if (lastSlashIndex !== -1 && lastSlashIndex < remaining.length - 1) {
-        const possibleFlags = remaining.substring(lastSlashIndex + 1);
-        if (/^[ims]+$/i.test(possibleFlags)) {
-          flags = possibleFlags.toLowerCase();
-          pattern = remaining.substring(0, lastSlashIndex);
-        } else {
-          pattern = remaining;
-        }
-      } else {
-        pattern = remaining;
-      }
-      if (!flags && remaining.endsWith('/')) pattern = remaining.slice(0, -1);
-      if (!flags) {
-        const oldFlagMatch = pattern.match(/^\(\?([ims]+)\)/);
-        if (oldFlagMatch) {
-          flags = oldFlagMatch[1];
-          pattern = pattern.substring(oldFlagMatch[0].length);
-        }
-      }
-      if (flags.includes('s')) {
-        pattern = pattern.replace(/\./g, '[\\s\\S]');
-        flags = flags.replace('s', '');
-      }
+      const prefixLen = ruleToCheck.startsWith('title/') ? 6 : 5;
+      const { pattern, flags } = parsePrefixedRegexRule(ruleToCheck, prefixLen);
       try {
         new RegExp(pattern, flags);
         return true;
@@ -575,494 +562,8 @@
     }
   }
 
-  // 规则转换
-  function ruleToRegex(rule) {
-    if (!rule.startsWith('/') && !rule.startsWith('title/') && !rule.startsWith('text/') &&
-      !rule.includes('*') && !rule.includes('://') && !rule.startsWith('.')) {
-      if (rule.includes('.') && !/\s/.test(rule)) {
-        rule = '*://*.' + rule + '/*';
-      }
-    }
-
-    if (rule.startsWith('/') && rule.lastIndexOf('/') > 0) {
-      const lastSlash = rule.lastIndexOf('/');
-      const pattern = rule.slice(1, lastSlash);
-      const flags = rule.slice(lastSlash + 1);
-      return {
-        pattern,
-        flags
-      };
-    }
-
-    if (rule.startsWith('title/')) {
-      let remaining = rule.substring(6);
-      let pattern, flags = '';
-      const lastSlashIndex = remaining.lastIndexOf('/');
-      if (lastSlashIndex !== -1 && lastSlashIndex < remaining.length - 1) {
-        const possibleFlags = remaining.substring(lastSlashIndex + 1);
-        if (/^[ims]+$/i.test(possibleFlags)) {
-          flags = possibleFlags.toLowerCase();
-          pattern = remaining.substring(0, lastSlashIndex);
-        } else {
-          pattern = remaining;
-        }
-      } else {
-        pattern = remaining;
-      }
-      if (!flags && remaining.endsWith('/')) pattern = remaining.slice(0, -1);
-      if (!flags) {
-        const oldFlagMatch = pattern.match(/^\(\?([ims]+)\)/);
-        if (oldFlagMatch) {
-          flags = oldFlagMatch[1];
-          pattern = pattern.substring(oldFlagMatch[0].length);
-        }
-      }
-      if (flags.includes('s')) {
-        pattern = pattern.replace(/\./g, '[\\s\\S]');
-        flags = flags.replace('s', '');
-      }
-      return {
-        pattern,
-        flags
-      };
-    }
-
-    // URL规则
-    let pattern = rule;
-    if (pattern.startsWith('*://')) pattern = pattern.substring(4);
-    if (pattern.includes('/')) {
-      const parts = pattern.split('/');
-      pattern = parts.map((part, index) => {
-        if (index === 0) {
-          return part.replace(/\*/g, '.*').replace(/\?/g, '\\?').replace(/(?<!\\)\./g, '\\.');
-        } else {
-          return part.replace(/\*/g, '.*').replace(/\?/g, '\\?');
-        }
-      }).join('\\/');
-    } else {
-      pattern = pattern.replace(/\*/g, '.*').replace(/\?/g, '\\?').replace(/(?<!\\)\./g, '\\.');
-    }
-    return {
-      pattern,
-      flags: 'i'
-    };
-  }
-
-  // 白名单简单域名
-  function extractSimpleWhitelistDomain(rule) {
-    const match = rule.match(/^@\*:\/\/(?:\*\.)?([^\/\*]+)\/\*$/);
-    return match ? match[1].toLowerCase() : null;
-  }
-
-  // 预编译规则索引
-  function buildRuleIndex() {
-    compiledRules = {
-      domains: new Set(),
-      urls: [],
-      titles: [],
-      texts: [],
-      whitelistDomains: new Set(),
-      whitelistUrlPatterns: [],
-      rulesList: [],
-      conditionalRules: [],
-      highlightDomains: new Map(),
-      highlightUrls: [],
-      highlightTitles: [],
-      highlightTexts: [],
-      highlightConditionalRules: []
-    };
-    const subscriptionRules = getAllSubscriptionRules();
-    const allRules = currentConfig.rules.concat(subscriptionRules);
-    const subscriptions = getSubscriptions();
-
-    // 规则来源标签
-    function getRuleSource(rule) {
-      for (let idx = 0; idx < subscriptions.length; idx++) {
-        const sub = subscriptions[idx];
-        if (sub.enabled && sub.rules && sub.rules.includes(rule)) {
-          return `${t('subscription')}${idx + 1}`;
-        }
-      }
-      return t('localRule');
-    }
-
-    allRules.forEach(rule => {
-
-      // @N高亮规则
-      const hlMatch = rule.trim().match(/^@(\d+)/);
-      if (hlMatch) {
-        const N = parseInt(hlMatch[1]);
-        let hlRule = rule.trim().substring(hlMatch[0].length).trim();
-        if (!hlRule) return;
-        const parsed = parseRuleWithConditions(hlRule);
-        if (!parsed.staticPass) return;
-        let coreRule = parsed.coreRule;
-
-        // @N域名规则
-        let domainMatch = coreRule.match(/^\*:\/\/\*\.([^\/]+)\/\*$/);
-        if (!domainMatch) domainMatch = coreRule.match(/^\*:\/\/([^\/]+)\/\*$/);
-        if (domainMatch) {
-          const domain = domainMatch[1].toLowerCase();
-          if (!domain.includes('/')) {
-            if (!parsed.dynamicConditions.length)
-              compiledRules.highlightDomains.set(domain, N);
-            else
-              compiledRules.highlightConditionalRules.push({
-                type: 'domain',
-                domain,
-                N,
-                conditions: parsed.dynamicConditions
-              });
-            return;
-          }
-        }
-
-        // @N其他规则
-        try {
-          let type, regex, ruleObj = {
-            conditions: parsed.dynamicConditions,
-            N
-          };
-          if (coreRule.startsWith('/')) {
-            type = 'url';
-            let {
-              pattern,
-              flags
-            } = ruleToRegex(coreRule);
-            regex = new RegExp(pattern, flags);
-          } else if (coreRule.startsWith('title/')) {
-            type = 'title';
-            let {
-              pattern,
-              flags
-            } = ruleToRegex(coreRule);
-            regex = new RegExp(pattern, flags);
-          } else if (coreRule.startsWith('text/')) {
-            type = 'text';
-            let {
-              pattern,
-              flags
-            } = ruleToRegex(coreRule.replace('text/', 'title/'));
-            regex = new RegExp(pattern, flags);
-          } else {
-            type = 'url';
-            let {
-              pattern,
-              flags
-            } = ruleToRegex(coreRule);
-            regex = new RegExp(pattern, flags);
-          }
-          ruleObj.type = type;
-          ruleObj.regex = regex;
-
-          if (!parsed.dynamicConditions.length) {
-            if (type === 'url') compiledRules.highlightUrls.push({regex, N});
-            else if (type === 'title') compiledRules.highlightTitles.push({regex, N});
-            else if (type === 'text') compiledRules.highlightTexts.push({regex, N});
-          } else {
-            compiledRules.highlightConditionalRules.push(ruleObj);
-          }
-        } catch (e) {
-          if (currentConfig.debug) console.warn('高亮规则编译失败:', hlRule, e);
-        }
-        return;
-      }
-
-      if (!rule || rule.trim() === '' || rule.startsWith('#')) return;
-
-      const source = getRuleSource(rule);
-
-      const parsed = parseRuleWithConditions(rule);
-      if (!parsed.staticPass) return;
-
-      const coreRule = parsed.coreRule;
-      const hasDynamic = parsed.dynamicConditions.length > 0;
-
-      // 白名单简单处理
-      if (coreRule.startsWith('@')) {
-        const simpleDomain = extractSimpleWhitelistDomain(coreRule);
-        if (simpleDomain) {
-          compiledRules.whitelistDomains.add(simpleDomain);
-        } else {
-          const whitelistRule = coreRule.substring(1).trim();
-          if (!whitelistRule) return;
-          try {
-            const {
-              pattern,
-              flags
-            } = ruleToRegex(whitelistRule);
-            compiledRules.whitelistUrlPatterns.push(new RegExp(pattern, flags));
-          } catch (e) {
-            if (currentConfig.debug) console.warn('白名单规则预编译失败:', rule, e);
-          }
-        }
-        return;
-      }
-
-      let ruleObj = {
-        originalRule: rule,
-        source: source,
-        conditions: parsed.dynamicConditions
-      };
-
-      // 处理域名规则
-      if (!coreRule.startsWith('/') && !coreRule.startsWith('text/') && !coreRule.startsWith('title/')) {
-        let domainMatch = coreRule.match(/^\*:\/\/\*\.([^\/]+)\/\*$/);
-        if (!domainMatch) {
-          domainMatch = coreRule.match(/^\*:\/\/([^\/]+)\/\*$/);
-        }
-        if (domainMatch) {
-          const domain = domainMatch[1].toLowerCase();
-          if (!domain.includes('/')) {
-            ruleObj.type = 'domain';
-            ruleObj.domain = domain;
-            if (!hasDynamic) compiledRules.domains.add(domain);
-            else compiledRules.conditionalRules.push(ruleObj);
-
-            compiledRules.rulesList.push(ruleObj);
-            return;
-          }
-        }
-      }
-
-      // 预编译正则
-      try {
-        if (coreRule.startsWith('text/')) {
-          let virtualRule = coreRule.replace(/^text\//, 'title/');
-          let {
-            pattern,
-            flags
-          } = ruleToRegex(virtualRule);
-          const regex = new RegExp(pattern, flags);
-          ruleObj.type = 'text';
-          ruleObj.regex = regex;
-          if (!hasDynamic) compiledRules.texts.push(regex);
-          else compiledRules.conditionalRules.push(ruleObj);
-          compiledRules.rulesList.push(ruleObj);
-        } else if (coreRule.startsWith('title/')) {
-          let {
-            pattern,
-            flags
-          } = ruleToRegex(coreRule);
-          const regex = new RegExp(pattern, flags);
-          ruleObj.type = 'title';
-          ruleObj.regex = regex;
-          if (!hasDynamic) compiledRules.titles.push(regex);
-          else compiledRules.conditionalRules.push(ruleObj);
-          compiledRules.rulesList.push(ruleObj);
-        } else {
-          let {
-            pattern,
-            flags
-          } = ruleToRegex(coreRule);
-          const regex = new RegExp(pattern, flags);
-          ruleObj.type = coreRule.startsWith('/') ? 'regex' : 'url';
-          ruleObj.regex = regex;
-          if (!hasDynamic) compiledRules.urls.push(regex);
-          else compiledRules.conditionalRules.push(ruleObj);
-          compiledRules.rulesList.push(ruleObj);
-        }
-      } catch (e) {
-        if (currentConfig.debug) console.warn('规则预编译失败:', rule, e);
-      }
-    });
-  }
-
-  function cachedValidateRule(rule) {
-    if (validationCache.has(rule)) return validationCache.get(rule);
-    const result = validateRule(rule);
-    validationCache.set(rule, result);
-    return result;
-  }
-
-  // 规则匹配优先级
-  function checkRuleMatchOptimized(url, domain, title, snippet) {
-    // 白名单
-    let d = domain.toLowerCase();
-    while (d) {
-      if (compiledRules.whitelistDomains.has(d)) return false;
-      let dotIndex = d.indexOf('.');
-      if (dotIndex === -1) break;
-      d = d.substring(dotIndex + 1);
-    }
-
-    for (let i = 0; i < compiledRules.whitelistUrlPatterns.length; i++) {
-      if (compiledRules.whitelistUrlPatterns[i].test(url) || compiledRules.whitelistUrlPatterns[i].test(domain)) {
-        return false;
-      }
-    }
-
-    // 黑名单
-    d = domain.toLowerCase();
-    while (d) {
-      if (compiledRules.domains.has(d)) return true;
-      let dotIndex = d.indexOf('.');
-      if (dotIndex === -1) break;
-      d = d.substring(dotIndex + 1);
-    }
-
-    for (let i = 0; i < compiledRules.urls.length; i++) {
-      if (compiledRules.urls[i].test(url) || compiledRules.urls[i].test(domain)) return true;
-    }
-
-    if (title) {
-      for (let i = 0; i < compiledRules.titles.length; i++) {
-        if (compiledRules.titles[i].test(title)) return true;
-      }
-    }
-
-    if (snippet) {
-      for (let i = 0; i < compiledRules.texts.length; i++) {
-        if (compiledRules.texts[i].test(snippet)) return true;
-      }
-    }
-
-    for (let i = 0; i < compiledRules.conditionalRules.length; i++) {
-      const ruleObj = compiledRules.conditionalRules[i];
-      let conditionsMet = true;
-      for (let j = 0; j < ruleObj.conditions.length; j++) {
-        const cond = ruleObj.conditions[j];
-        if (cond.type === 'title' && cond.op === '*=') {
-          if (!title || !title.toLowerCase().includes(cond.val)) {
-            conditionsMet = false;
-            break;
-          }
-        }
-      }
-      if (!conditionsMet) continue;
-
-      if (ruleObj.type === 'domain') {
-        let d2 = domain.toLowerCase();
-        let matched = false;
-        while (d2) {
-          if (d2 === ruleObj.domain) {
-            matched = true;
-            break;
-          }
-          let dotIndex = d2.indexOf('.');
-          if (dotIndex === -1) break;
-          d2 = d2.substring(dotIndex + 1);
-        }
-        if (matched) return true;
-      } else if (ruleObj.type === 'url' || ruleObj.type === 'regex') {
-        if (ruleObj.regex.test(url) || ruleObj.regex.test(domain)) return true;
-      } else if (ruleObj.type === 'title' && title) {
-        if (ruleObj.regex.test(title)) return true;
-      } else if (ruleObj.type === 'text' && snippet) {
-        if (ruleObj.regex.test(snippet)) return true;
-      }
-    }
-
-    // 高亮规则
-    let hd = domain.toLowerCase();
-    while (hd) {
-      if (compiledRules.highlightDomains.has(hd)) return compiledRules.highlightDomains.get(hd);
-      const dot = hd.indexOf('.');
-      if (dot === -1) break;
-      hd = hd.substring(dot + 1);
-    }
-    for (let {regex, N} of compiledRules.highlightUrls) {
-      if (regex.test(url) || regex.test(domain)) return N;
-    }
-    if (title) {
-      for (let {regex, N} of compiledRules.highlightTitles) {
-        if (regex.test(title)) return N;
-      }
-    }
-    if (snippet) {
-      for (let {regex, N} of compiledRules.highlightTexts) {
-        if (regex.test(snippet)) return N;
-      }
-    }
-    for (let item of compiledRules.highlightConditionalRules) {
-      let condMet = true;
-      for (let cond of item.conditions) {
-        if (cond.type === 'title' && cond.op === '*=') {
-          if (!title || !title.toLowerCase().includes(cond.val)) {
-            condMet = false;
-            break;
-          }
-        }
-      }
-      if (!condMet) continue;
-      if (item.type === 'domain') {
-        let d2 = domain.toLowerCase();
-        while (d2) {
-          if (d2 === item.domain) return item.N;
-          const dot = d2.indexOf('.');
-          if (dot === -1) break;
-          d2 = d2.substring(dot + 1);
-        }
-      } else {
-        if (item.regex.test(url) || item.regex.test(domain)) return item.N;
-      }
-    }
-
-    return false;
-  }
-
-  // 查找首条命中规则
-  function findFirstMatchingRule(url, domain, title, snippet) {
-    for (const item of compiledRules.rulesList) {
-      try {
-        if (item.conditions && item.conditions.length > 0) {
-          let conditionsMet = true;
-          for (let j = 0; j < item.conditions.length; j++) {
-            const cond = item.conditions[j];
-            if (cond.type === 'title' && cond.op === '*=') {
-              if (!title || !title.toLowerCase().includes(cond.val)) {
-                conditionsMet = false;
-                break;
-              }
-            }
-          }
-          if (!conditionsMet) continue;
-        }
-
-        if (item.type === 'domain') {
-          let d = domain.toLowerCase();
-          while (d) {
-            if (d === item.domain) {
-              return {
-                rule: item.originalRule,
-                source: item.source
-              };
-            }
-            const dot = d.indexOf('.');
-            if (dot === -1) break;
-            d = d.substring(dot + 1);
-          }
-        } else if (item.type === 'url' || item.type === 'regex') {
-          if (item.regex.test(url) || item.regex.test(domain)) {
-            return {
-              rule: item.originalRule,
-              source: item.source
-            };
-          }
-        } else if (item.type === 'title' && title) {
-          if (item.regex.test(title)) {
-            return {
-              rule: item.originalRule,
-              source: item.source
-            };
-          }
-        } else if (item.type === 'text' && snippet) {
-          if (item.regex.test(snippet)) {
-            return {
-              rule: item.originalRule,
-              source: item.source
-            };
-          }
-        }
-      } catch (e) {}
-    }
-    return null;
-  }
-
-  // 处理正文规则
-  function checkTextRule(rule, snippet) {
-    if (!snippet) return false;
-    let remaining = rule.substring(5);
+  function parsePrefixedRegexRule(rawRule, prefixLen) {
+    let remaining = rawRule.substring(prefixLen);
     let pattern, flags = '';
     const lastSlashIndex = remaining.lastIndexOf('/');
     if (lastSlashIndex !== -1 && lastSlashIndex < remaining.length - 1) {
@@ -1088,74 +589,442 @@
       pattern = pattern.replace(/\./g, '[\\s\\S]');
       flags = flags.replace('s', '');
     }
-    try {
-      const regex = new RegExp(pattern, flags);
-      return regex.test(snippet);
-    } catch (e) {
-      const simplePattern = pattern.replace(/^\(\?[ims]+\)/, '');
-      return flags.includes('i') ? snippet.toLowerCase().includes(simplePattern.toLowerCase()) : snippet.includes(simplePattern);
-    }
+    return { pattern, flags };
   }
 
-  // 函数匹配
-  function checkRuleMatch(rule, url, domain, title, snippet) {
-    if (rule.startsWith('/') && rule.lastIndexOf('/') > 0) {
-      try {
-        const {
-          pattern,
-          flags
-        } = ruleToRegex(rule);
-        const regex = new RegExp(pattern, flags);
-        return regex.test(url);
-      } catch (e) {
-        return false;
+  // 规则转换
+  function ruleToRegex(rule) {
+    if (!rule.startsWith('/') && !rule.startsWith('title/') && !rule.startsWith('text/') &&
+      !rule.includes('*') && !rule.includes('://') && !rule.startsWith('.')) {
+      if (rule.includes('.') && !/\s/.test(rule)) {
+        rule = '*://*.' + rule + '/*';
       }
     }
 
-    if (rule.startsWith('text/')) {
-      return checkTextRule(rule, snippet);
+    if (rule.startsWith('/') && rule.lastIndexOf('/') > 0) {
+      const lastSlash = rule.lastIndexOf('/');
+      const pattern = rule.slice(1, lastSlash);
+      const flags = rule.slice(lastSlash + 1);
+      return {
+        pattern,
+        flags
+      };
     }
 
     if (rule.startsWith('title/')) {
-      try {
-        const {
-          pattern,
-          flags
-        } = ruleToRegex(rule);
-        if (!title || title.trim() === '') return false;
-        const regex = new RegExp(pattern, flags);
-        return regex.test(title);
-      } catch (e) {
+      return parsePrefixedRegexRule(rule, 6);
+    }
+
+    if (rule.startsWith('text/')) {
+      return parsePrefixedRegexRule(rule, 5);
+    }
+
+    // URL规则
+    let pattern = rule;
+    if (pattern.startsWith('*://')) pattern = pattern.substring(4);
+    if (pattern.includes('/')) {
+      const parts = pattern.split('/');
+      pattern = parts.map((part, index) => {
+        if (index === 0) {
+          return part.replace(/\*/g, '.*').replace(/\?/g, '\\?').replace(/(?<!\\)\./g, '\\.');
+        } else {
+          return part.replace(/\*/g, '.*').replace(/\?/g, '\\?');
+        }
+      }).join('\\/');
+    } else {
+      pattern = pattern.replace(/\*/g, '.*').replace(/\?/g, '\\?').replace(/(?<!\\)\./g, '\\.');
+    }
+    return {
+      pattern,
+      flags: 'i'
+    };
+  }
+
+  // 白名单简单域名
+  function extractSimpleWhitelistDomain(rule) {
+    const wildcardMatch = rule.match(/^@\*:\/\*\.([^\/\*]+)\/\*$/);
+    if (wildcardMatch) return {domain: wildcardMatch[1].toLowerCase(), type: 'wildcard'};
+    const exactMatch = rule.match(/^@\*:\/\/([^\/\*]+)\/\*$/);
+    if (exactMatch) return {domain: exactMatch[1].toLowerCase(), type: 'exact'};
+    return null;
+  }
+
+  // 辅助匹配简单域名
+  function matchSimpleDomain(coreRule) {
+    let domainMatch = coreRule.match(/^\*:\/\/\*\.([^\/\*]+)\/\*$/);
+    if (!domainMatch) domainMatch = coreRule.match(/^\*:\/\/([^\/\*]+)\/\*$/);
+    if (domainMatch) {
+      const domain = domainMatch[1].toLowerCase();
+      if (!domain.includes('/')) {
+        return {domain, domainType: coreRule.startsWith('*://*.') ? 'wildcard' : 'exact'};
+      }
+    }
+    return null;
+  }
+
+  // 辅助分类正则
+  function compileRuleRegex(coreRule) {
+    if (coreRule.startsWith('/') && coreRule.lastIndexOf('/') > 0) {
+      const {pattern, flags} = ruleToRegex(coreRule);
+        return {type: 'regex', regex: new RegExp(pattern, flags)};
+    }
+    if (coreRule.startsWith('title/')) {
+      const {pattern, flags} = ruleToRegex(coreRule);
+      return {type: 'title', regex: new RegExp(pattern, flags)};
+    }
+    if (coreRule.startsWith('text/')) {
+      const {pattern, flags} = parsePrefixedRegexRule(coreRule, 5);
+      return {type: 'text', regex: new RegExp(pattern, flags)};
+    }
+    const {pattern, flags} = ruleToRegex(coreRule);
+    return {type: 'url', regex: new RegExp(pattern, flags)};
+  }
+
+  // 预编译规则索引
+  function buildRuleIndex() {
+    validationCache.clear();
+    subdomainCache.clear();
+    compiledRules = {
+      domains: new Map(),
+      urls: [],
+      titles: [],
+      texts: [],
+      whitelistDomains: new Map(),
+      whitelistUrlPatterns: [],
+      whitelistTitlePatterns: [],
+      whitelistTextPatterns: [],
+      conditionalRules: [],
+      conditionalDomains: new Map(),
+      highlightDomains: new Map(),
+      highlightUrls: [],
+      highlightTitles: [],
+      highlightTexts: [],
+      highlightConditionalRules: [],
+      highlightConditionalDomains: new Map()
+    };
+    const subscriptionRules = getAllSubscriptionRules();
+    const allRules = currentConfig.rules.concat(subscriptionRules);
+    const subscriptions = getSubscriptions();
+
+    const subRuleSets = subscriptions.map((sub, idx) => ({
+      idx,
+      set: (sub.enabled && sub.rules && sub.rules.length) ? new Set(sub.rules) : null
+    }));
+
+    function getRuleSource(rule) {
+      for (const {idx, set} of subRuleSets) {
+        if (set && set.has(rule)) return `${t('subscription')}${idx + 1}`;
+      }
+      return t('localRule');
+    }
+
+    allRules.forEach(rule => {
+
+      // @N高亮规则
+      const hlMatch = rule.trim().match(/^@(\d+)/);
+      if (hlMatch) {
+        const N = parseInt(hlMatch[1]);
+        if (N < 1 || N > 5) return;
+        let hlRule = rule.trim().substring(hlMatch[0].length).trim();
+        if (!hlRule) return;
+        const parsed = parseRuleWithConditions(hlRule);
+        if (!parsed.staticPass) return;
+        let coreRule = parsed.coreRule;
+
+        const dm = matchSimpleDomain(coreRule);
+        if (dm) {
+          if (!parsed.dynamicConditions.length) {
+            if (!compiledRules.highlightDomains.has(dm.domain))
+              compiledRules.highlightDomains.set(dm.domain, []);
+            compiledRules.highlightDomains.get(dm.domain).push({N, type: dm.domainType});
+          } else {
+            const hlCondRule = {type: 'domain', domain: dm.domain, N, conditions: parsed.dynamicConditions, domainType: dm.domainType};
+            if (!compiledRules.highlightConditionalDomains.has(dm.domain))
+              compiledRules.highlightConditionalDomains.set(dm.domain, []);
+            compiledRules.highlightConditionalDomains.get(dm.domain).push(hlCondRule);
+          }
+          return;
+        }
+
         try {
-          const simplePattern = rule.substring(6).replace(/^\(\?[ims]+\)/, '');
-          return rule.includes('(?i)') || rule.includes('(?i)') ? title.toLowerCase().includes(simplePattern.toLowerCase()) : title.includes(simplePattern);
-        } catch (e2) {
-          return false;
+          const compiled = compileRuleRegex(coreRule);
+          const ruleObj = {type: compiled.type, regex: compiled.regex, conditions: parsed.dynamicConditions, N};
+          if (!parsed.dynamicConditions.length) {
+            if (compiled.type === 'url' || compiled.type === 'regex') compiledRules.highlightUrls.push({regex: compiled.regex, N});
+            else if (compiled.type === 'title') compiledRules.highlightTitles.push({regex: compiled.regex, N});
+            else if (compiled.type === 'text') compiledRules.highlightTexts.push({regex: compiled.regex, N});
+          } else {
+            compiledRules.highlightConditionalRules.push(ruleObj);
+          }
+        } catch (e) {
+          if (currentConfig.debug) console.warn('高亮规则编译失败:', hlRule, e);
+        }
+        return;
+      }
+
+      if (!rule || rule.trim() === '' || rule.startsWith('#')) return;
+
+      const source = getRuleSource(rule);
+
+      const parsed = parseRuleWithConditions(rule);
+      if (!parsed.staticPass) return;
+
+      const coreRule = parsed.coreRule;
+      const hasDynamic = parsed.dynamicConditions.length > 0;
+
+      // 白名单处理
+      if (coreRule.startsWith('@')) {
+        const simpleDomain = extractSimpleWhitelistDomain(coreRule);
+        if (simpleDomain) {
+          if (!compiledRules.whitelistDomains.has(simpleDomain.domain))
+            compiledRules.whitelistDomains.set(simpleDomain.domain, []);
+          compiledRules.whitelistDomains.get(simpleDomain.domain).push(simpleDomain.type);
+        } else {
+          const whitelistRule = coreRule.substring(1).trim();
+          if (!whitelistRule) return;
+          try {
+            const compiled = compileRuleRegex(whitelistRule);
+            if (compiled.type === 'title') {
+              compiledRules.whitelistTitlePatterns.push(compiled.regex);
+            } else if (compiled.type === 'text') {
+              compiledRules.whitelistTextPatterns.push(compiled.regex);
+            } else {
+              compiledRules.whitelistUrlPatterns.push(compiled.regex);
+            }
+          } catch (e) {
+            if (currentConfig.debug) console.warn('白名单规则预编译失败:', rule, e);
+          }
+        }
+        return;
+      }
+
+      let ruleObj = {
+        originalRule: rule,
+        source: source,
+        conditions: parsed.dynamicConditions
+      };
+
+      // 处理域名规则
+      if (!coreRule.startsWith('/') && !coreRule.startsWith('text/') && !coreRule.startsWith('title/')) {
+        const dm = matchSimpleDomain(coreRule);
+        if (dm) {
+          ruleObj.type = 'domain';
+          ruleObj.domain = dm.domain;
+          ruleObj.domainType = dm.domainType;
+          if (!hasDynamic) {
+            if (!compiledRules.domains.has(dm.domain))
+              compiledRules.domains.set(dm.domain, []);
+            compiledRules.domains.get(dm.domain).push({type: dm.domainType, originalRule: rule, source});
+          } else {
+            if (!compiledRules.conditionalDomains.has(dm.domain))
+              compiledRules.conditionalDomains.set(dm.domain, []);
+            compiledRules.conditionalDomains.get(dm.domain).push(ruleObj);
+          }
+          return;
+        }
+      }
+
+      // 预编译正则
+      try {
+        const compiled = compileRuleRegex(coreRule);
+        ruleObj.type = compiled.type;
+        ruleObj.regex = compiled.regex;
+        if (!hasDynamic) {
+          if (compiled.type === 'text') compiledRules.texts.push({regex: compiled.regex, originalRule: rule, source});
+          else if (compiled.type === 'title') compiledRules.titles.push({regex: compiled.regex, originalRule: rule, source});
+          else compiledRules.urls.push({regex: compiled.regex, originalRule: rule, source});
+        } else {
+          compiledRules.conditionalRules.push(ruleObj);
+        }
+      } catch (e) {
+        if (currentConfig.debug) console.warn('规则预编译失败:', rule, e);
+      }
+    });
+  }
+
+  function cachedValidateRule(rule) {
+    if (validationCache.has(rule)) return validationCache.get(rule);
+    const result = validateRule(rule);
+    validationCache.set(rule, result);
+    return result;
+  }
+
+  function checkDynamicConditions(conditions, title) {
+    for (let j = 0; j < conditions.length; j++) {
+      const cond = conditions[j];
+      if (cond.type === 'title' && cond.op === '*=') {
+        if (!title || !title.toLowerCase().includes(cond.val)) return false;
+      }
+    }
+    return true;
+  }
+
+  function getSubdomainLevels(domain) {
+    const lower = domain.toLowerCase();
+    if (subdomainCache.has(lower)) return subdomainCache.get(lower);
+    const levels = [];
+    let d = lower;
+    while (d) {
+      levels.push(d);
+      const dot = d.indexOf('.');
+      if (dot === -1) break;
+      d = d.substring(dot + 1);
+    }
+    subdomainCache.set(lower, levels);
+    return levels;
+  }
+
+  // 规则优先级
+  function checkRuleMatchOptimized(url, domain, title, snippet, subdomainLevels) {
+    const lowerDomain = domain.toLowerCase();
+    let whitelisted = false;
+    let highlightN = 0;
+    let blockedInfo = null;
+
+    for (const level of subdomainLevels) {
+      const hlEntries = compiledRules.highlightDomains.get(level);
+      if (hlEntries) {
+        for (const hlData of hlEntries) {
+          if (hlData.type === 'wildcard' || (hlData.type === 'exact' && level === lowerDomain)) {
+            highlightN = hlData.N; break;
+          }
+        }
+        if (highlightN) break;
+      }
+    }
+    if (!highlightN) {
+      for (let {regex, N} of compiledRules.highlightUrls) {
+        if (regex.test(url) || regex.test(domain)) { highlightN = N; break; }
+      }
+    }
+    if (!highlightN && title) {
+      for (let {regex, N} of compiledRules.highlightTitles) {
+        if (regex.test(title)) { highlightN = N; break; }
+      }
+    }
+    if (!highlightN && snippet) {
+      for (let {regex, N} of compiledRules.highlightTexts) {
+        if (regex.test(snippet)) { highlightN = N; break; }
+      }
+    }
+    if (!highlightN) {
+      for (const level of subdomainLevels) {
+        const rules = compiledRules.highlightConditionalDomains.get(level);
+        if (rules) {
+          for (const item of rules) {
+            if ((item.domainType === 'wildcard' || (item.domainType === 'exact' && level === lowerDomain)) && checkDynamicConditions(item.conditions, title)) {
+              highlightN = item.N; break;
+            }
+          }
+          if (highlightN) break;
+        }
+      }
+    }
+    if (!highlightN) {
+      for (let item of compiledRules.highlightConditionalRules) {
+        if (!checkDynamicConditions(item.conditions, title)) continue;
+        if (item.type === 'url' || item.type === 'regex') {
+          if (item.regex.test(url) || item.regex.test(domain)) { highlightN = item.N; break; }
+        } else if (item.type === 'title' && title) {
+          if (item.regex.test(title)) { highlightN = item.N; break; }
+        } else if (item.type === 'text' && snippet) {
+          if (item.regex.test(snippet)) { highlightN = item.N; break; }
         }
       }
     }
 
-    // URL匹配
-    try {
-      const {
-        pattern,
-        flags
-      } = ruleToRegex(rule);
-      const regex = new RegExp(pattern, flags);
-      const fullMatch = regex.test(url);
-      const domainMatch = regex.test(domain);
-      return fullMatch || domainMatch;
-    } catch (e) {
-      try {
-        const simpleRule = rule.replace('*://', '').replace(/\*/g, '');
-        return url.includes(simpleRule) || domain.includes(simpleRule);
-      } catch (e2) {
-        return false;
+    for (const level of subdomainLevels) {
+      const types = compiledRules.whitelistDomains.get(level);
+      if (types) {
+        for (const matchType of types) {
+          if (matchType === 'wildcard') { whitelisted = true; break; }
+          if (matchType === 'exact' && level === lowerDomain) { whitelisted = true; break; }
+        }
+        if (whitelisted) break;
       }
     }
+    if (!whitelisted) {
+      for (let i = 0; i < compiledRules.whitelistUrlPatterns.length; i++) {
+        if (compiledRules.whitelistUrlPatterns[i].test(url) || compiledRules.whitelistUrlPatterns[i].test(domain)) {
+          whitelisted = true; break;
+        }
+      }
+    }
+    if (!whitelisted && title) {
+      for (let i = 0; i < compiledRules.whitelistTitlePatterns.length; i++) {
+        if (compiledRules.whitelistTitlePatterns[i].test(title)) { whitelisted = true; break; }
+      }
+    }
+    if (!whitelisted && snippet) {
+      for (let i = 0; i < compiledRules.whitelistTextPatterns.length; i++) {
+        if (compiledRules.whitelistTextPatterns[i].test(snippet)) { whitelisted = true; break; }
+      }
+    }
+
+    if (!whitelisted) {
+      for (const level of subdomainLevels) {
+        const entries = compiledRules.domains.get(level);
+        if (entries) {
+          for (const dm of entries) {
+            if (dm.type === 'wildcard') { blockedInfo = {rule: dm.originalRule, source: dm.source}; break; }
+            if (dm.type === 'exact' && level === lowerDomain) { blockedInfo = {rule: dm.originalRule, source: dm.source}; break; }
+          }
+          if (blockedInfo) break;
+        }
+      }
+      if (!blockedInfo) {
+        for (let i = 0; i < compiledRules.urls.length; i++) {
+          const item = compiledRules.urls[i];
+          if (item.regex.test(url) || item.regex.test(domain)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
+        }
+      }
+      if (!blockedInfo && title) {
+        for (let i = 0; i < compiledRules.titles.length; i++) {
+          const item = compiledRules.titles[i];
+          if (item.regex.test(title)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
+        }
+      }
+      if (!blockedInfo && snippet) {
+        for (let i = 0; i < compiledRules.texts.length; i++) {
+          const item = compiledRules.texts[i];
+          if (item.regex.test(snippet)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
+        }
+      }
+      if (!blockedInfo) {
+        for (const level of subdomainLevels) {
+          const rules = compiledRules.conditionalDomains.get(level);
+          if (rules) {
+            for (const ruleObj of rules) {
+              if ((ruleObj.domainType === 'wildcard' || (ruleObj.domainType === 'exact' && level === lowerDomain)) && checkDynamicConditions(ruleObj.conditions, title)) {
+                blockedInfo = {rule: ruleObj.originalRule, source: ruleObj.source}; break;
+              }
+            }
+            if (blockedInfo) break;
+          }
+        }
+      }
+      if (!blockedInfo) {
+        for (let i = 0; i < compiledRules.conditionalRules.length; i++) {
+          const ruleObj = compiledRules.conditionalRules[i];
+          if (!checkDynamicConditions(ruleObj.conditions, title)) continue;
+          if (ruleObj.type === 'url' || ruleObj.type === 'regex') {
+            if (ruleObj.regex.test(url) || ruleObj.regex.test(domain)) { blockedInfo = {rule: ruleObj.originalRule, source: ruleObj.source}; break; }
+          } else if (ruleObj.type === 'title' && title) {
+            if (ruleObj.regex.test(title)) { blockedInfo = {rule: ruleObj.originalRule, source: ruleObj.source}; break; }
+          } else if (ruleObj.type === 'text' && snippet) {
+            if (ruleObj.regex.test(snippet)) { blockedInfo = {rule: ruleObj.originalRule, source: ruleObj.source}; break; }
+          }
+        }
+      }
+    }
+
+    if (highlightN && blockedInfo) return {highlight: highlightN, blocked: true, rule: blockedInfo.rule, source: blockedInfo.source};
+    if (highlightN) return {highlight: highlightN};
+    if (blockedInfo) return {blocked: true, rule: blockedInfo.rule, source: blockedInfo.source};
+    return false;
   }
 
-  // google重定向
+  // 去除重定向
   function getCleanUrlAndFixDOM(link, engine) {
     if (!link || !link.href) return '';
     let url = link.href;
@@ -1295,10 +1164,14 @@
 
       // 添加规则
       let newRule = '';
-      const isIP = /^(\d{1,3}\.){3}\d{1,3}$/.test(domain);
+      const ipParts = domain.split('.');
+      const isIP = ipParts.length === 4 && ipParts.every(p => {
+        const n = parseInt(p, 10);
+        return n >= 0 && n <= 255 && String(n) === p;
+      });
 
       if (isIP) {
-        newRule = `*://${domain}`;
+        newRule = `*://${domain}/*`;
       } else {
         const baseDomain = domain.startsWith('www.') ? domain.substring(4) : domain;
         if (currentConfig.blockDomain) {
@@ -1370,33 +1243,21 @@
     const title = getResultTitle(result, engine);
     const snippet = getResultSnippet(result, engine);
 
-    const matchResult = checkRuleMatchOptimized(url, domain, title, snippet);
+    const lowerDomain = domain.toLowerCase();
+    const subdomainLevels = getSubdomainLevels(domain);
 
-    // 高亮优先
-    if (typeof matchResult === 'number') {
-      const color = currentConfig.highlightColors[matchResult] || '#CE2029';
-      result.style.display = '';
-      result.style.outline = `2px solid ${color}`;
-      result.style.outlineOffset = '-2px';
-      result.classList.remove('searchfilter-blocked-visible');
-      result.setAttribute('data-blocker-processed', 'true');
-      result.setAttribute('data-is-highlighted', 'true');
-      result.setAttribute('data-highlight-n', matchResult);
-      result.removeAttribute('data-is-blocked');
-      if (currentConfig.showBlockBtn) {
-        injectBlockButton(result, engine, url, domain);
-      }
-      return false;
-    }
+    const matchResult = checkRuleMatchOptimized(url, domain, title, snippet, subdomainLevels);
 
-    if (matchResult === true) {
+    // 黑名单＞高亮
+    if (matchResult && matchResult.blocked) {
       result.style.display = showHiddenResults ? '' : 'none';
       result.setAttribute('data-blocker-processed', 'true');
       result.setAttribute('data-is-blocked', 'true');
 
       // 清除yandex空白条
       if (engine === 'yandex') {
-        setTimeout(() => {
+        const timeoutId = setTimeout(() => {
+          yandexParentTimeouts.delete(timeoutId);
           const parent = result.parentElement;
           if (parent) {
             const hasVisibleSiblings = Array.from(parent.children).some(sibling => {
@@ -1406,27 +1267,43 @@
             });
             if (!hasVisibleSiblings) {
               parent.style.display = 'none';
+              parent.dataset.blockerYandexParent = 'true';
             }
           }
         }, 50);
+        yandexParentTimeouts.add(timeoutId);
       }
 
-      const match = findFirstMatchingRule(url, domain, title, snippet);
-      if (match) {
-        result.dataset.matchedRule = match.rule;
-        result.dataset.matchedSource = match.source;
-      }
+      result.dataset.matchedRule = matchResult.rule || '';
+      result.dataset.matchedSource = matchResult.source || '';
       if (showHiddenResults) {
         result.classList.add('searchfilter-blocked-visible');
         if (currentConfig.showBlockBtn) injectBlockButton(result, engine, url, domain);
         addMatchedRuleLabel(result);
       }
       return true;
-    } else {
+    }
+
+    if (matchResult && matchResult.highlight) {
+      const matchHL = matchResult.highlight;
+      const color = currentConfig.highlightColors[matchHL] || '#CE2029';
+      result.style.display = '';
+      result.style.outline = `2px solid ${color}`;
+      result.style.outlineOffset = '-2px';
+      result.classList.remove('searchfilter-blocked-visible');
       result.setAttribute('data-blocker-processed', 'true');
-      if (currentConfig.showBlockBtn) injectBlockButton(result, engine, url, domain);
+      result.setAttribute('data-is-highlighted', 'true');
+      result.setAttribute('data-highlight-n', matchHL);
+      result.removeAttribute('data-is-blocked');
+      if (currentConfig.showBlockBtn) {
+        injectBlockButton(result, engine, url, domain);
+      }
       return false;
     }
+
+    result.setAttribute('data-blocker-processed', 'true');
+    if (currentConfig.showBlockBtn) injectBlockButton(result, engine, url, domain);
+    return false;
   }
 
   // 视口观察器
@@ -1457,8 +1334,12 @@
       document.querySelectorAll('[data-blocker-processed], [data-observed]').forEach(result => {
         resultObserver.unobserve(result);
         result.style.display = '';
+        result.style.outline = '';
+        result.style.outlineOffset = '';
         result.removeAttribute('data-blocker-processed');
         result.removeAttribute('data-is-blocked');
+        result.removeAttribute('data-is-highlighted');
+        result.removeAttribute('data-highlight-n');
         result.removeAttribute('data-observed');
         result.classList.remove('searchfilter-blocked-visible');
         const label = result.querySelector('.searchfilter-matched-rule');
@@ -1505,6 +1386,8 @@
   }
 
   function forceReprocessAll() {
+    yandexParentTimeouts.forEach(id => clearTimeout(id));
+    yandexParentTimeouts.clear();
     buildRuleIndex();
 
     const engine = getSearchEngine();
@@ -1517,8 +1400,6 @@
     }
 
     document.querySelectorAll('[data-observed]').forEach(el => {
-      resultObserver.unobserve(el);
-      el.removeAttribute('data-observed');
       el.removeAttribute('data-blocker-processed');
       el.removeAttribute('data-is-blocked');
       el.removeAttribute('data-is-highlighted');
@@ -1531,28 +1412,36 @@
       if (label) label.remove();
     });
     document.querySelectorAll('.searchfilter-quick-block').forEach(btn => btn.remove());
-
-    const allResults = document.querySelectorAll(selector);
-
-    // 调试3
-    if (currentConfig.debug) {
-      console.log(`[搜索屏蔽器-force] 找到 ${allResults.length} 个结果元素`);
-    }
-
-    let totalBlocked = 0;
-
-    allResults.forEach(result => {
-      result.setAttribute('data-observed', 'true');
-      const blocked = processSingleResult(result);
-      if (blocked) totalBlocked++;
+    document.querySelectorAll('[data-blocker-yandex-parent]').forEach(el => {
+      el.style.display = '';
+      el.removeAttribute('data-blocker-yandex-parent');
     });
 
-    // 调试4
-    if (currentConfig.debug) {
-      console.log(`[搜索屏蔽器-force] 共屏蔽 ${totalBlocked} 个结果`);
-    }
+    const newResults = document.querySelectorAll(`${selector}:not([data-observed])`);
+    newResults.forEach(r => r.setAttribute('data-observed', 'true'));
 
-    updateStatus(totalBlocked);
+    const batchId = ++forceReprocessBatchId;
+    let totalBlocked = 0;
+    const allResults = document.querySelectorAll('[data-observed]');
+    let processIdx = 0;
+
+    function processBatch() {
+      if (batchId !== forceReprocessBatchId) return;
+      const batchSize = 30;
+      const end = Math.min(processIdx + batchSize, allResults.length);
+      for (; processIdx < end; processIdx++) {
+        if (processSingleResult(allResults[processIdx])) totalBlocked++;
+      }
+      if (processIdx < allResults.length) {
+        requestAnimationFrame(processBatch);
+      } else {
+        if (currentConfig.debug) {
+          console.log(`[搜索屏蔽器-force] 共屏蔽 ${totalBlocked} 个结果`);
+        }
+        updateStatus(totalBlocked);
+      }
+    }
+    requestAnimationFrame(processBatch);
   }
 
   // UI
@@ -2198,7 +2087,7 @@
             flex-shrink: 0 !important;
         }
 
-        /* Switch开关样式 */
+        /* 开关样式 */
         .searchfilter-switch {
             position: relative;
             display: inline-block;
@@ -2521,6 +2410,9 @@
     document.querySelectorAll('[data-is-blocked="true"]').forEach(el => {
       el.style.display = showHiddenResults ? '' : 'none';
       if (showHiddenResults) {
+        if (el.parentElement && el.parentElement.style.display === 'none') {
+          el.parentElement.style.display = '';
+        }
         el.classList.add('searchfilter-blocked-visible');
         const engine = getSearchEngine();
         const link = getResultLink(el, engine);
@@ -2565,7 +2457,6 @@
     const children = lineNums.children;
 
     if (Math.abs(lines.length - children.length) > 50) {
-      validationCache.clear();
       let html = '';
       for (let i = 0; i < lines.length; i++) {
         const rule = lines[i];
@@ -2607,6 +2498,10 @@
     scheduleLineNumbersUpdate();
   }
 
+  function escHtml(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
   // 统计面板
   function hideStatsPanel() {
     const statsPanel = document.getElementById('searchfilter-stats-panel');
@@ -2645,15 +2540,14 @@
       }
     });
 
-    const hlStatsRegex = /^@\d+/;
     const whitelistRules = activeRules
-      .filter(rule => rule.startsWith('@') && !rule.toLowerCase().startsWith('@if') && !hlStatsRegex.test(rule))
+      .filter(rule => rule.startsWith('@') && !rule.toLowerCase().startsWith('@if') && !HL_STATS_REGEX.test(rule))
       .map(rule => rule.substring(1).trim());
 
     const highlightRules = activeRules
-      .filter(rule => hlStatsRegex.test(rule));
+      .filter(rule => HL_STATS_REGEX.test(rule));
 
-    const compoundRules = activeRules.filter(rule => /@if\s*\(/i.test(rule) && !hlStatsRegex.test(rule));
+    const compoundRules = activeRules.filter(rule => /@if\s*\(/i.test(rule) && !HL_STATS_REGEX.test(rule));
 
     const engine = getSearchEngine();
     const selector = getContainerSelector(engine);
@@ -2687,7 +2581,7 @@
     if (ruleErrorsArray.length > 0) {
       resultHTML += `<div style="color: #c53030; background: #fff5f5; padding: 8px; border-radius: 4px; margin-bottom: 12px;"><strong>⚠️ ${t('statsErrors', {count: ruleErrorsArray.length})}</strong><br>`;
       ruleErrorsArray.forEach(item => {
-        resultHTML += `<div style="margin: 4px 0; font-size: 11px;"><div style="color: #2d3748;"><strong>${t('statsRule')}</strong>${item.rule}</div><div style="color: #c53030;"><strong>${t('statsError')}</strong>${item.errors.join(', ')}</div></div>`;
+        resultHTML += `<div style="margin: 4px 0; font-size: 11px;"><div style="color: #2d3748;"><strong>${t('statsRule')}</strong>${escHtml(item.rule)}</div><div style="color: #c53030;"><strong>${t('statsError')}</strong>${escHtml(item.errors.join(', '))}</div></div>`;
       });
       resultHTML += '</div>';
     }
@@ -2711,7 +2605,7 @@
 
       sortedRules.forEach(([rule, count]) => {
         let ruleType = t('urlRule');
-        if (hlStatsRegex.test(rule)) {
+        if (HL_STATS_REGEX.test(rule)) {
           ruleType = t('highlightRules');
         } else if (/@if\s*\(/i.test(rule)) {
           ruleType = t('statsCompound');
@@ -2728,7 +2622,7 @@
         resultHTML += `<span style="font-size: 11px; color: #718096;">${ruleType}</span>`;
         resultHTML += `<span style="font-size: 11px; color: #38a169; font-weight: bold;">${t('matchedCountLabel')}: ${count} ${t('matchedCountUnit')}</span>`;
         resultHTML += `</div>`;
-        resultHTML += `<div style="font-size: 12px; color: #2d3748; word-break: break-all; font-family: 'Consolas', monospace;">${rule}</div>`;
+        resultHTML += `<div style="font-size: 12px; color: #2d3748; word-break: break-all; font-family: 'Consolas', monospace;">${escHtml(rule)}</div>`;
         resultHTML += `</div>`;
       });
 
@@ -2747,7 +2641,7 @@
       resultHTML += `<span style="background: #2c5282; color: white; padding: 2px 10px; border-radius: 12px; font-size: 12px;">${t('stateEnabled')} ${whitelistRules.length} ${t('matchedCountUnit')}</span>`;
       resultHTML += `</div>`;
       whitelistRules.forEach(rule => {
-        resultHTML += `<div style="font-size: 11px; color: #4a5568; word-break: break-all; font-family: 'Consolas', monospace;">@${rule}</div>`;
+        resultHTML += `<div style="font-size: 11px; color: #4a5568; word-break: break-all; font-family: 'Consolas', monospace;">@${escHtml(rule)}</div>`;
       });
       resultHTML += `</div>`;
     }
@@ -2760,7 +2654,7 @@
       resultHTML += `<span style="background: #2c5282; color: white; padding: 2px 10px; border-radius: 12px; font-size: 12px;">${t('stateEnabled')} ${highlightRules.length} ${t('matchedCountUnit')}</span>`;
       resultHTML += `</div>`;
       highlightRules.forEach(rule => {
-        resultHTML += `<div style="font-size: 11px; color: #4a5568; word-break: break-all; font-family: 'Consolas', monospace;">${rule}</div>`;
+        resultHTML += `<div style="font-size: 11px; color: #4a5568; word-break: break-all; font-family: 'Consolas', monospace;">${escHtml(rule)}</div>`;
       });
       resultHTML += `</div>`;
     }
@@ -2803,8 +2697,17 @@
   function showConfigPanel() {
     const existingPanel = document.getElementById('searchfilter-panel');
     if (existingPanel) {
+      if (window._panelCloseHandler) {
+        document.removeEventListener('click', window._panelCloseHandler);
+        window._panelCloseHandler = null;
+      }
       existingPanel.remove();
       return;
+    }
+
+    if (window._panelCloseHandler) {
+      document.removeEventListener('click', window._panelCloseHandler);
+      window._panelCloseHandler = null;
     }
 
     const panel = document.createElement('div');
@@ -3064,7 +2967,7 @@
         return;
       }
 
-    function hslToRgb(h, s, v) {
+    function hsvToRgb(h, s, v) {
       h /= 360;
       let r, g, b;
       const i = Math.floor(h * 6);
@@ -3182,7 +3085,7 @@
       for (let y = 0; y < h; y++) {
         for (let x = 0; x < w; x++) {
           const s = x / w, v = 1 - y / h;
-          const [r, g, b] = hslToRgb(hue, s, v);
+          const [r, g, b] = hsvToRgb(hue, s, v);
           const idx = (y * w + x) * 4;
           imageData.data[idx] = r;
           imageData.data[idx+1] = g;
@@ -3199,14 +3102,14 @@
       const ctx = canvas.getContext('2d');
       const w = canvas.width, h = canvas.height;
       for (let y = 0; y < h; y++) {
-        const [r, g, b] = hslToRgb((y / h) * 360, 1, 1);
+        const [r, g, b] = hsvToRgb((y / h) * 360, 1, 1);
         ctx.fillStyle = `rgb(${r},${g},${b})`;
         ctx.fillRect(0, y, w, 1);
       }
     }
 
     function updatePickedColor() {
-      const [r, g, b] = hslToRgb(currentHue, currentSat, currentVal);
+      const [r, g, b] = hsvToRgb(currentHue, currentSat, currentVal);
       const hex = rgbToHex(r, g, b);
       const el = document.getElementById('hlcolor-code-text');
       if (el) el.textContent = hex;
@@ -3267,7 +3170,7 @@
         if (!/^#[0-9a-fA-F]{6}$/.test(val)) {
           const saveBtn = document.getElementById('hlcolor-save');
           const originalText = saveBtn.textContent;
-          saveBtn.textContent = t('errorword');
+          saveBtn.textContent = t('errorWord');
           saveBtn.style.backgroundColor = '#c53030';
           setTimeout(() => {
             saveBtn.textContent = originalText;
@@ -3344,23 +3247,36 @@
   }
 
   function saveSubscriptions(subscriptions) {
+    cachedSubscriptionRules = null;
     GM_setValue(SUBSCRIPTIONS_KEY, subscriptions);
   }
 
   function getAllSubscriptionRules() {
+    if (cachedSubscriptionRules) return cachedSubscriptionRules;
     const subs = getSubscriptions();
     const rules = [];
     subs.filter(s => s.enabled).forEach(s => {
       if (s.rules && Array.isArray(s.rules)) rules.push(...s.rules);
     });
+    cachedSubscriptionRules = rules;
     return rules;
   }
 
   // 订阅管理
   async function performSubscriptionForUrl(url, showAlerts = true) {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const content = await response.text();
+    const resp = await new Promise((resolve, reject) => {
+      GM_xmlhttpRequest({
+        method: 'GET',
+        url,
+        onload: (r) => {
+          if (r.status >= 200 && r.status < 300) resolve(r);
+          else reject(new Error(`HTTP ${r.status}`));
+        },
+        onerror: () => reject(new Error(t('networkError'))),
+        ontimeout: () => reject(new Error(t('requestTimeout')))
+      });
+    });
+    const content = resp.responseText;
 
     const lines = content.split('\n').map(line => line.trim());
     const validRules = [];
@@ -3859,6 +3775,7 @@
     }
     currentConfig.rules = mergedRules;
     GM_setValue(CONFIG_KEY, currentConfig);
+    GM_setValue(LOCAL_LAST_MODIFIED_KEY, Date.now());
     forceReprocessAll();
     GM_setValue(WEBDAV_LAST_SYNC_KEY, Date.now());
   }
@@ -3967,15 +3884,19 @@
     const subs = getSubscriptions();
     if (!subs || subs.length === 0) return;
     const now = Date.now();
-    subs.filter(s => s.enabled).forEach(async sub => {
-      if (now - sub.lastUpdate < 24 * 60 * 60 * 1000) return;
-      console.log(`[自动订阅] 开始更新: ${sub.url}`);
-      try {
-        await performSubscriptionForUrl(sub.url, false);
-      } catch (err) {
-        console.error(`[自动订阅] 失败: ${sub.url}`, err.message);
+    const needUpdate = subs.filter(s => s.enabled && now - s.lastUpdate >= 24 * 60 * 60 * 1000);
+    if (needUpdate.length === 0) return;
+    (async () => {
+      for (const sub of needUpdate) {
+        console.log(`[自动订阅] 开始更新: ${sub.url}`);
+        try {
+          await performSubscriptionForUrl(sub.url, false);
+        } catch (err) {
+          console.error(`[自动订阅] 失败: ${sub.url}`, err.message);
+        }
       }
-    });
+      forceReprocessAll();
+    })();
   }
 
   function init() {
@@ -3988,7 +3909,7 @@
     const domObserver = new MutationObserver((mutations) => {
       if (mutations.some(m => m.addedNodes.length > 0)) requestAnimationFrame(() => scanNewResults());
     });
-    domObserver.observe(document.body, {
+    domObserver.observe(document.querySelector('#rso, #results, .results, #main, main') || document.body, {
       childList: true,
       subtree: true
     });
