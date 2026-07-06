@@ -68,8 +68,7 @@
 **正文匹配：**  
 `text/.*示例.*/` – 匹配结果词条的网页描述内容中包含`示例`的搜索结果，此规则不会匹配标题  
 `text/.*示例abc.*/i` – 同上，加i忽略大小写  
-注意：正文匹配为脚本特有规则，无法在ublacklist中使用  
-
+  
 ### 效果截图：  
 
 <img width="464" height="300" alt="01" src="https://github.com/user-attachments/assets/998e772f-32be-4d0c-95de-7c2d65a4abd3" />  
