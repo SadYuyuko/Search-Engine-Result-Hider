@@ -68,7 +68,6 @@ Rules tend to favor titles and regular matches. For convenience, you can add rul
 **Snippet Matching:**  
 `text/.*example.*/` – matches results whose snippet/description contains `example`. This rule does not match titles.  
 `text/.*example.*/i` – same as above, case‑insensitive.  
-Note: Snipet Matching is a script-only rule that doesn't work in ublacklist  
   
 ### Screenshots：  
 
