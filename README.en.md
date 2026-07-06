@@ -2,8 +2,7 @@
 ## A tool to hide unwanted search results  
 ### [Github](https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js) | [Greasy Fork](https://greasyfork.org/zh-CN/scripts/552394) (Recommended) Install with any userscript manager  
 [中文](README.md) | [English](README.en.md)  
-This script is trying to replicate the functionality of uBlacklist on mobile browsers that only support script installation. It also works on desktop browsers or mobile browsers with extension support, though [uBlacklist](https://addons.mozilla.org/zh-CN/firefox/addon/ublacklist) is the preferred option in those environments.  
-
+Implement complex rule blocking function for search results on mobile browsers that only support script installation.  
 Supports Bing, Google, DuckDuckGo and Yandex, with potential support for more search engines in the future. It includes uBlacklist basic rule compatibility as well as regex matching, URL matching, title matching, whitelist matching, highlighting results and matching the snippet text of results.  
 
 **Current Features:**  
