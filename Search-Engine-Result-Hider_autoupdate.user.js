@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.1.0
+// @version      7.1.1
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -473,7 +473,6 @@
       if (!ruleToCheck) return true;
     }
 
-    // 前缀@if(){...}解包
     const prefixIfIdx = ruleToCheck.search(/@if\s*\(/i);
     if (prefixIfIdx !== -1) {
       const parenResult = extractBalancedParens(ruleToCheck, ruleToCheck.indexOf('(', prefixIfIdx));
@@ -486,7 +485,6 @@
       }
     }
 
-    // 正则循环剥离所有@if(...)
     const ifRegex = /@if\s*\(/gi;
     let match;
     const ranges = [];
@@ -1295,12 +1293,16 @@
       result.setAttribute('data-is-highlighted', 'true');
       result.setAttribute('data-highlight-n', matchHL);
       result.removeAttribute('data-is-blocked');
+      result.removeAttribute('data-matched-rule');
+      result.removeAttribute('data-matched-source');
       if (currentConfig.showBlockBtn) {
         injectBlockButton(result, engine, url, domain);
       }
       return false;
     }
 
+    result.removeAttribute('data-matched-rule');
+    result.removeAttribute('data-matched-source');
     result.setAttribute('data-blocker-processed', 'true');
     if (currentConfig.showBlockBtn) injectBlockButton(result, engine, url, domain);
     return false;
@@ -1404,6 +1406,8 @@
       el.removeAttribute('data-is-blocked');
       el.removeAttribute('data-is-highlighted');
       el.removeAttribute('data-highlight-n');
+      el.removeAttribute('data-matched-rule');
+      el.removeAttribute('data-matched-source');
       el.classList.remove('searchfilter-blocked-visible');
       el.style.outline = '';
       el.style.outlineOffset = '';
