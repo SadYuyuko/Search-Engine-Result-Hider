@@ -3,7 +3,7 @@
 ### [Github](https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js) | [Greasy Fork](https://greasyfork.org/zh-CN/scripts/552394) (推荐) 使用任意脚本管理器安装  
 [中文](README.md) | [English](README.en.md)  
 在仅支持安装脚本的移动端浏览器上实现复杂规则屏蔽搜索结果功能  
-适用于Bing、Google、DuckDuckGo、Yandex，未来可能支持更多搜索引擎。支持包括ublacklist基础规则在内的正则匹配、URL匹配、标题匹配、白名单匹配、结果高亮以及搜索词条正文内容匹配。  
+适用于Bing、Google、DuckDuckGo、Yandex，未来可能支持更多搜索引擎。支持包括ublacklist基础规则在内的正则匹配、URL匹配、标题匹配、白名单匹配、高亮目标结果以及搜索词条正文内容匹配。  
 
 **当前功能：**  
 - 屏蔽按钮一键屏蔽域名  
