@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.1.1
+// @version      7.1.2
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -89,24 +89,17 @@
       blockDomain: '屏蔽域名',
       doubleConfirm: '二次确认',
       bubbleSize: '悬浮球大小:',
-      sizeMedium: '中杯',
-      sizeLarge: '大杯',
-      sizeLarger: '超大',
-      sizeXLarge: '特大',
       blockRules: '屏蔽规则:',
-      subscribe: '订阅',
       sync: '同步',
       import: '导入',
       export: '导出',
       save: '保存',
       test: '统计',
       close: '关闭',
+      cancel: '取消',
       placeholder: '每行一个规则',
       panelTitle: '订阅管理',
-      addSubscription: '➕ 添加订阅',
-      saveSub: '保存',
-      importSub: '导入',
-      cancel: '取消',
+      addSubscription: '添加订阅',
       webdavTitle: 'WebDAV同步设置',
       webdavUrl: 'Webdav地址',
       webdavUser: 'Webdav账号',
@@ -139,7 +132,6 @@
       noRulesExport: '没有规则可导出',
       confirmBlock: '确定要屏蔽并添加规则 [ {rule} ] 吗？',
       statsErrors: '发现 {count} 个规则错误：',
-      statsRule: '规则：',
       matchedCountLabel: '匹配',
       matchedCountUnit: '条',
       menuBubbleStateShow: '显示',
@@ -148,7 +140,6 @@
       menuBubbleActionToggle: '显示隐藏结果',
       stateEnabled: '启用',
       stateDisabled: '关闭',
-      statsError: '错误：',
       subLinkEmpty: '链接为空',
       subImportSuccess: '导入成功，已导入 {count} 条规则',
       subImportFailed: '导入失败，请检查链接或网络状态',
@@ -178,24 +169,17 @@
       blockDomain: 'Block Domain',
       doubleConfirm: 'Confirm',
       bubbleSize: 'Bubble Size:',
-      sizeMedium: 'Medium',
-      sizeLarge: 'Large',
-      sizeLarger: 'Larger',
-      sizeXLarge: 'XLarge',
       blockRules: 'Block Rules:',
-      subscribe: 'Subscribe',
       sync: 'Sync',
       import: 'Import',
       export: 'Export',
       save: 'Save',
       test: 'Stats',
       close: 'Close',
+      cancel: 'Cancel',
       placeholder: 'One rule per line',
       panelTitle: 'Subscription Manager',
-      addSubscription: '➕ Add Subscription',
-      saveSub: 'Save',
-      importSub: 'Import',
-      cancel: 'Cancel',
+      addSubscription: 'Add Subscription',
       webdavTitle: 'WebDAV Sync Settings',
       webdavUrl: 'WebDAV URL',
       webdavUser: 'Username',
@@ -205,7 +189,7 @@
       download: 'Download',
       matchedRule: 'Rule',
       localRule: 'Local Rule',
-      subscription: 'Subscription',
+      subscription: 'Sub',
       urlRule: 'URL Rule',
       titleRule: 'Title Rule',
       textRule: 'Text Rule',
@@ -228,7 +212,6 @@
       noRulesExport: 'No rules to export',
       confirmBlock: 'Add block rule [ {rule} ] ?',
       statsErrors: 'Found {count} rule errors:',
-      statsRule: 'Rule:',
       matchedCountLabel: 'Hits',
       matchedCountUnit: 'Rule',
       menuBubbleStateShow: 'Show',
@@ -237,7 +220,6 @@
       menuBubbleActionToggle: 'Toggle Results',
       stateEnabled: 'Enabled',
       stateDisabled: 'Disabled',
-      statsError: 'Error:',
       subLinkEmpty: 'URL is empty',
       subImportSuccess: 'Import success, {count} rules imported',
       subImportFailed: 'Import failed, check URL or network',
@@ -1358,27 +1340,27 @@
     // 调试1
     if (currentConfig.debug) {
       const allMatches = document.querySelectorAll(selector);
-      console.log(`[搜索屏蔽器] 引擎: ${engine}, 选择器: "${selector}", 匹配数量: ${allMatches.length}`);
+      console.log(`[屏蔽] 引擎: ${engine}, 选择器: "${selector}", 匹配数量: ${allMatches.length}`);
       if (allMatches.length > 0) {
-        console.log('[搜索屏蔽器] 第一个匹配元素:', allMatches[0]);
-        console.log('[搜索屏蔽器] 第一个元素的 href:', allMatches[0].querySelector('a[href]')?.href);
+        console.log('[屏蔽] 第一个匹配元素:', allMatches[0]);
+        console.log('[屏蔽] 第一个元素的 href:', allMatches[0].querySelector('a[href]')?.href);
       } else {
-        console.log('[搜索屏蔽器] ⚠️ 选择器未匹配到任何元素！');
-        console.log('[搜索屏蔽器] 页面中所有 li:', document.querySelectorAll('li').length);
-        console.log('[搜索屏蔽器] 页面中所有 article:', document.querySelectorAll('article').length);
+        console.log('[屏蔽] 选择器未匹配到任何元素');
+        console.log('[屏蔽] 页面中所有 li:', document.querySelectorAll('li').length);
+        console.log('[屏蔽] 页面中所有 article:', document.querySelectorAll('article').length);
         const lis = document.querySelectorAll('li');
         const classes = new Set();
         lis.forEach(li => {
           if (li.className && typeof li.className === 'string') classes.add(li.className);
         });
-        console.log('[搜索屏蔽器] li 的 class 列表:', [...classes].slice(0, 30));
+        console.log('[屏蔽] li 的 class 列表:', [...classes].slice(0, 30));
       }
     }
 
     const newResults = document.querySelectorAll(`${selector}:not([data-observed])`);
 
     if (currentConfig.debug) {
-      console.log(`[搜索屏蔽器] 未处理的新结果数量: ${newResults.length}`);
+      console.log(`[屏蔽] 未处理的新结果数量: ${newResults.length}`);
     }
 
     newResults.forEach(result => {
@@ -1397,8 +1379,8 @@
 
     // 调试2
     if (currentConfig.debug) {
-      console.log(`[搜索屏蔽器-force] 引擎: ${engine}, 选择器: "${selector}"`);
-      console.log(`[搜索屏蔽器-force] 规则数量: domains=${compiledRules.domains.size}, urls=${compiledRules.urls.length}, titles=${compiledRules.titles.length}, texts=${compiledRules.texts.length}`);
+      console.log(`[屏蔽] 引擎: ${engine}, 选择器: "${selector}"`);
+      console.log(`[屏蔽] 规则数量: domains=${compiledRules.domains.size}, urls=${compiledRules.urls.length}, titles=${compiledRules.titles.length}, texts=${compiledRules.texts.length}`);
     }
 
     document.querySelectorAll('[data-observed]').forEach(el => {
@@ -1440,7 +1422,7 @@
         requestAnimationFrame(processBatch);
       } else {
         if (currentConfig.debug) {
-          console.log(`[搜索屏蔽器-force] 共屏蔽 ${totalBlocked} 个结果`);
+          console.log(`[屏蔽] 共屏蔽 ${totalBlocked} 个结果`);
         }
         updateStatus(totalBlocked);
       }
@@ -2585,7 +2567,7 @@
     if (ruleErrorsArray.length > 0) {
       resultHTML += `<div style="color: #c53030; background: #fff5f5; padding: 8px; border-radius: 4px; margin-bottom: 12px;"><strong>⚠️ ${t('statsErrors', {count: ruleErrorsArray.length})}</strong><br>`;
       ruleErrorsArray.forEach(item => {
-        resultHTML += `<div style="margin: 4px 0; font-size: 11px;"><div style="color: #2d3748;"><strong>${t('statsRule')}</strong>${escHtml(item.rule)}</div><div style="color: #c53030;"><strong>${t('statsError')}</strong>${escHtml(item.errors.join(', '))}</div></div>`;
+        resultHTML += `<div style="margin: 4px 0; font-size: 11px;"><div style="color: #2d3748;"><strong>${t('matchedRule')}: </strong>${escHtml(item.rule)}</div><div style="color: #c53030;"><strong>${t('errorWord')}: </strong>${escHtml(item.errors.join(', '))}</div></div>`;
       });
       resultHTML += '</div>';
     }
@@ -2804,7 +2786,7 @@
                 <div class="compact-row">
                     <span style="font-size: 12px; color: #4a5568;">${t('blockRules')}</span>
                     <div style="display: flex; gap: 4px;">
-                        <button id="searchfilter-subscribe" class="searchfilter-button searchfilter-button-secondary" style="padding: 3px 8px; border: 1px solid transparent;">${t('subscribe')}</button>
+                        <button id="searchfilter-subscribe" class="searchfilter-button searchfilter-button-secondary" style="padding: 3px 8px; border: 1px solid transparent;">${t('subscription')}</button>
                         <button id="searchfilter-sync" class="searchfilter-button searchfilter-button-success" style="padding: 3px 8px; border: 1px solid transparent;">${t('sync')}</button>
                         <button id="searchfilter-import-file" class="searchfilter-button searchfilter-button-secondary" style="padding: 3px 8px; border: 1px solid transparent;">${t('import')}</button>
                         <button id="searchfilter-export-file" class="searchfilter-button searchfilter-button-success" style="padding: 3px 8px; border: 1px solid transparent;">${t('export')}</button>
@@ -2963,7 +2945,7 @@
 
   }
 
-  // 高亮颜色面板
+  // 高亮面板
     function showHighlightColorPanel() {
       const existing = document.getElementById('searchfilter-hlcolor-panel');
       if (existing) {
@@ -3361,7 +3343,7 @@
             <h3 style="margin:0 0 16px;font-size:16px;color:#2d3748;">${t('panelTitle')}</h3>
             <div id="subscription-rows-container">${rowsHtml}</div>
             <div class="add-subscription-btn"><button id="add-subscription" class="searchfilter-button searchfilter-button-secondary" style="width:100%;" ${subscriptions.length >= 3 ? 'disabled' : ''}>${t('addSubscription')}</button></div>
-            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:0px;"><button id="subscription-save" class="searchfilter-button searchfilter-button-primary" style="flex:1;">${t('saveSub')}</button><button id="subscription-import" class="searchfilter-button searchfilter-button-primary" style="flex:1;">${t('importSub')}</button><button id="subscription-cancel" class="searchfilter-button searchfilter-button-secondary" style="flex:1;">${t('cancel')}</button></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:0px;"><button id="subscription-save" class="searchfilter-button searchfilter-button-primary" style="flex:1;">${t('save')}</button><button id="subscription-import" class="searchfilter-button searchfilter-button-primary" style="flex:1;">${t('import')}</button><button id="subscription-cancel" class="searchfilter-button searchfilter-button-secondary" style="flex:1;">${t('cancel')}</button></div>
             <div id="subscription-status" style="color:#4a5568;"></div>
         `;
 
