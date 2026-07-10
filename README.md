@@ -71,10 +71,8 @@
   
 ### 效果截图：  
 
-<img width="464" height="300" alt="01" src="https://github.com/user-attachments/assets/998e772f-32be-4d0c-95de-7c2d65a4abd3" />  
-
----  
-<img width="277" height="270" alt="02" src="https://github.com/user-attachments/assets/816f7952-8e19-408d-819c-497c6df1133c" />  
-
----  
-<img width="256" height="170" alt="1783165677531" src="https://github.com/user-attachments/assets/facdc784-3778-457e-a3e4-1585dc65efeb" />  
+<img width="464" height="300" alt="01" src="https://github.com/user-attachments/assets/998e772f-32be-4d0c-95de-7c2d65a4abd3" />
+<br>
+<img width="277" height="270" alt="02" src="https://github.com/user-attachments/assets/816f7952-8e19-408d-819c-497c6df1133c" />
+<br>
+<img width="256" height="170" alt="1783165677531" src="https://github.com/user-attachments/assets/facdc784-3778-457e-a3e4-1585dc65efeb" />
