@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.1.2
+// @version      7.1.3
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -48,6 +48,7 @@
   const WEBDAV_LAST_SYNC_KEY = 'searchfilter_webdav_last_sync';
   const LOCAL_LAST_MODIFIED_KEY = 'searchfilter_local_last_modified';
   const WEBDAV_AUTO_SYNC_KEY = 'searchfilter_webdav_auto_sync';
+  const WEBDAV_SYNC_CONFIG_KEY = 'searchfilter_webdav_sync_config';
   const HL_STATS_REGEX = /^@\d+/;
 
   // 默认配置
@@ -100,7 +101,7 @@
       placeholder: '每行一个规则',
       panelTitle: '订阅管理',
       addSubscription: '添加订阅',
-      webdavTitle: 'WebDAV同步设置',
+      webdavTitle: 'WebDAV同步',
       webdavUrl: 'Webdav地址',
       webdavUser: 'Webdav账号',
       webdavPass: '应用密码',
@@ -154,6 +155,7 @@
       subLinkInvalid: '链接错误',
       importing: '导入中',
       autoSync: '自动同步',
+      syncScriptConfig: '同步配置',
       webdavUrlEmpty: 'WebDAV地址为空',
       highlightRules: '高亮规则',
       menuHighlightColor: '🎨 高亮颜色',
@@ -180,7 +182,7 @@
       placeholder: 'One rule per line',
       panelTitle: 'Subscription Manager',
       addSubscription: 'Add Subscription',
-      webdavTitle: 'WebDAV Sync Settings',
+      webdavTitle: 'WebDAV Sync',
       webdavUrl: 'WebDAV URL',
       webdavUser: 'Username',
       webdavPass: 'Password',
@@ -234,6 +236,7 @@
       subLinkInvalid: 'Invalid URL',
       importing: 'Importing',
       autoSync: 'Auto Sync',
+      syncScriptConfig: 'Sync Config',
       webdavUrlEmpty: 'WebDAV URL is empty',
       highlightRules: 'Highlight Rules',
       menuHighlightColor: '🎨 Highlight Colors',
@@ -3522,18 +3525,28 @@
     `;
 
     const autoSyncEnabled = GM_getValue(WEBDAV_AUTO_SYNC_KEY, false);
+    const syncConfigEnabled = GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false);
 
     // webdav面板布局
     panel.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0;">
         <h3 style="margin:0;font-size:16px;color:#2d3748;line-height:1;">${t('webdavTitle')}</h3>
-        <label style="display:flex !important;align-items:center;font-size:12px;color:#4a5568;cursor:pointer;margin:0;white-space:nowrap;line-height:1;">
-            <span class="searchfilter-switch">
-                <input type="checkbox" id="webdav-auto-sync" ${autoSyncEnabled ? 'checked' : ''}>
-                <span class="searchfilter-slider"></span>
-            </span>
-            <span style="line-height:1;">${t('autoSync')}</span>
-        </label>
+        <div style="display:flex;align-items:center;gap:8px;">
+            <label style="display:flex !important;align-items:center;font-size:12px;color:#4a5568;cursor:pointer;margin:0;white-space:nowrap;line-height:1;">
+                <span class="searchfilter-switch">
+                    <input type="checkbox" id="webdav-auto-sync" ${autoSyncEnabled ? 'checked' : ''}>
+                    <span class="searchfilter-slider"></span>
+                </span>
+                <span style="line-height:1;">${t('autoSync')}</span>
+            </label>
+            <label style="display:flex !important;align-items:center;font-size:12px;color:#4a5568;cursor:pointer;margin:0;white-space:nowrap;line-height:1;">
+                <span class="searchfilter-switch">
+                    <input type="checkbox" id="webdav-sync-config" ${syncConfigEnabled ? 'checked' : ''}>
+                    <span class="searchfilter-slider"></span>
+                </span>
+                <span style="line-height:1;">${t('syncScriptConfig')}</span>
+            </label>
+        </div>
     </div>
     <div class="webdav-row"><label>${t('webdavUrl')}</label><input id="webdav-url" type="text" placeholder="https://example.com/dav/files/" value="${webdavConfig.url}"></div>
     <div class="webdav-row"><label>${t('webdavUser')}</label><input id="webdav-username" type="text" value="${webdavConfig.username}"></div>
@@ -3614,7 +3627,11 @@
       }
       const config = saveWebDAVConfig();
       const textarea = document.getElementById('searchfilter-rules');
-      const content = textarea ? textarea.value : currentConfig.rules.join('\n');
+      let content = textarea ? textarea.value : currentConfig.rules.join('\n');
+      if (GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)) {
+        const { rules, ...settings } = currentConfig;
+        content = '# ScriptConfig:' + JSON.stringify(settings) + '\n' + content;
+      }
       setStatus(t('webdavUploading'));
       try {
         const fullUrl = config.url.replace(/\/$/, '') + '/' + config.filename;
@@ -3642,6 +3659,9 @@
 
     document.getElementById('webdav-auto-sync').onchange = (e) => {
       GM_setValue(WEBDAV_AUTO_SYNC_KEY, e.target.checked);
+    };
+    document.getElementById('webdav-sync-config').onchange = (e) => {
+      GM_setValue(WEBDAV_SYNC_CONFIG_KEY, e.target.checked);
     };
 
     // webdav下载
@@ -3694,7 +3714,22 @@
       });
     });
     const content = resp.responseText;
-    const newRules = content.split('\n').map(r => r.trim()).filter(r => r);
+    const lines = content.split('\n');
+    let configParsed = false;
+    if (GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false) && lines.length > 0 && lines[0].startsWith('# ScriptConfig:')) {
+      try {
+        const jsonStr = lines[0].substring('# ScriptConfig:'.length);
+        const parsed = JSON.parse(jsonStr);
+        const { rules, ...settings } = parsed;
+        Object.assign(currentConfig, settings);
+        GM_setValue(CONFIG_KEY, currentConfig);
+        configParsed = true;
+      } catch (e) {
+        if (currentConfig.debug) console.warn('[WebDAV] 配置头解析失败:', e);
+      }
+    }
+    const newLines = configParsed ? lines.slice(1) : lines;
+    const newRules = newLines.map(r => r.trim()).filter(r => r);
     const textarea = document.getElementById('searchfilter-rules');
     if (textarea) {
       textarea.value = newRules.join('\n');
@@ -3730,10 +3765,23 @@
     });
 
     let cloudRules = [];
+    let cloudConfig = null;
     let cloudTime = 0;
     if (resp.status !== 404) {
       const content = resp.responseText;
-      cloudRules = content.split('\n').map(r => r.trim()).filter(r => r);
+      const rawLines = content.split('\n');
+      if (GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false) && rawLines.length > 0 && rawLines[0].startsWith('# ScriptConfig:')) {
+        try {
+          const jsonStr = rawLines[0].substring('# ScriptConfig:'.length);
+          cloudConfig = JSON.parse(jsonStr);
+          const { rules, ...settings } = cloudConfig;
+          cloudRules = rawLines.slice(1).map(r => r.trim()).filter(r => r);
+        } catch (e) {
+          cloudRules = rawLines.map(r => r.trim()).filter(r => r);
+        }
+      } else {
+        cloudRules = rawLines.map(r => r.trim()).filter(r => r);
+      }
       const lastModMatch = resp.responseHeaders.match(/last-modified:\s*(.*)/i);
       if (lastModMatch) cloudTime = Date.parse(lastModMatch[1]);
       if (isNaN(cloudTime)) cloudTime = 0;
@@ -3745,12 +3793,17 @@
 
     if (localTime > cloudTime) {
       console.log('[自动 WebDAV] 本地规则较新，合并后上传...');
+      let uploadData = mergedRules.join('\n');
+      if (GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)) {
+        const { rules, ...settings } = currentConfig;
+        uploadData = '# ScriptConfig:' + JSON.stringify(settings) + '\n' + uploadData;
+      }
       await new Promise((resolve, reject) => {
         GM_xmlhttpRequest({
           method: 'PUT',
           url: fullUrl,
           headers,
-          data: mergedRules.join('\n'),
+          data: uploadData,
           onload: (r) => {
             if (r.status >= 200 && r.status < 300) resolve(r);
             else reject(new Error(`HTTP ${r.status}`));
@@ -3759,6 +3812,12 @@
         });
       });
     }
+
+    if (cloudConfig && GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)) {
+      const { rules, ...settings } = cloudConfig;
+      Object.assign(currentConfig, settings);
+    }
+
     currentConfig.rules = mergedRules;
     GM_setValue(CONFIG_KEY, currentConfig);
     GM_setValue(LOCAL_LAST_MODIFIED_KEY, Date.now());
