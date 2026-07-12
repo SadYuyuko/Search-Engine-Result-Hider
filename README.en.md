@@ -28,7 +28,7 @@ Supports Bing, Google, DuckDuckGo and Yandex, with potential support for more se
 
 **Notes:**  
 1. Exporting to TXT relies on blob functionality. Please ensure your browser supports blob operations.  
-2. Subscriptions update once per day. Only remote .txt file links are supported, with a maximum of 3 subscriptions. Subscription rules are applied after local rules. Due to script performance constraints, it is recommended to keep the total rule count under 30,000 to avoid performance issues on mobile devices.  
+2. Subscriptions update once per day. Only remote .txt file links are supported, with a maximum of 3 subscriptions. Subscription rules are applied after local rules. Due to the limited performance of the script available, the total number of rules should not exceed 10,000 to avoid lagging on the phone.  
 3. Due to script extension limitations, `##` uBlock DOM syntax rules are not supported. Such rules will be automatically removed when imported via subscription.  
   
 Rules tend to favor titles and regular matches. For convenience, you can add rules in script without using `*://*.` Prefix directly write domain name, but for the rules that need to be used in the ublacklist, you need to add it.    
