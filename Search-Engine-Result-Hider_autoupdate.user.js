@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.1.3
+// @version      7.1.4
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -298,7 +298,8 @@
   const validationCache = new Map();
   const subdomainCache = new Map();
   let cachedSubscriptionRules = null;
-  let lineUpdateRaf = null;
+  let _prevLineArray = null;
+  let _lineDebounceTimer = null;
   let forceReprocessBatchId = 0;
 
   // 引擎检测
@@ -2443,48 +2444,63 @@
     if (!textarea || !lineNums) return;
 
     const lines = textarea.value.split('\n');
+    const prevLines = _prevLineArray;
+    _prevLineArray = lines;
     const children = lineNums.children;
 
-    if (Math.abs(lines.length - children.length) > 50) {
+    if (!prevLines || Math.abs(lines.length - children.length) > 50) {
       let html = '';
       for (let i = 0; i < lines.length; i++) {
-        const rule = lines[i];
-        const isValid = cachedValidateRule(rule);
-        const warnIcon = isValid ? '' : `<span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 10px; background: #edf2f7; z-index: 1;">⚠️</span>`;
-        html += `<div style="position: relative; color: #a0aec0;">${i + 1}${warnIcon}</div>`;
+        const isValid = cachedValidateRule(lines[i]);
+        html += `<div style="position: relative; color: #a0aec0;">${i + 1}${isValid ? '' : '<span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 10px; background: #edf2f7; z-index: 1;">⚠️</span>'}</div>`;
       }
       lineNums.innerHTML = html;
       return;
     }
 
-    while (children.length > lines.length) {
-      lineNums.removeChild(lineNums.lastChild);
-    }
-    while (children.length < lines.length) {
-      const div = document.createElement('div');
-      div.style.position = 'relative';
-      div.style.color = '#a0aec0';
-      lineNums.appendChild(div);
-    }
+    const len = lines.length;
+    const prevLen = prevLines.length;
 
-    for (let i = 0; i < lines.length; i++) {
-      const rule = lines[i];
-      const isValid = cachedValidateRule(rule);
-      const warnIcon = isValid ? '' : `<span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 10px; background: #edf2f7; z-index: 1;">⚠️</span>`;
-      children[i].innerHTML = `${i + 1}${warnIcon}`;
+    if (len === prevLen) {
+      for (let i = 0; i < len; i++) {
+        if (lines[i] === prevLines[i]) continue;
+        const isValid = cachedValidateRule(lines[i]);
+        children[i].innerHTML = `${i + 1}${isValid ? '' : '<span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 10px; background: #edf2f7; z-index: 1;">⚠️</span>'}`;
+      }
+    } else {
+      let firstDiff = 0;
+      const minLen = Math.min(len, prevLen);
+      while (firstDiff < minLen && lines[firstDiff] === prevLines[firstDiff]) {
+        firstDiff++;
+      }
+
+      while (children.length > len) {
+        lineNums.removeChild(lineNums.lastChild);
+      }
+      while (children.length < len) {
+        const div = document.createElement('div');
+        div.style.position = 'relative';
+        div.style.color = '#a0aec0';
+        lineNums.appendChild(div);
+      }
+
+      for (let i = firstDiff; i < len; i++) {
+        const isValid = cachedValidateRule(lines[i]);
+        children[i].innerHTML = `${i + 1}${isValid ? '' : '<span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 10px; background: #edf2f7; z-index: 1;">⚠️</span>'}`;
+      }
     }
   }
 
   function scheduleLineNumbersUpdate() {
-    if (lineUpdateRaf) cancelAnimationFrame(lineUpdateRaf);
-    lineUpdateRaf = requestAnimationFrame(() => {
-      updateLineNumbersIncremental();
-      lineUpdateRaf = null;
-    });
+    if (_lineDebounceTimer) clearTimeout(_lineDebounceTimer);
+    _lineDebounceTimer = setTimeout(() => {
+      _lineDebounceTimer = null;
+      requestAnimationFrame(updateLineNumbersIncremental);
+    }, 100);
   }
 
   function updateLineNumbers() {
-    scheduleLineNumbersUpdate();
+    requestAnimationFrame(updateLineNumbersIncremental);
   }
 
   function escHtml(str) {
@@ -3630,7 +3646,8 @@
       let content = textarea ? textarea.value : currentConfig.rules.join('\n');
       if (GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)) {
         const { rules, ...settings } = currentConfig;
-        content = '# ScriptConfig:' + JSON.stringify(settings) + '\n' + content;
+        const uploadPayload = { ...settings, subscriptions: getSubscriptions().map(s => ({ url: s.url, enabled: s.enabled, lastUpdate: s.lastUpdate })) };
+        content = '# ScriptConfig:' + JSON.stringify(uploadPayload) + '\n' + content;
       }
       setStatus(t('webdavUploading'));
       try {
@@ -3716,17 +3733,20 @@
     const content = resp.responseText;
     const lines = content.split('\n');
     let configParsed = false;
-    if (GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false) && lines.length > 0 && lines[0].startsWith('# ScriptConfig:')) {
-      try {
-        const jsonStr = lines[0].substring('# ScriptConfig:'.length);
-        const parsed = JSON.parse(jsonStr);
-        const { rules, ...settings } = parsed;
-        Object.assign(currentConfig, settings);
-        GM_setValue(CONFIG_KEY, currentConfig);
-        configParsed = true;
-      } catch (e) {
-        if (currentConfig.debug) console.warn('[WebDAV] 配置头解析失败:', e);
+    if (lines.length > 0 && lines[0].startsWith('# ScriptConfig:')) {
+      if (GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)) {
+        try {
+          const jsonStr = lines[0].substring('# ScriptConfig:'.length);
+          const parsed = JSON.parse(jsonStr);
+          const { subscriptions, ...settings } = parsed;
+          Object.assign(currentConfig, settings);
+          GM_setValue(CONFIG_KEY, currentConfig);
+          if (subscriptions) saveSubscriptions(subscriptions);
+        } catch (e) {
+          if (currentConfig.debug) console.warn('[WebDAV] 配置头解析失败:', e);
+        }
       }
+      configParsed = true;
     }
     const newLines = configParsed ? lines.slice(1) : lines;
     const newRules = newLines.map(r => r.trim()).filter(r => r);
@@ -3770,15 +3790,18 @@
     if (resp.status !== 404) {
       const content = resp.responseText;
       const rawLines = content.split('\n');
-      if (GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false) && rawLines.length > 0 && rawLines[0].startsWith('# ScriptConfig:')) {
-        try {
-          const jsonStr = rawLines[0].substring('# ScriptConfig:'.length);
-          cloudConfig = JSON.parse(jsonStr);
-          const { rules, ...settings } = cloudConfig;
-          cloudRules = rawLines.slice(1).map(r => r.trim()).filter(r => r);
-        } catch (e) {
-          cloudRules = rawLines.map(r => r.trim()).filter(r => r);
+      let hasConfigHeader = false;
+      if (rawLines.length > 0 && rawLines[0].startsWith('# ScriptConfig:')) {
+        if (GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)) {
+          try {
+            const jsonStr = rawLines[0].substring('# ScriptConfig:'.length);
+            cloudConfig = JSON.parse(jsonStr);
+          } catch (e) {
+            if (currentConfig.debug) console.warn('[自动 WebDAV] 配置头解析失败:', e);
+          }
         }
+        hasConfigHeader = true;
+        cloudRules = rawLines.slice(1).map(r => r.trim()).filter(r => r);
       } else {
         cloudRules = rawLines.map(r => r.trim()).filter(r => r);
       }
@@ -3796,7 +3819,8 @@
       let uploadData = mergedRules.join('\n');
       if (GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)) {
         const { rules, ...settings } = currentConfig;
-        uploadData = '# ScriptConfig:' + JSON.stringify(settings) + '\n' + uploadData;
+        const uploadPayload = { ...settings, subscriptions: getSubscriptions().map(s => ({ url: s.url, enabled: s.enabled, lastUpdate: s.lastUpdate })) };
+        uploadData = '# ScriptConfig:' + JSON.stringify(uploadPayload) + '\n' + uploadData;
       }
       await new Promise((resolve, reject) => {
         GM_xmlhttpRequest({
@@ -3814,8 +3838,9 @@
     }
 
     if (cloudConfig && GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)) {
-      const { rules, ...settings } = cloudConfig;
+      const { subscriptions, ...settings } = cloudConfig;
       Object.assign(currentConfig, settings);
+      if (subscriptions) saveSubscriptions(subscriptions);
     }
 
     currentConfig.rules = mergedRules;
@@ -3852,9 +3877,14 @@
       }
       const reader = new FileReader();
       reader.onload = (event) => {
+        let content = event.target.result;
+        const lines = content.split('\n');
+        if (lines.length > 0 && lines[0].startsWith('# ScriptConfig:')) {
+          content = lines.slice(1).join('\n');
+        }
         const textarea = document.getElementById('searchfilter-rules');
         if (textarea) {
-          textarea.value = event.target.result;
+          textarea.value = content;
           updateLineNumbers();
         }
         document.body.removeChild(fileInput);
