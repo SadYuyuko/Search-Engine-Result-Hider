@@ -21,9 +21,10 @@ Supports Bing, Google, DuckDuckGo and Yandex, with potential support for more se
 
 **About WebDAV:**  
 1. Synchronizes automatically every hour. Auto‑sync merges files based on timestamps and deduplicates. Manual upload/download overwrites files. Currently tested only with single‑device synchronization. In theory, it can sync the same configuration file as uBlacklist, but no guarantees are made regarding file overwrite logic errors. Always back up your files first.  
-2. WebDAV sync requires cross‑origin request permissions.  
-3. Due to inherent limitations of script data storage, only HTTPS addresses are supported, and it is strongly recommended to use an app‑specific password rather than your main account password.  
-4. Provide the full folder path in the address field, e.g., for Nutstore: `https://dav.jianguoyun.com/dav/your_folder/`  
+2. WebDAV sync requires cross‑origin request permissions.
+3. Sync config takes effect after refreshing.  
+4. Due to inherent limitations of script data storage, only HTTPS addresses are supported, and it is strongly recommended to use an app‑specific password rather than your main account password.  
+5. Provide the full folder path in the address field, e.g., for Nutstore: `https://dav.jianguoyun.com/dav/your_folder/`  
 
 **Notes:**  
 1. Exporting to TXT relies on blob functionality. Please ensure your browser supports blob operations.  
