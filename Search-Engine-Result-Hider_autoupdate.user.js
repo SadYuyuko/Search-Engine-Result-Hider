@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.1.5
+// @version      7.1.6
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -1334,7 +1334,6 @@
         if (label) label.remove();
       });
       showHiddenResults = false;
-      updateStatus(0);
       return;
     }
 
@@ -2208,14 +2207,19 @@
       ? `<span style="display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; flex-shrink: 0; line-height: 0;"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg></span>`
       : `<span style="display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; flex-shrink: 0; line-height: 0;"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></span>`;
 
+    let newHtml;
     if (currentConfig.showCount) {
       if (isLeft) {
-        statusBtn.innerHTML = `${icon} <span class="bubble-number">${blocked}</span>`;
+        newHtml = `${icon} <span class="bubble-number">${blocked}</span>`;
       } else {
-        statusBtn.innerHTML = `<span class="bubble-number">${blocked}</span> ${icon}`;
+        newHtml = `<span class="bubble-number">${blocked}</span> ${icon}`;
       }
     } else {
-    statusBtn.innerHTML = icon;
+      newHtml = icon;
+    }
+    if (statusBtn._lastHtml !== newHtml) {
+      statusBtn.innerHTML = newHtml;
+      statusBtn._lastHtml = newHtml;
     }
   }
 
