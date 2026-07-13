@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.1.4
+// @version      7.1.5
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -3984,7 +3984,7 @@
     const domObserver = new MutationObserver((mutations) => {
       if (mutations.some(m => m.addedNodes.length > 0)) requestAnimationFrame(() => scanNewResults());
     });
-    domObserver.observe(document.querySelector('#rso, #results, .results, #main, main') || document.body, {
+    domObserver.observe(document.body, {
       childList: true,
       subtree: true
     });
