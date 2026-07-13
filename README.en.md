@@ -9,7 +9,8 @@ Supports Bing, Google, DuckDuckGo and Yandex, with potential support for more se
 - One-click domain blocking via a block button  
 - Display hit rule counts and debug output  
 - Import/export rules to timestamped TXT files  
-- Rule subscription and WebDAV synchronization  
+- Rule subscription  
+- WebDAV synchronization  
 - Script manager menu settings  
   ┣ Directly open the configuration panel  
   ┣ Toggle blocking on/off  
