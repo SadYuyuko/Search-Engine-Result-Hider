@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.1.6
+// @version      7.2.0
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -79,6 +79,7 @@
   if (currentConfig.language === undefined) currentConfig.language = 'zh-CN';
   if (currentConfig.highlightColors === undefined) currentConfig.highlightColors = {1:'#CE2029', 2:'#FF8C00', 3:'#FFD700', 4:'#228B22', 5:'#1E90FF'};
   let showHiddenResults = false;
+  let _orGroupCounter = 0;
 
   // 文本映射
   const LANG_TEXTS = {
@@ -336,30 +337,140 @@
   }
 
   // 解析规则
+  function splitByPipe(str) {
+    const parts = [];
+    let current = '';
+    let inSQ = false;
+    let inDQ = false;
+    let inRE = false;
+    let depth = 0;
+
+    for (let i = 0; i < str.length; i++) {
+      const ch = str[i];
+
+      if (ch === '\\' && i + 1 < str.length) {
+        current += ch + str[++i];
+        continue;
+      }
+
+      if (!inDQ && !inRE && ch === "'") { inSQ = !inSQ; current += ch; continue; }
+      if (!inSQ && !inRE && ch === '"') { inDQ = !inDQ; current += ch; continue; }
+
+      if (!inSQ && !inDQ && ch === '(') { depth++; current += ch; continue; }
+      if (!inSQ && !inDQ && ch === ')') { depth--; current += ch; continue; }
+
+      if (!inSQ && !inDQ && ch === '/' && !inRE) {
+        const trimmed = current.replace(/\s+$/, '');
+        if (!trimmed || trimmed.endsWith('=~') || trimmed.endsWith('~') || trimmed.endsWith('|') || trimmed.endsWith('(')) {
+          inRE = true; current += ch; continue;
+        }
+      }
+      if (!inSQ && !inDQ && ch === '/' && inRE) {
+        inRE = false; current += ch; continue;
+      }
+
+      if (!inSQ && !inDQ && !inRE && depth === 0 && ch === '|') {
+        parts.push(current);
+        current = '';
+        continue;
+      }
+
+      current += ch;
+    }
+
+    if (current) parts.push(current);
+    return parts;
+  }
+
   function evaluateCondition(condStr, dynamicConditionsList) {
     const currentEngine = getSearchEngine();
     const currentSite = window.location.hostname;
+    const parts = splitByPipe(condStr);
 
-    if (/^(google|bing|duckduckgo|yandex)$/i.test(condStr.trim())) {
-      return currentEngine === condStr.trim().toLowerCase();
+    if (parts.length === 1) {
+      const cond = parts[0].trim();
+
+      if (/^(google|bing|duckduckgo|yandex)$/i.test(cond)) {
+        return currentEngine === cond.toLowerCase();
+      }
+
+      let siteMatch = cond.match(/^site\s*[=:]\s*['"](.*?)['"]$/i);
+      if (!siteMatch) siteMatch = cond.match(/^site\s*\(\s*['"](.*?)['"]\s*\)$/i);
+      if (siteMatch) {
+        return currentSite.endsWith(siteMatch[1].toLowerCase());
+      }
+
+      const titleMatch = cond.match(/^title\s*\*\=\s*['"](.*?)['"]$/i);
+      if (titleMatch) {
+        dynamicConditionsList.push({
+          type: 'title',
+          op: '*=',
+          val: titleMatch[1].toLowerCase()
+        });
+        return true;
+      }
+
+      const regexMatch = cond.match(/^title\s*=\~\s*\/((?:[^/\\]|\\.)*)\/([a-z]*)$/i);
+      if (regexMatch) {
+        dynamicConditionsList.push({
+          type: 'title',
+          op: '=~',
+          regex: new RegExp(regexMatch[1], regexMatch[2])
+        });
+        return true;
+      }
+
+      return false;
     }
 
-    let siteMatch = condStr.match(/^site\s*[=:]\s*['"](.*?)['"]$/i);
-    if (siteMatch) {
-      return currentSite.endsWith(siteMatch[1].toLowerCase());
-    }
-    siteMatch = condStr.match(/^site\s*\(\s*['"](.*?)['"]\s*\)$/i);
-    if (siteMatch) {
-      return currentSite.endsWith(siteMatch[1].toLowerCase());
+    const orGroup = ++_orGroupCounter;
+    let anyStaticPass = false;
+    const pendingDynamic = [];
+
+    for (const part of parts) {
+      const trimmed = part.trim();
+      if (!trimmed) continue;
+
+      if (/^(google|bing|duckduckgo|yandex)$/i.test(trimmed)) {
+        if (currentEngine === trimmed.toLowerCase()) anyStaticPass = true;
+        continue;
+      }
+
+      let siteMatch = trimmed.match(/^site\s*[=:]\s*['"](.*?)['"]$/i);
+      if (!siteMatch) siteMatch = trimmed.match(/^site\s*\(\s*['"](.*?)['"]\s*\)$/i);
+      if (siteMatch) {
+        if (currentSite.endsWith(siteMatch[1].toLowerCase())) anyStaticPass = true;
+        continue;
+      }
+
+      const titleMatch = trimmed.match(/^title\s*\*\=\s*['"](.*?)['"]$/i);
+      if (titleMatch) {
+        pendingDynamic.push({
+          type: 'title',
+          op: '*=',
+          val: titleMatch[1].toLowerCase()
+        });
+        continue;
+      }
+
+      const regexMatch = trimmed.match(/^title\s*=\~\s*\/((?:[^/\\]|\\.)*)\/([a-z]*)$/i);
+      if (regexMatch) {
+        pendingDynamic.push({
+          type: 'title',
+          op: '=~',
+          regex: new RegExp(regexMatch[1], regexMatch[2])
+        });
+        continue;
+      }
     }
 
-    const titleMatch = condStr.match(/^title\s*\*\=\s*['"](.*?)['"]$/i);
-    if (titleMatch) {
-      dynamicConditionsList.push({
-        type: 'title',
-        op: '*=',
-        val: titleMatch[1].toLowerCase()
-      });
+    if (anyStaticPass) return true;
+
+    if (pendingDynamic.length > 0) {
+      for (const cond of pendingDynamic) {
+        cond.orGroup = orGroup;
+        dynamicConditionsList.push(cond);
+      }
       return true;
     }
 
@@ -834,12 +945,38 @@
   }
 
   function checkDynamicConditions(conditions, title) {
-    for (let j = 0; j < conditions.length; j++) {
-      const cond = conditions[j];
-      if (cond.type === 'title' && cond.op === '*=') {
-        if (!title || !title.toLowerCase().includes(cond.val)) return false;
+    const groups = new Map();
+    const ungrouped = [];
+
+    for (const cond of conditions) {
+      if (cond.orGroup !== undefined) {
+        if (!groups.has(cond.orGroup)) groups.set(cond.orGroup, []);
+        groups.get(cond.orGroup).push(cond);
+      } else {
+        ungrouped.push(cond);
       }
     }
+
+    for (const cond of ungrouped) {
+      if (cond.type === 'title' && cond.op === '*=') {
+        if (!title || !title.toLowerCase().includes(cond.val)) return false;
+      } else if (cond.type === 'title' && cond.op === '=~') {
+        if (!title || !cond.regex.test(title)) return false;
+      }
+    }
+
+    for (const conds of groups.values()) {
+      let groupMatch = false;
+      for (const cond of conds) {
+        if (cond.type === 'title' && cond.op === '*=') {
+          if (title && title.toLowerCase().includes(cond.val)) { groupMatch = true; break; }
+        } else if (cond.type === 'title' && cond.op === '=~') {
+          if (title && cond.regex.test(title)) { groupMatch = true; break; }
+        }
+      }
+      if (!groupMatch) return false;
+    }
+
     return true;
   }
 
