@@ -62,7 +62,9 @@
 注意：只支持5种颜色，即`@1`～`@5`，通过脚本菜单打开自定义颜色面板  
 
 **复合规则：**  
-`*://*.example.com/* @if(title *= "示例")` - 屏蔽`example.com`的搜索结果中标题含有`示例`的结果，复合规则的标题规则默认忽略大小写  
+`*://*.example.com/* @if(title *= "示例")` - 屏蔽`example.com`的标题中含有`示例`的结果，复合规则的标题规则默认忽略大小写  
+`*://*.example.com/* @if(title *= "关键词1" | title *= "关键词2" | title *= "关键词3")` - 上条规则的多关键词支持    
+`*://*.example.com/* @if(title =~ /关键词1|关键词2|关键词3/)` - 上条规则的正则写法  
 `@if (Google) { *://*.example.com/* }` - 仅在Google中屏蔽该`example.com`  
 `@if (site = "google.com.hk") { *://*.example.com/* }` - 仅在Google HK中屏蔽`example.com`  
 `@if(Google) { *://*.example.com/* @if(title *= "示例") @if(site = "google.com") }` - 仅在Google中，屏蔽`example.com`的搜索结果中标题含有`示例`的结果  
