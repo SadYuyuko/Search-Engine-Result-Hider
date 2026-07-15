@@ -63,6 +63,8 @@ Rules tend to favor titles and regular matches. For convenience, you can add rul
   
 **Composite Rules:**  
 `*://*.example.com/* @if(title *= "keyword")` - Block results from `example.com` whose title contains the `keyword` in search results, Its title rule ignores case  
+`*://*.example.com/* @if(title *= "keyword1" | title *= "keyword2" | title *= "keyword3")` - Multiple keywords support for the previous rule  
+`*://*.example.com/* @if(title =~ /keyword1|keyword2|keyword3/)` - The regular form of the previous rule  
 `@if (Google) { *://*.example.com/* }` - Block this `example.com` only on Google  
 `@if (site = "google.com.hk") { *://*.example.com/* }` - Block `example.com` only on Google HK  
 `@if(Google) { *://*.example.com/* @if(title *= "keyword") @if(site = "google.com") }` - Block results from `example.com` whose title contains the `keyword`, only on Google  
