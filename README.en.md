@@ -30,7 +30,8 @@ Supports Bing, Google, DuckDuckGo and Yandex, with potential support for more se
 1. Exporting to TXT relies on blob functionality. Please ensure your browser supports blob operations.  
 2. Subscriptions update once per day. Only remote .txt file links are supported, with a maximum of 3 subscriptions. Subscription rules are applied after local rules. Due to the limited performance of the script available in mobile browsers, the total number of rules should not exceed 20,000 to avoid lagging on the phone.  
 3. `##` DOM syntax rules are not supported. Such rules will be automatically removed when imported via subscription.
-4. When adding domain name rules in scripts, you can write the domain name directly without using the `*://*` prefix, but rules that need to be used on ublacklist must be included.  
+4. When adding domain name rules in scripts, you can write the domain name directly without using the `*://*` prefix, but rules that need to be used on ublacklist must be included.
+<br>
   
 ### Basic Rules:  
 **URL Matching:**  
