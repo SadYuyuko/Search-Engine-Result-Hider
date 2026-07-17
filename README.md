@@ -39,27 +39,27 @@
 `*://*.example.com/*` – 匹配`example.com`及其所有子域名  
 `*://*.example.com/path/*` – 匹配`example.com`特定路径  
 `*://*.example.*` – 匹配`example.com`所有顶级域名  
-<br>
+  
 **标题匹配：**  
 `title/.*示例.*/` – 匹配标题包含`示例`的结果  
 `title/^示例.*/` – 匹配标题以`示例`开头的搜索结果  
 `title/.*示例(A|B).*/` – 匹配标题包含`示例A`和`示例B`的结果  
 `title/.*示例(A|B).*/i` – 加i忽略大小写，匹配除上条结果外还包含`示例a`和`示例b`的结果  
 `title/.*示例AbC.*/i` – 加i忽略大小写，匹配除`示例AbC`外还包含`示例ABC`等结果  
-<br>
+  
 **白名单匹配：**  
 `@*://*.com/*` – 放行所有以`.com`结尾域名页面  
 `@*://example.com/*` – 放行`example.com`主站  
 `@*://*.example.com/*` – 放行`example.com`及其所有子域名  
 `@*://example.com/abc/*` – 只放行`example.com`特定路径  
-`@*://*.example.com/abc/*` – 只放行`example.com`子域名特定路径
-<br>
+`@*://*.example.com/abc/*` – 只放行`example.com`子域名特定路径  
+  
   **高亮规则：**  
 `@1 *://*.example.com/*` – 给`example.com`及其子域名的搜索结果加上颜色边框  
 `@1 title/.*示例.*/` – 给匹配到标题带有`示例`的结果加上颜色边框  
 优先级：高亮＞白名单，但黑名单＞高亮  
 注意：只支持5种颜色，即`@1`～`@5`，通过脚本菜单打开自定义颜色面板  
-<br>
+  
 **复合规则：**  
 `*://*.example.com/* @if(title *= "示例")` - 屏蔽`example.com`的标题中含有`示例`的结果，复合规则的标题规则默认忽略大小写  
 `*://*.example.com/* @if(title *= "关键词1" | title *= "关键词2" | title *= "关键词3")` - 上条规则的多关键词支持    
@@ -67,7 +67,7 @@
 `@if (Google) { *://*.example.com/* }` - 仅在Google中屏蔽该`example.com`  
 `@if (site = "google.com.hk") { *://*.example.com/* }` - 仅在Google HK中屏蔽`example.com`  
 `@if(Google) { *://*.example.com/* @if(title *= "示例") @if(site = "google.com") }` - 仅在Google中，屏蔽`example.com`的搜索结果中标题含有`示例`的结果  
-<br>
+  
 **正文匹配：**  
 `text/.*示例.*/` – 匹配结果词条的网页描述内容中包含`示例`的搜索结果，此规则不会匹配标题  
 `text/.*示例abc.*/i` – 同上，加i忽略大小写  
