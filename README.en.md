@@ -22,19 +22,17 @@ Supports Bing, Google, DuckDuckGo and Yandex, with potential support for more se
 
 **About WebDAV:**  
 1. Synchronizes automatically every hour. Auto‑sync merges files based on timestamps and deduplicates. Manual upload/download overwrites files. Currently tested only with single‑device synchronization. In theory, it can sync the same configuration file as uBlacklist, but no guarantees are made regarding file overwrite logic errors. Always back up your files first.  
-2. WebDAV sync requires cross‑origin request permissions.
-3. Sync config takes effect after refreshing.  
-4. Due to inherent limitations of script data storage, only HTTPS addresses are supported, and it is strongly recommended to use an app‑specific password rather than your main account password.  
-5. Provide the full folder path in the address field, e.g., for Nutstore: `https://dav.jianguoyun.com/dav/your_folder/`  
-
+2. WebDAV sync requires cross‑origin request permissions, and only HTTPS addresses are supported, it is strongly recommended to use an app‑specific password rather than your main account password.  
+3. Provide the full folder path in the address field, e.g., for Nutstore: `https://dav.jianguoyun.com/dav/your_folder/`
+4. Sync config takes effect after refreshing.  
+  
 **Notes:**  
 1. Exporting to TXT relies on blob functionality. Please ensure your browser supports blob operations.  
-2. Subscriptions update once per day. Only remote .txt file links are supported, with a maximum of 3 subscriptions. Subscription rules are applied after local rules. Due to the limited performance of the script available in mobile browsers, the total number of rules should not exceed 10,000 to avoid lagging on the phone.  
-3. Due to script extension limitations, `##` uBlock DOM syntax rules are not supported. Such rules will be automatically removed when imported via subscription.  
+2. Subscriptions update once per day. Only remote .txt file links are supported, with a maximum of 3 subscriptions. Subscription rules are applied after local rules. Due to the limited performance of the script available in mobile browsers, the total number of rules should not exceed 20,000 to avoid lagging on the phone.  
+3. `##` DOM syntax rules are not supported. Such rules will be automatically removed when imported via subscription.
+4. When adding domain name rules in scripts, you can write the domain name directly without using the `*://*` prefix, but rules that need to be used on ublacklist must be included.  
   
-Rules tend to favor titles and regular matches. For convenience, you can add rules in script without using `*://*.` Prefix directly write domain name, but for the rules that need to be used in the ublacklist, you need to add it.    
-
-### Basic Rule Syntax:  
+### Basic Rules:  
 **URL Matching:**  
 `*://www.example.com/*` – matches `example.com`  
 `*://*.example.com/*` – matches `example.com` and all its subdomains  
@@ -72,9 +70,9 @@ Rules tend to favor titles and regular matches. For convenience, you can add rul
 **Snippet Matching:**  
 `text/.*example.*/` – matches results whose snippet/description contains `example`. This rule does not match titles.  
 `text/.*example.*/i` – same as above, case‑insensitive.  
-  
+<br>
+<br>
 ### Screenshots：  
-
 <img width="460" height="285" alt="01" src="https://github.com/user-attachments/assets/8523f109-84d1-4eba-b8d5-678b0a824340" />
 <br>
 <img width="267" height="250" alt="02" src="https://github.com/user-attachments/assets/abe39f77-d9e3-4a91-8148-5bcb548a7f6c" />
