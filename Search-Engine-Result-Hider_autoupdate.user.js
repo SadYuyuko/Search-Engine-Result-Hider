@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.2.0
+// @version      7.2.1
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -56,7 +56,7 @@
     rules: ['*://*.example.com/*'],
     enabled: true,
     showCount: false,
-    bubbleSize: 20,
+    bubbleSize: 30,
     debug: false,
     showBlockBtn: false,
     blockDomain: false,
@@ -66,7 +66,8 @@
     panelCentered: true,
     bubbleAction: 'openPanel',
     language: 'zh-CN',
-    highlightColors: {1:'#CE2029', 2:'#FF8C00', 3:'#FFD700', 4:'#228B22', 5:'#1E90FF'}
+    highlightColors: {1:'#CE2029', 2:'#FF8C00', 3:'#FFD700', 4:'#228B22', 5:'#1E90FF'},
+    subscriptionAutoUpdate: false
   });
 
   // 兼容旧配置
@@ -78,6 +79,7 @@
   if (currentConfig.bubbleAction === undefined) currentConfig.bubbleAction = 'openPanel';
   if (currentConfig.language === undefined) currentConfig.language = 'zh-CN';
   if (currentConfig.highlightColors === undefined) currentConfig.highlightColors = {1:'#CE2029', 2:'#FF8C00', 3:'#FFD700', 4:'#228B22', 5:'#1E90FF'};
+  if (currentConfig.subscriptionAutoUpdate === undefined) currentConfig.subscriptionAutoUpdate = false;
   let showHiddenResults = false;
   let _orGroupCounter = 0;
 
@@ -102,7 +104,7 @@
       placeholder: '每行一个规则',
       panelTitle: '订阅管理',
       addSubscription: '添加订阅',
-      webdavTitle: 'WebDAV同步',
+      webdavTitle: 'WebDAV',
       webdavUrl: 'Webdav地址',
       webdavUser: 'Webdav账号',
       webdavPass: '应用密码',
@@ -124,16 +126,16 @@
       menuCenter: '面板居中',
       menuBubble: '悬浮球状态',
       menuBubbleAction: '悬浮球功能',
-      menuLang: 'Language：中文',
+      menuLang: 'Language: 中文',
       menuLangEn: 'Language: English',
-      subscriptionSuccess: '订阅成功！已更新 {count} 条有效规则。',
+      subscriptionSuccess: '订阅成功！已更新 {count} 条规则。',
       subscriptionSaved: '订阅配置已保存',
       importDone: '导入操作完成',
       uploadSuccess: '上传成功！',
       downloadSuccess: '下载成功！规则已加载到编辑区，保存生效',
       noRulesExport: '没有规则可导出',
       confirmBlock: '确定要屏蔽并添加规则 [ {rule} ] 吗？',
-      statsErrors: '发现 {count} 个规则错误：',
+      statsErrors: '发现 {count} 个规则错误: ',
       matchedCountLabel: '匹配',
       matchedCountUnit: '条',
       menuBubbleStateShow: '显示',
@@ -148,8 +150,8 @@
       maxSubscriptions: '最多只能添加3条订阅',
       webdavUploading: '正在上传...',
       webdavDownloading: '正在下载...',
-      webdavUploadFailed: '上传失败：',
-      webdavDownloadFailed: '下载失败：',
+      webdavUploadFailed: '上传失败: ',
+      webdavDownloadFailed: '下载失败: ',
       webdavHttpsRequired: '安全起见，WebDAV地址必须使用https',
       networkError: '网络错误',
       requestTimeout: '请求超时',
@@ -159,9 +161,10 @@
       syncScriptConfig: '同步配置',
       webdavUrlEmpty: 'WebDAV地址为空',
       highlightRules: '高亮规则',
-      menuHighlightColor: '🎨 高亮颜色',
+      menuHighlightColor: '🎨 高亮颜色设置',
       hlColorTitle: '高亮颜色设置',
       hlColorReset: '重置',
+      autoUpdate: '自动更新',
       errorWord: '错误',
     },
     'en': {
@@ -183,8 +186,8 @@
       placeholder: 'One rule per line',
       panelTitle: 'Subscription Manager',
       addSubscription: 'Add Subscription',
-      webdavTitle: 'WebDAV Sync',
-      webdavUrl: 'WebDAV URL',
+      webdavTitle: 'WebDAV',
+      webdavUrl: 'URL',
       webdavUser: 'Username',
       webdavPass: 'Password',
       filename: 'Filename',
@@ -205,9 +208,9 @@
       menuCenter: 'Center Panel',
       menuBubble: 'Bubble',
       menuBubbleAction: 'Bubble Action',
-      menuLang: 'Language：中文',
+      menuLang: 'Language: 中文',
       menuLangEn: 'Language: English',
-      subscriptionSuccess: 'Subscription successful! Updated {count} valid rules.',
+      subscriptionSuccess: 'Subscription successful! Updated {count} rules.',
       subscriptionSaved: 'Subscription config saved',
       importDone: 'Import completed',
       uploadSuccess: 'Upload successful!',
@@ -243,6 +246,7 @@
       menuHighlightColor: '🎨 Highlight Colors',
       hlColorTitle: 'Highlight Color Settings',
       hlColorReset: 'Reset',
+      autoUpdate: 'Auto Update',
       errorWord: 'Error',
     }
   };
@@ -1338,7 +1342,7 @@
     label.className = 'searchfilter-matched-rule';
     const sourceText = result.dataset.matchedSource || t('matchedRule');
     const ruleText = result.dataset.matchedRule;
-    label.textContent = `${sourceText}：${ruleText}`;
+    label.textContent = `${sourceText}: ${ruleText}`;
     if (window.getComputedStyle(result).position === 'static') result.style.position = 'relative';
     result.appendChild(label);
   }
@@ -3500,7 +3504,16 @@
     });
 
     panel.innerHTML = `
-            <h3 style="margin:0 0 16px;font-size:16px;color:#2d3748;">${t('panelTitle')}</h3>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <h3 style="margin:0;font-size:16px;color:#2d3748;line-height:1;">${t('panelTitle')}</h3>
+                <label style="display:flex !important;align-items:center;font-size:12px;color:#4a5568;cursor:pointer;margin:0;white-space:nowrap;line-height:1;">
+                    <span class="searchfilter-switch">
+                        <input type="checkbox" id="subscription-auto-update" ${currentConfig.subscriptionAutoUpdate ? 'checked' : ''}>
+                        <span class="searchfilter-slider"></span>
+                    </span>
+                    <span style="line-height:1;">${t('autoUpdate')}</span>
+                </label>
+            </div>
             <div id="subscription-rows-container">${rowsHtml}</div>
             <div class="add-subscription-btn"><button id="add-subscription" class="searchfilter-button searchfilter-button-secondary" style="width:100%;" ${subscriptions.length >= 3 ? 'disabled' : ''}>${t('addSubscription')}</button></div>
             <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:0px;"><button id="subscription-save" class="searchfilter-button searchfilter-button-primary" style="flex:1;">${t('save')}</button><button id="subscription-import" class="searchfilter-button searchfilter-button-primary" style="flex:1;">${t('import')}</button><button id="subscription-cancel" class="searchfilter-button searchfilter-button-secondary" style="flex:1;">${t('cancel')}</button></div>
@@ -3513,6 +3526,13 @@
     const container = document.getElementById('subscription-rows-container');
     const addBtn = document.getElementById('add-subscription');
     const statusDiv = document.getElementById('subscription-status');
+    const autoUpdateSwitch = document.getElementById('subscription-auto-update');
+    if (autoUpdateSwitch) {
+      autoUpdateSwitch.addEventListener('change', function() {
+        currentConfig.subscriptionAutoUpdate = this.checked;
+        GM_setValue(CONFIG_KEY, currentConfig);
+      });
+    }
 
     function setStatus(msg, isError = false) {
       statusDiv.textContent = msg;
@@ -3686,22 +3706,22 @@
 
     // webdav面板布局
     panel.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0;">
         <h3 style="margin:0;font-size:16px;color:#2d3748;line-height:1;">${t('webdavTitle')}</h3>
         <div style="display:flex;align-items:center;gap:8px;">
-            <label style="display:flex !important;align-items:center;font-size:12px;color:#4a5568;cursor:pointer;margin:0;white-space:nowrap;line-height:1;">
-                <span class="searchfilter-switch">
-                    <input type="checkbox" id="webdav-auto-sync" ${autoSyncEnabled ? 'checked' : ''}>
-                    <span class="searchfilter-slider"></span>
-                </span>
-                <span style="line-height:1;">${t('autoSync')}</span>
-            </label>
             <label style="display:flex !important;align-items:center;font-size:12px;color:#4a5568;cursor:pointer;margin:0;white-space:nowrap;line-height:1;">
                 <span class="searchfilter-switch">
                     <input type="checkbox" id="webdav-sync-config" ${syncConfigEnabled ? 'checked' : ''}>
                     <span class="searchfilter-slider"></span>
                 </span>
                 <span style="line-height:1;">${t('syncScriptConfig')}</span>
+            </label>
+            <label style="display:flex !important;align-items:center;font-size:12px;color:#4a5568;cursor:pointer;margin:0;white-space:nowrap;line-height:1;">
+                <span class="searchfilter-switch">
+                    <input type="checkbox" id="webdav-auto-sync" ${autoSyncEnabled ? 'checked' : ''}>
+                    <span class="searchfilter-slider"></span>
+                </span>
+                <span style="line-height:1;">${t('autoSync')}</span>
             </label>
         </div>
     </div>
@@ -4065,23 +4085,23 @@
   // 管理器菜单
   function registerMenu() {
     GM_registerMenuCommand(t('menuOpenPanel'), () => showConfigPanel());
-    GM_registerMenuCommand((currentConfig.enabled ? "🟢 " : "🔴 ") + t('menuEnable') + (currentConfig.enabled ? `：${t('stateEnabled')}` : `：${t('stateDisabled')}`), () => {
+    GM_registerMenuCommand((currentConfig.enabled ? "🟢 " : "🔴 ") + t('menuEnable') + (currentConfig.enabled ? `: ${t('stateEnabled')}` : `: ${t('stateDisabled')}`), () => {
       currentConfig.enabled = !currentConfig.enabled;
       GM_setValue(CONFIG_KEY, currentConfig);
       location.reload();
     });
 
-    GM_registerMenuCommand((currentConfig.panelCentered ? "🟢 " : "🔴 ") + t('menuCenter') + (currentConfig.panelCentered ? `：${t('stateEnabled')}` : `：${t('stateDisabled')}`), () => {
+    GM_registerMenuCommand((currentConfig.panelCentered ? "🟢 " : "🔴 ") + t('menuCenter') + (currentConfig.panelCentered ? `: ${t('stateEnabled')}` : `: ${t('stateDisabled')}`), () => {
       currentConfig.panelCentered = !currentConfig.panelCentered;
       GM_setValue(CONFIG_KEY, currentConfig);
       location.reload();
     });
-    GM_registerMenuCommand((currentConfig.showBubble ? "🟢 " : "🔴 ") + t('menuBubble') + (currentConfig.showBubble ? `：${t('menuBubbleStateShow')}` : `：${t('menuBubbleStateHide')}`), () => {
+    GM_registerMenuCommand((currentConfig.showBubble ? "🟢 " : "🔴 ") + t('menuBubble') + (currentConfig.showBubble ? `: ${t('menuBubbleStateShow')}` : `: ${t('menuBubbleStateHide')}`), () => {
       currentConfig.showBubble = !currentConfig.showBubble;
       GM_setValue(CONFIG_KEY, currentConfig);
       location.reload();
     });
-    GM_registerMenuCommand((currentConfig.bubbleAction === 'openPanel' ? "🟢 " : "🔵 ") + t('menuBubbleAction') + (currentConfig.bubbleAction === 'openPanel' ? `：${t('menuBubbleActionOpen')}` : `：${t('menuBubbleActionToggle')}`), () => {
+    GM_registerMenuCommand((currentConfig.bubbleAction === 'openPanel' ? "🟢 " : "🔵 ") + t('menuBubbleAction') + (currentConfig.bubbleAction === 'openPanel' ? `: ${t('menuBubbleActionOpen')}` : `: ${t('menuBubbleActionToggle')}`), () => {
       currentConfig.bubbleAction = currentConfig.bubbleAction === 'openPanel' ? 'toggleHidden' : 'openPanel';
       GM_setValue(CONFIG_KEY, currentConfig);
       location.reload();
@@ -4095,8 +4115,8 @@
     GM_registerMenuCommand(t('menuHighlightColor'), () => showHighlightColorPanel());
   }
 
-  // 初始化
   function checkAutoSubscription() {
+    if (!currentConfig.subscriptionAutoUpdate) return;
     const subs = getSubscriptions();
     if (!subs || subs.length === 0) return;
     const now = Date.now();
