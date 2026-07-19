@@ -47,7 +47,7 @@ Supports Bing, Google, DuckDuckGo and Yandex, with potential support for more se
 `title/.*example(A|B).*/i` – same as above, but case-insensitive (also matches `examplea` and `exampleb`)  
 `title/.*exampleAbC.*/i` – case-insensitive; matches `exampleAbC`, `exampleABC`, etc.  
 `title/^(?=.*keyword1)(?=.*(?:keyword2)).*/i` - Ignore backward and forward order, match results with both `keyword1` and `keyword2`  
-`title/^(?=.*keyword1)(?=.*(?:keyword2|keyword3)).*/i` - same rules as above, but matching the result of `keyword1+keyword2` and `keyword1+keyword3`  
+`title/^(?=.*keyword1)(?=.*(?:keyword2|keyword3)).*/i` - same rules as above, but matching the result of `keyword1+keyword2` or `keyword1+keyword3`  
   
 **Whitelist Matching:**  
 `@*://*.com/*` – allow all pages whose domain ends with `.com`  
