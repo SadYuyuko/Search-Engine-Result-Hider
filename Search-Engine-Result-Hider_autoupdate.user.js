@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.2.1
+// @version      7.2.2
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -3032,7 +3032,7 @@
       behavior: 'smooth'
     });
 
-    // 悬浮球大小滑动条
+    // 悬浮球大小滑条
     const sizeSlider = panel.querySelector('#searchfilter-bubble-size-slider');
     const sizeValueDisplay = panel.querySelector('#searchfilter-bubble-size-val');
     if (sizeSlider) {
@@ -3048,7 +3048,7 @@
       });
     }
 
-    // 滑块开关立即生效
+    // 滑块开关
     const switchDefs = [
       { id: 'searchfilter-enabled', key: 'enabled', apply: () => { forceReprocessAll(); } },
       { id: 'searchfilter-show-count', key: 'showCount', apply: () => { const s = document.getElementById('searchfilter-status'); if (s) updateBubbleContent(s, parseInt(s.dataset.blockedCount || 0)); } },
@@ -3746,14 +3746,14 @@
     document.body.appendChild(panel);
     requestAnimationFrame(() => panel.classList.add('show'));
 
-    // 获取输入元素
+    // 获取输入
     const urlInput = document.getElementById('webdav-url');
     const usernameInput = document.getElementById('webdav-username');
     const passwordInput = document.getElementById('webdav-password');
     const filenameInput = document.getElementById('webdav-filename');
     const statusDiv = document.getElementById('webdav-status');
 
-    // 密码显隐切换
+    // 密码显隐
     const togglePasswordBtn = document.getElementById('webdav-toggle-password');
     if (togglePasswordBtn && passwordInput) {
       togglePasswordBtn.addEventListener('click', (e) => {
@@ -3806,7 +3806,7 @@
       const textarea = document.getElementById('searchfilter-rules');
       let content = textarea ? textarea.value : currentConfig.rules.join('\n');
       if (GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)) {
-        const { rules, ...settings } = currentConfig;
+        const { rules, bubbleState, bubbleSize, ...settings } = currentConfig;
         const uploadPayload = { ...settings, subscriptions: getSubscriptions().map(s => ({ url: s.url, enabled: s.enabled, lastUpdate: s.lastUpdate })) };
         content = '# ScriptConfig:' + JSON.stringify(uploadPayload) + '\n' + content;
       }
@@ -3899,7 +3899,7 @@
         try {
           const jsonStr = lines[0].substring('# ScriptConfig:'.length);
           const parsed = JSON.parse(jsonStr);
-          const { subscriptions, ...settings } = parsed;
+          const { subscriptions, bubbleState, bubbleSize, ...settings } = parsed;
           Object.assign(currentConfig, settings);
           GM_setValue(CONFIG_KEY, currentConfig);
           if (subscriptions) saveSubscriptions(subscriptions);
@@ -3979,7 +3979,7 @@
       console.log('[自动 WebDAV] 本地规则较新，合并后上传...');
       let uploadData = mergedRules.join('\n');
       if (GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)) {
-        const { rules, ...settings } = currentConfig;
+        const { rules, bubbleState, bubbleSize, ...settings } = currentConfig;
         const uploadPayload = { ...settings, subscriptions: getSubscriptions().map(s => ({ url: s.url, enabled: s.enabled, lastUpdate: s.lastUpdate })) };
         uploadData = '# ScriptConfig:' + JSON.stringify(uploadPayload) + '\n' + uploadData;
       }
@@ -3999,7 +3999,7 @@
     }
 
     if (cloudConfig && GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)) {
-      const { subscriptions, ...settings } = cloudConfig;
+      const { subscriptions, bubbleState, bubbleSize, ...settings } = cloudConfig;
       Object.assign(currentConfig, settings);
       if (subscriptions) saveSubscriptions(subscriptions);
     }
@@ -4021,7 +4021,7 @@
     performAutoWebDAVSync(config).catch(err => console.error('[自动 WebDAV] 同步失败:', err.message));
   }
 
-  // 从TXT导入规则
+  // TXT导入
   function importRulesFromFile() {
     preventPanelClose = true;
     const fileInput = document.createElement('input');
@@ -4056,7 +4056,7 @@
     fileInput.click();
   }
 
-  // 导出规则到TXT
+  // TXT导出
   function exportRulesToFile() {
     preventPanelClose = true;
     const textarea = document.getElementById('searchfilter-rules');
@@ -4115,6 +4115,7 @@
     GM_registerMenuCommand(t('menuHighlightColor'), () => showHighlightColorPanel());
   }
 
+  // 订阅
   function checkAutoSubscription() {
     if (!currentConfig.subscriptionAutoUpdate) return;
     const subs = getSubscriptions();
@@ -4124,11 +4125,11 @@
     if (needUpdate.length === 0) return;
     (async () => {
       for (const sub of needUpdate) {
-        console.log(`[自动订阅] 开始更新: ${sub.url}`);
+        console.log(`[订阅] 开始更新: ${sub.url}`);
         try {
           await performSubscriptionForUrl(sub.url, false);
         } catch (err) {
-          console.error(`[自动订阅] 失败: ${sub.url}`, err.message);
+          console.error(`[订阅] 更新失败: ${sub.url}`, err.message);
         }
       }
       forceReprocessAll();
