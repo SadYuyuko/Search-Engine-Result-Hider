@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.2.2
+// @version      7.3.0
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -16,8 +16,10 @@
 // @match        *://*.google.com/*
 // @match        *://*.yandex.com/*
 // @match        *://*.duckduckgo.com/*
+// @match        *://*.brave.com/*
 // @include      /^https?:\/\/([\w-]+\.)?ya\.ru\/.*$/
 // @include      /^https?:\/\/([\w-]+\.)?(?:duckduckgo\.com|ddg\.gg)\/.*$/
+// @include      /^https?:\/\/([\w-]+\.)?brave\.com\/.*$/
 // @include      /^https?:\/\/([\w-]+\.)?bing\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)\/.*$/
 // @include      /^https?:\/\/([\w-]+\.)?google\.(?:com|[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})\/.*$/
 // @include      /^https?:\/\/([\w-]+\.)?yandex\.(?:com|[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})\/.*$/
@@ -105,9 +107,9 @@
       panelTitle: '订阅管理',
       addSubscription: '添加订阅',
       webdavTitle: 'WebDAV',
-      webdavUrl: 'Webdav地址',
-      webdavUser: 'Webdav账号',
-      webdavPass: '应用密码',
+      webdavUrl: '地址',
+      webdavUser: '账号',
+      webdavPass: '密码',
       filename: '文件名',
       upload: '上传',
       download: '下载',
@@ -257,6 +259,7 @@
       bing: 'li.b_algo, div.b_algo',
       google: 'div.g, div.MjjYud',
       duckduckgo: '[data-testid="result"], .result, .web-result, .tile, .tile--ad',
+      brave: '.snippet[data-type="web"], .snippet[data-type="news"], .snippet[data-type="videos"], .image-wrapper',
       yandex: 'div.Organic',
       other: 'div.g, li.b_algo'
     },
@@ -264,18 +267,21 @@
       bing: ['h2 a', 'a h2', '.b_title'],
       google: ['h3', 'div[role="heading"]', '.LC20lb', '.DKV0Md', '.sXLaOe', '.c9DxTc', 'a h3'],
       duckduckgo: ['a[data-testid="result-title-a"]', '.result__title', '.tile__title', '.tile--title__title', 'h2 a', 'a h2'],
+      brave: ['.title', '.snippet-title', '.img-title'],
       yandex: ['.OrganicTitle']
     },
     snippets: {
       bing: ['.b_caption p', '.b_snippet', '.b_paractl p', '.b_lineclamp2'],
       google: ['.st', '.VwiC3b', '.s3v9rd', '.IsZvec', '.lyLwlc', '.yXK7lf'],
       duckduckgo: ['[data-testid="result-snippet"]', '[data-result="snippet"]', '.result__snippet'],
+      brave: ['.snippet-description', '.description'],
       yandex: ['.OrganicText']
     },
     links: {
       bing: 'a[href]',
       google: 'a[href]',
       duckduckgo: ['a[data-testid="result-extras-url-link"]', 'a[data-testid="result-title-a"]', '.result__url', '.tile--title__domain', 'a[href]'],
+      brave: ['a[href]'],
       yandex: ['.OrganicTitle a', '.Path-Item a', 'a.Link', 'a[href]']
     }
   };
@@ -315,6 +321,7 @@
     if (/(?:^|\.)(?:duckduckgo\.com|ddg\.gg)$/.test(hostname)) return 'duckduckgo';
     if (/(?:^|\.)google\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})$/.test(hostname)) return 'google';
     if (/(?:^|\.)yandex\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})$/.test(hostname)) return 'yandex';
+    if (/(?:^|\.)brave\.com$/.test(hostname)) return 'brave';
     return 'other';
   }
 
@@ -394,7 +401,7 @@
     if (parts.length === 1) {
       const cond = parts[0].trim();
 
-      if (/^(google|bing|duckduckgo|yandex)$/i.test(cond)) {
+      if (/^(google|bing|duckduckgo|yandex|brave)$/i.test(cond)) {
         return currentEngine === cond.toLowerCase();
       }
 
@@ -435,7 +442,7 @@
       const trimmed = part.trim();
       if (!trimmed) continue;
 
-      if (/^(google|bing|duckduckgo|yandex)$/i.test(trimmed)) {
+      if (/^(google|bing|duckduckgo|yandex|brave)$/i.test(trimmed)) {
         if (currentEngine === trimmed.toLowerCase()) anyStaticPass = true;
         continue;
       }
