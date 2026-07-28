@@ -2,8 +2,9 @@
 ## A tool to hide unwanted search results  
 ### [Github](https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js) | [Greasy Fork](https://greasyfork.org/zh-CN/scripts/552394) Install  
 [中文](README.md) | [English](README.en.md)  
-Implement complex rule blocking function for search results on mobile browsers that only support script installation.  
-Supports Bing, Google, DuckDuckGo and Yandex, with potential support for more search engines in the future. It includes uBlacklist basic rule compatibility as well as regex matching, URL matching, title matching, whitelist matching, highlighting results and matching the snippet text of results.  
+Implement complex rule blocking function for search results on browsers that only support script installation.  
+It includes uBlacklist basic rule compatibility as well as URL matching, regex matching, title matching, whitelist matching, highlighting results and matching the snippet text of results.  
+Currently supported search engines: Bing, Google, DuckDuckGo, Yandex, Brave  
 
 **Current Features:**  
 - One-click domain blocking via a block button  
