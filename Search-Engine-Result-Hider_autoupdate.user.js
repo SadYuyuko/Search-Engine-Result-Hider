@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.3.0
+// @version      7.4.0
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -17,7 +17,9 @@
 // @match        *://*.yandex.com/*
 // @match        *://*.duckduckgo.com/*
 // @match        *://*.brave.com/*
+// @match        *://*.yahoo.com/*
 // @include      /^https?:\/\/([\w-]+\.)?ya\.ru\/.*$/
+// @include      /^https?:\/\/([\w-]+\.)?search\.yahoo\.(?:co\.jp|com|[a-z]{2}(?:\.[a-z]{2})?)\/.*$/
 // @include      /^https?:\/\/([\w-]+\.)?(?:duckduckgo\.com|ddg\.gg)\/.*$/
 // @include      /^https?:\/\/([\w-]+\.)?brave\.com\/.*$/
 // @include      /^https?:\/\/([\w-]+\.)?bing\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)\/.*$/
@@ -55,7 +57,7 @@
 
   // 默认配置
   let currentConfig = GM_getValue(CONFIG_KEY, {
-    rules: ['*://*.example.com/*'],
+    rules: ['*://*.giffgaff.com/*\n*://*.example.com/*'],
     enabled: true,
     showCount: false,
     bubbleSize: 30,
@@ -84,6 +86,43 @@
   if (currentConfig.subscriptionAutoUpdate === undefined) currentConfig.subscriptionAutoUpdate = false;
   let showHiddenResults = false;
   let _orGroupCounter = 0;
+
+  // 选择器
+  const SELECTORS = {
+    containers: {
+      bing: 'li.b_algo, div.b_algo',
+      google: 'div.g, div.MjjYud',
+      duckduckgo: '[data-testid="result"], .result, .web-result, .tile, .tile--ad',
+      brave: '.snippet[data-type="web"], .snippet[data-type="news"], .snippet[data-type="videos"], .image-wrapper',
+      yandex: 'div.Organic',
+      yahoo: '.sw-Card.Algo, li.b_algo, div.b_algo, #web .algo, .algo',
+      other: 'div.g, li.b_algo'
+    },
+    titles: {
+      bing: ['h2 a', 'a h2', '.b_title'],
+      google: ['h3', 'div[role="heading"]', '.LC20lb', '.DKV0Md', '.sXLaOe', '.c9DxTc', 'a h3'],
+      duckduckgo: ['a[data-testid="result-title-a"]', '.result__title', '.tile__title', '.tile--title__title', 'h2 a', 'a h2'],
+      brave: ['.title', '.snippet-title', '.img-title'],
+      yandex: ['.OrganicTitle'],
+      yahoo: ['h3', 'h2 a', 'a h2', '.b_title']
+    },
+    snippets: {
+      bing: ['.b_caption p', '.b_snippet', '.b_paractl p', '.b_lineclamp2'],
+      google: ['.st', '.VwiC3b', '.s3v9rd', '.IsZvec', '.lyLwlc', '.yXK7lf'],
+      duckduckgo: ['[data-testid="result-snippet"]', '[data-result="snippet"]', '.result__snippet'],
+      brave: [ '.generic-snippet .content', '.generic-snippet', '.line-clamp-dynamic', '.snippet-description', '.description'],
+      yandex: ['.OrganicText'],
+      yahoo: ['.sw-Card__description', '.sw-Card__snippet', '.sw-Text__body', 'p', '.b_caption p', '.b_snippet', '.b_paractl p']
+    },
+    links: {
+      bing: 'a[href]',
+      google: 'a[href]',
+      duckduckgo: ['a[data-testid="result-extras-url-link"]', 'a[data-testid="result-title-a"]', '.result__url', '.tile--title__domain', 'a[href]'],
+      brave: ['a[href]'],
+      yandex: ['.OrganicTitle a', '.Path-Item a', 'a.Link', 'a[href]'],
+      yahoo: ['h3 a', '.sw-Card__title a', 'a[data-ylk*="slk:title"]', 'a.ac-algo', 'a']
+    }
+  };
 
   // 文本映射
   const LANG_TEXTS = {
@@ -253,39 +292,6 @@
     }
   };
 
-  // 选择器
-  const SELECTORS = {
-    containers: {
-      bing: 'li.b_algo, div.b_algo',
-      google: 'div.g, div.MjjYud',
-      duckduckgo: '[data-testid="result"], .result, .web-result, .tile, .tile--ad',
-      brave: '.snippet[data-type="web"], .snippet[data-type="news"], .snippet[data-type="videos"], .image-wrapper',
-      yandex: 'div.Organic',
-      other: 'div.g, li.b_algo'
-    },
-    titles: {
-      bing: ['h2 a', 'a h2', '.b_title'],
-      google: ['h3', 'div[role="heading"]', '.LC20lb', '.DKV0Md', '.sXLaOe', '.c9DxTc', 'a h3'],
-      duckduckgo: ['a[data-testid="result-title-a"]', '.result__title', '.tile__title', '.tile--title__title', 'h2 a', 'a h2'],
-      brave: ['.title', '.snippet-title', '.img-title'],
-      yandex: ['.OrganicTitle']
-    },
-    snippets: {
-      bing: ['.b_caption p', '.b_snippet', '.b_paractl p', '.b_lineclamp2'],
-      google: ['.st', '.VwiC3b', '.s3v9rd', '.IsZvec', '.lyLwlc', '.yXK7lf'],
-      duckduckgo: ['[data-testid="result-snippet"]', '[data-result="snippet"]', '.result__snippet'],
-      brave: ['.snippet-description', '.description'],
-      yandex: ['.OrganicText']
-    },
-    links: {
-      bing: 'a[href]',
-      google: 'a[href]',
-      duckduckgo: ['a[data-testid="result-extras-url-link"]', 'a[data-testid="result-title-a"]', '.result__url', '.tile--title__domain', 'a[href]'],
-      brave: ['a[href]'],
-      yandex: ['.OrganicTitle a', '.Path-Item a', 'a.Link', 'a[href]']
-    }
-  };
-
   // Map
   let compiledRules = {
     domains: new Map(),
@@ -321,6 +327,7 @@
     if (/(?:^|\.)(?:duckduckgo\.com|ddg\.gg)$/.test(hostname)) return 'duckduckgo';
     if (/(?:^|\.)google\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})$/.test(hostname)) return 'google';
     if (/(?:^|\.)yandex\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})$/.test(hostname)) return 'yandex';
+    if (/(?:^|\.)search\.yahoo\.(?:co\.jp|com|[a-z]{2}(?:\.[a-z]{2})?)$/.test(hostname)) return 'yahoo';
     if (/(?:^|\.)brave\.com$/.test(hostname)) return 'brave';
     return 'other';
   }
@@ -401,7 +408,7 @@
     if (parts.length === 1) {
       const cond = parts[0].trim();
 
-      if (/^(google|bing|duckduckgo|yandex|brave)$/i.test(cond)) {
+      if (/^(google|bing|duckduckgo|yandex|brave|yahoo)$/i.test(cond)) {
         return currentEngine === cond.toLowerCase();
       }
 
@@ -442,7 +449,7 @@
       const trimmed = part.trim();
       if (!trimmed) continue;
 
-      if (/^(google|bing|duckduckgo|yandex|brave)$/i.test(trimmed)) {
+      if (/^(google|bing|duckduckgo|yandex|brave|yahoo)$/i.test(trimmed)) {
         if (currentEngine === trimmed.toLowerCase()) anyStaticPass = true;
         continue;
       }
@@ -1172,6 +1179,27 @@
         }
       } catch (e) {}
     }
+    if (engine === 'yahoo') {
+      try {
+        const urlObj = new URL(url);
+        if (/^(?:r\.)?search\.yahoo\./.test(urlObj.hostname)) {
+          const pathParts = urlObj.pathname.split('/');
+          for (const part of pathParts) {
+            if (part.startsWith('RU=')) {
+              const encodedUrl = part.substring(3);
+              try {
+                const realUrl = decodeURIComponent(encodedUrl);
+                if (realUrl && /^https?:\/\//i.test(realUrl)) {
+                  url = realUrl;
+                  link.href = realUrl;
+                }
+              } catch (_) {}
+              break;
+            }
+          }
+        }
+      } catch (_) {}
+    }
     return url;
   }
 
@@ -1235,10 +1263,7 @@
     btn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>`;
 
     if (window.getComputedStyle(result).position === 'static') result.style.position = 'relative';
-    if (engine === 'bing') {
-      btn.style.right = '5px';
-      btn.style.top = '10px';
-    } else if (engine === 'yandex') {
+    if (engine === 'bing' || engine === 'yandex' || engine === 'brave' || engine === 'yahoo') {
       btn.style.right = '5px';
       btn.style.top = '10px';
     } else {
