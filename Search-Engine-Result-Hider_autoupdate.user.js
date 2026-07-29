@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.4.1
+// @version      7.4.2
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -18,13 +18,12 @@
 // @match        *://*.google.com/*
 // @match        *://*.yandex.com/*
 // @match        *://*.duckduckgo.com/*
-// @include      /^https?:\/\/([\w-]+\.)?ya\.ru\/.*$/
 // @include      /^https?:\/\/([\w-]+\.)?brave\.com\/.*$/
 // @include      /^https?:\/\/([\w-]+\.)?(?:duckduckgo\.com|ddg\.gg)\/.*$/
 // @include      /^https?:\/\/([\w-]+\.)?bing\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)\/.*$/
 // @include      /^https?:\/\/([\w-]+\.)?yahoo\.(?:co\.jp|com|[a-z]{2}(?:\.[a-z]{2})?)\/.*$/
 // @include      /^https?:\/\/([\w-]+\.)?google\.(?:com|[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})\/.*$/
-// @include      /^https?:\/\/([\w-]+\.)?yandex\.(?:com|[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})\/.*$/
+// @include      /^https?:\/\/(?:(?:[\w-]+\.)?yandex\.(?:com|[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4})|(?:[\w-]+\.)?ya\.ru)\/.*$/
 // @connect      dav.jianguoyun.com
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -57,7 +56,7 @@
 
   // 默认配置
   let currentConfig = GM_getValue(CONFIG_KEY, {
-    rules: ['*://*.csdn.net/*\n*://*.giffgaff.com/*\n*://*.example.com/*'],
+    rules: ['*://*.giffgaff.com/*\n*://*.example.com/*'],
     enabled: true,
     showCount: false,
     bubbleSize: 30,
@@ -89,40 +88,62 @@
 
   // 选择器
   const SELECTORS = {
-    containers: {
-      bing: 'li.b_algo, div.b_algo',
-      google: 'div.g, div.MjjYud',
-      duckduckgo: '[data-testid="result"], .result, .web-result, .tile, .tile--ad',
-      brave: '.snippet[data-type="web"], .snippet[data-type="news"], .snippet[data-type="videos"], .image-wrapper',
-      yandex: 'div.Organic',
-      yahoo: '.sw-Card.Algo, li.b_algo, div.b_algo, #web .algo, .algo-sr, .richAlgo',
-      other: 'div.g, li.b_algo'
+    bing: {
+      containers: 'li.b_algo, div.b_algo',
+      titles: ['h2 a', 'a h2', '.b_title'],
+      snippets: ['.b_caption p', '.b_snippet', '.b_paractl p', '.b_lineclamp2'],
+      links: 'a[href]',
     },
-    titles: {
-      bing: ['h2 a', 'a h2', '.b_title'],
-      google: ['h3', 'div[role="heading"]', '.LC20lb', '.DKV0Md', '.sXLaOe', '.c9DxTc', 'a h3'],
-      duckduckgo: ['a[data-testid="result-title-a"]', '.result__title', '.tile__title', '.tile--title__title', 'h2 a', 'a h2'],
-      brave: ['.title', '.snippet-title', '.img-title'],
-      yandex: ['.OrganicTitle'],
-      yahoo: ['h3', '.s-title', 'h2 a', 'a h2', '.b_title', '.title'],
+    google: {
+      containers: 'div.g, div.MjjYud',
+      titles: ['h3', 'div[role="heading"]', '.LC20lb', '.DKV0Md', '.sXLaOe', '.c9DxTc', 'a h3'],
+      snippets: ['.st', '.VwiC3b', '.s3v9rd', '.IsZvec', '.lyLwlc', '.yXK7lf'],
+      links: 'a[href]',
     },
-    snippets: {
-      bing: ['.b_caption p', '.b_snippet', '.b_paractl p', '.b_lineclamp2'],
-      google: ['.st', '.VwiC3b', '.s3v9rd', '.IsZvec', '.lyLwlc', '.yXK7lf'],
-      duckduckgo: ['[data-testid="result-snippet"]', '[data-result="snippet"]', '.result__snippet'],
-      brave: [ '.generic-snippet .content', '.generic-snippet', '.line-clamp-dynamic', '.snippet-description', '.description'],
-      yandex: ['.OrganicText'],
-      yahoo: ['.sw-Card__description', '.sw-Card__snippet', '.sw-Text__body', 'p', '.b_caption p', '.b_snippet', '.b_paractl p']
+    duckduckgo: {
+      containers: '[data-testid="result"], .result, .web-result, .tile, .tile--ad',
+      titles: ['a[data-testid="result-title-a"]', '.result__title', '.tile__title', '.tile--title__title', 'h2 a', 'a h2'],
+      snippets: ['[data-testid="result-snippet"]', '[data-result="snippet"]', '.result__snippet'],
+      links: ['a[data-testid="result-extras-url-link"]', 'a[data-testid="result-title-a"]', '.result__url', '.tile--title__domain', 'a[href]'],
     },
-    links: {
-      bing: 'a[href]',
-      google: 'a[href]',
-      duckduckgo: ['a[data-testid="result-extras-url-link"]', 'a[data-testid="result-title-a"]', '.result__url', '.tile--title__domain', 'a[href]'],
-      brave: ['a[href]'],
-      yandex: ['.OrganicTitle a', '.Path-Item a', 'a.Link', 'a[href]'],
-      yahoo: ['h3 a', '.s-title', '.sw-Card__title a', 'a[data-ylk*="slk:title"]', 'a.ac-algo', 'a[data-y-link-id]'],
+    yandex: {
+      containers: 'div.Organic',
+      titles: ['.OrganicTitle'],
+      snippets: ['.OrganicText'],
+      links: ['.OrganicTitle a', '.Path-Item a', 'a.Link', 'a[href]'],
+    },
+    brave: {
+      containers: '.snippet[data-type="web"], .snippet[data-type="news"], .snippet[data-type="videos"], .image-wrapper',
+      titles: ['.title', '.snippet-title', '.img-title'],
+      snippets: ['.generic-snippet .content', '.generic-snippet', '.line-clamp-dynamic', '.snippet-description', '.description'],
+      links: ['a[href]'],
+    },
+    yahoo: {
+      containers: '.sw-Card.Algo, li.b_algo, div.b_algo, #web .algo, .algo-sr, .richAlgo',
+      titles: ['h3', '.s-title', 'h2 a', 'a h2', '.b_title', '.title'],
+      snippets: ['.sw-Card__description', '.sw-Card__snippet', '.sw-Text__body', 'p', '.b_caption p', '.b_snippet', '.b_paractl p'],
+      links: ['h3 a', '.s-title', '.sw-Card__title a', 'a[data-ylk*="slk:title"]', 'a.ac-algo', 'a[data-y-link-id]'],
+    },
+    other: {
+      containers: '',
     }
   };
+
+  // 引擎检测
+  function getSearchEngine() {
+    const hostname = window.location.hostname;
+    if (/(?:^|\.)bing\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)$/.test(hostname)) return 'bing';
+    if (/(?:^|\.)google\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})$/.test(hostname)) return 'google';
+    if (/(?:^|\.)(?:duckduckgo\.com|ddg\.gg)$/.test(hostname)) return 'duckduckgo';
+    if (/(?:^|\.)(?:ya\.ru|yandex\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,}))$/.test(hostname)) return 'yandex';
+    if (/(?:^|\.)brave\.com$/.test(hostname)) return 'brave';
+    if (/(?:^|\.)yahoo\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)$/i.test(hostname)) return 'yahoo';
+    return 'other';
+  }
+
+  function getContainerSelector(engine) {
+    return (SELECTORS[engine] || SELECTORS.other).containers;
+  }
 
   // 文本映射
   const LANG_TEXTS = {
@@ -318,23 +339,6 @@
   let _prevLineArray = null;
   let _lineDebounceTimer = null;
   let forceReprocessBatchId = 0;
-
-  // 引擎检测
-  function getSearchEngine() {
-    const hostname = window.location.hostname;
-    if (/(?:^|\.)ya\.ru$/.test(hostname)) return 'yandex';
-    if (/(?:^|\.)bing\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)$/.test(hostname)) return 'bing';
-    if (/(?:^|\.)(?:duckduckgo\.com|ddg\.gg)$/.test(hostname)) return 'duckduckgo';
-    if (/(?:^|\.)google\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})$/.test(hostname)) return 'google';
-    if (/(?:^|\.)yandex\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})$/.test(hostname)) return 'yandex';
-    if (/(?:^|\.)yahoo\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)$/i.test(hostname)) return 'yahoo';
-    if (/(?:^|\.)brave\.com$/.test(hostname)) return 'brave';
-    return 'other';
-  }
-
-  function getContainerSelector(engine) {
-    return SELECTORS.containers[engine] || SELECTORS.containers.other;
-  }
 
   // 语言
   function t(key, params = {}) {
@@ -1209,7 +1213,7 @@
 
   // 正文选择器
   function getResultSnippet(result, engine) {
-    const selectors = SELECTORS.snippets[engine] || SELECTORS.snippets.bing;
+    const selectors = (SELECTORS[engine] || SELECTORS.bing).snippets;
     for (let selector of selectors) {
       const elem = result.querySelector(selector);
       if (elem && elem.textContent) return elem.textContent.trim();
@@ -1219,7 +1223,7 @@
 
   // 选择器链接
   function getResultLink(result, engine) {
-    const linkSelectors = SELECTORS.links[engine];
+    const linkSelectors = (SELECTORS[engine] || SELECTORS.google).links;
     if (Array.isArray(linkSelectors)) {
       for (let selector of linkSelectors) {
         const el = result.querySelector(selector);
@@ -1233,7 +1237,7 @@
 
   // 标题选择器
   function getResultTitle(result, engine) {
-    const selectors = SELECTORS.titles[engine] || SELECTORS.titles.google;
+    const selectors = (SELECTORS[engine] || SELECTORS.google).titles;
     for (let selector of selectors) {
       const elem = result.querySelector(selector);
       if (elem && elem.textContent) return elem.textContent.trim();
