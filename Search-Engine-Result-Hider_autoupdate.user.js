@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.4.0
+// @version      7.4.1
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -13,16 +13,16 @@
 // @homepageURL  https://github.com/SadYuyuko/Search-Engine-Result-Hider
 // @license      MIT
 // @match        *://*.bing.com/*
+// @match        *://*.brave.com/*
+// @match        *://*.yahoo.com/*
 // @match        *://*.google.com/*
 // @match        *://*.yandex.com/*
 // @match        *://*.duckduckgo.com/*
-// @match        *://*.brave.com/*
-// @match        *://*.yahoo.com/*
 // @include      /^https?:\/\/([\w-]+\.)?ya\.ru\/.*$/
-// @include      /^https?:\/\/([\w-]+\.)?search\.yahoo\.(?:co\.jp|com|[a-z]{2}(?:\.[a-z]{2})?)\/.*$/
-// @include      /^https?:\/\/([\w-]+\.)?(?:duckduckgo\.com|ddg\.gg)\/.*$/
 // @include      /^https?:\/\/([\w-]+\.)?brave\.com\/.*$/
+// @include      /^https?:\/\/([\w-]+\.)?(?:duckduckgo\.com|ddg\.gg)\/.*$/
 // @include      /^https?:\/\/([\w-]+\.)?bing\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)\/.*$/
+// @include      /^https?:\/\/([\w-]+\.)?yahoo\.(?:co\.jp|com|[a-z]{2}(?:\.[a-z]{2})?)\/.*$/
 // @include      /^https?:\/\/([\w-]+\.)?google\.(?:com|[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})\/.*$/
 // @include      /^https?:\/\/([\w-]+\.)?yandex\.(?:com|[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})\/.*$/
 // @connect      dav.jianguoyun.com
@@ -57,7 +57,7 @@
 
   // 默认配置
   let currentConfig = GM_getValue(CONFIG_KEY, {
-    rules: ['*://*.giffgaff.com/*\n*://*.example.com/*'],
+    rules: ['*://*.csdn.net/*\n*://*.giffgaff.com/*\n*://*.example.com/*'],
     enabled: true,
     showCount: false,
     bubbleSize: 30,
@@ -95,7 +95,7 @@
       duckduckgo: '[data-testid="result"], .result, .web-result, .tile, .tile--ad',
       brave: '.snippet[data-type="web"], .snippet[data-type="news"], .snippet[data-type="videos"], .image-wrapper',
       yandex: 'div.Organic',
-      yahoo: '.sw-Card.Algo, li.b_algo, div.b_algo, #web .algo, .algo',
+      yahoo: '.sw-Card.Algo, li.b_algo, div.b_algo, #web .algo, .algo-sr, .richAlgo',
       other: 'div.g, li.b_algo'
     },
     titles: {
@@ -104,7 +104,7 @@
       duckduckgo: ['a[data-testid="result-title-a"]', '.result__title', '.tile__title', '.tile--title__title', 'h2 a', 'a h2'],
       brave: ['.title', '.snippet-title', '.img-title'],
       yandex: ['.OrganicTitle'],
-      yahoo: ['h3', 'h2 a', 'a h2', '.b_title']
+      yahoo: ['h3', '.s-title', 'h2 a', 'a h2', '.b_title', '.title'],
     },
     snippets: {
       bing: ['.b_caption p', '.b_snippet', '.b_paractl p', '.b_lineclamp2'],
@@ -120,7 +120,7 @@
       duckduckgo: ['a[data-testid="result-extras-url-link"]', 'a[data-testid="result-title-a"]', '.result__url', '.tile--title__domain', 'a[href]'],
       brave: ['a[href]'],
       yandex: ['.OrganicTitle a', '.Path-Item a', 'a.Link', 'a[href]'],
-      yahoo: ['h3 a', '.sw-Card__title a', 'a[data-ylk*="slk:title"]', 'a.ac-algo', 'a']
+      yahoo: ['h3 a', '.s-title', '.sw-Card__title a', 'a[data-ylk*="slk:title"]', 'a.ac-algo', 'a[data-y-link-id]'],
     }
   };
 
@@ -327,7 +327,7 @@
     if (/(?:^|\.)(?:duckduckgo\.com|ddg\.gg)$/.test(hostname)) return 'duckduckgo';
     if (/(?:^|\.)google\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})$/.test(hostname)) return 'google';
     if (/(?:^|\.)yandex\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})$/.test(hostname)) return 'yandex';
-    if (/(?:^|\.)search\.yahoo\.(?:co\.jp|com|[a-z]{2}(?:\.[a-z]{2})?)$/.test(hostname)) return 'yahoo';
+    if (/(?:^|\.)yahoo\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)$/i.test(hostname)) return 'yahoo';
     if (/(?:^|\.)brave\.com$/.test(hostname)) return 'brave';
     return 'other';
   }
@@ -659,13 +659,13 @@
       const parts = pattern.split('/');
       pattern = parts.map((part, index) => {
         if (index === 0) {
-          return part.replace(/\*/g, '.*').replace(/\?/g, '\\?').replace(/(?<!\\)\./g, '\\.');
+          return part.replace(/(?<!\\)\./g, '\\.').replace(/\*/g, '.*').replace(/\?/g, '\\?');
         } else {
           return part.replace(/\*/g, '.*').replace(/\?/g, '\\?');
         }
       }).join('\\/');
     } else {
-      pattern = pattern.replace(/\*/g, '.*').replace(/\?/g, '\\?').replace(/(?<!\\)\./g, '\\.');
+      pattern = pattern.replace(/(?<!\\)\./g, '\\.').replace(/\*/g, '.*').replace(/\?/g, '\\?');
     }
     try {
       new RegExp(pattern, 'i');
@@ -739,13 +739,13 @@
       const parts = pattern.split('/');
       pattern = parts.map((part, index) => {
         if (index === 0) {
-          return part.replace(/\*/g, '.*').replace(/\?/g, '\\?').replace(/(?<!\\)\./g, '\\.');
+          return part.replace(/(?<!\\)\./g, '\\.').replace(/\*/g, '.*').replace(/\?/g, '\\?');
         } else {
           return part.replace(/\*/g, '.*').replace(/\?/g, '\\?');
         }
       }).join('\\/');
     } else {
-      pattern = pattern.replace(/\*/g, '.*').replace(/\?/g, '\\?').replace(/(?<!\\)\./g, '\\.');
+      pattern = pattern.replace(/(?<!\\)\./g, '\\.').replace(/\*/g, '.*').replace(/\?/g, '\\?');
     }
     return {
       pattern,
@@ -983,9 +983,13 @@
       }
     }
 
-    for (const conds of groups.values()) {
+    const groupsArr = [];
+    groups.forEach(v => groupsArr.push(v));
+    for (let gi = 0; gi < groupsArr.length; gi++) {
+      const conds = groupsArr[gi];
       let groupMatch = false;
-      for (const cond of conds) {
+      for (let ci = 0; ci < conds.length; ci++) {
+        const cond = conds[ci];
         if (cond.type === 'title' && cond.op === '*=') {
           if (title && title.toLowerCase().includes(cond.val)) { groupMatch = true; break; }
         } else if (cond.type === 'title' && cond.op === '=~') {
@@ -1381,6 +1385,8 @@
 
   // 屏蔽过滤
   function processSingleResult(result) {
+    if (result.closest('.sys_algo_rs, .AlsoTry_M, [data-yga*="sugg"]')) return false;
+
     if (result.hasAttribute('data-blocker-processed')) {
       return result.getAttribute('data-is-blocked') === 'true';
     }
@@ -1389,7 +1395,12 @@
 
     const engine = getSearchEngine();
     const link = getResultLink(result, engine);
-    if (!link || !link.href) return false;
+    if (!link || !link.href) {
+      if (currentConfig.debug) {
+        console.warn('[屏蔽] 未找到链接，跳过结果:', result.tagName, result.className, result.innerHTML.substring(0, 200));
+      }
+      return false;
+    }
 
     const url = getCleanUrlAndFixDOM(link, engine);
     let domain = '';
@@ -1559,20 +1570,6 @@
       console.log(`[屏蔽] 规则数量: domains=${compiledRules.domains.size}, urls=${compiledRules.urls.length}, titles=${compiledRules.titles.length}, texts=${compiledRules.texts.length}`);
     }
 
-    document.querySelectorAll('[data-observed]').forEach(el => {
-      el.removeAttribute('data-blocker-processed');
-      el.removeAttribute('data-is-blocked');
-      el.removeAttribute('data-is-highlighted');
-      el.removeAttribute('data-highlight-n');
-      el.removeAttribute('data-matched-rule');
-      el.removeAttribute('data-matched-source');
-      el.classList.remove('searchfilter-blocked-visible');
-      el.style.outline = '';
-      el.style.outlineOffset = '';
-      el.style.display = '';
-      const label = el.querySelector('.searchfilter-matched-rule');
-      if (label) label.remove();
-    });
     document.querySelectorAll('.searchfilter-quick-block').forEach(btn => btn.remove());
     document.querySelectorAll('[data-blocker-yandex-parent]').forEach(el => {
       el.style.display = '';
@@ -1592,7 +1589,27 @@
       const batchSize = 30;
       const end = Math.min(processIdx + batchSize, allResults.length);
       for (; processIdx < end; processIdx++) {
-        if (processSingleResult(allResults[processIdx])) totalBlocked++;
+        const result = allResults[processIdx];
+        result.removeAttribute('data-blocker-processed');
+        result.removeAttribute('data-is-blocked');
+        result.removeAttribute('data-is-highlighted');
+        result.removeAttribute('data-highlight-n');
+        result.removeAttribute('data-matched-rule');
+        result.removeAttribute('data-matched-source');
+        result.classList.remove('searchfilter-blocked-visible');
+        result.style.outline = '';
+        result.style.outlineOffset = '';
+        result.style.display = '';
+        const label = result.querySelector('.searchfilter-matched-rule');
+        if (label) label.remove();
+        try {
+          if (processSingleResult(result)) totalBlocked++;
+        } catch (e) {
+          if (currentConfig.debug) {
+            console.error('[屏蔽] 处理结果时出错:', result, e);
+          }
+          result.setAttribute('data-blocker-processed', 'true');
+        }
       }
       if (processIdx < allResults.length) {
         requestAnimationFrame(processBatch);
@@ -3134,8 +3151,6 @@
     GM_setValue(CONFIG_KEY, currentConfig);
     GM_setValue(LOCAL_LAST_MODIFIED_KEY, Date.now());
 
-    const existingStatus = document.getElementById('searchfilter-status');
-    if (existingStatus) existingStatus.remove();
     showHiddenResults = false;
     forceReprocessAll();
 
