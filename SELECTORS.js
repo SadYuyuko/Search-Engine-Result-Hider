@@ -1,4 +1,4 @@
-const SELECTORS = {
+  const SELECTORS = {
     bing: {
       containers: 'li.b_algo, div.b_algo',
       titles: ['h2 a', 'a h2', '.b_title'],
@@ -39,3 +39,14 @@ const SELECTORS = {
       containers: '',
     }
   };
+
+  function getSearchEngine() {
+    const hostname = window.location.hostname;
+    if (/(?:^|\.)bing\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)$/.test(hostname)) return 'bing';
+    if (/(?:^|\.)google\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})$/.test(hostname)) return 'google';
+    if (/(?:^|\.)(?:duckduckgo\.com|ddg\.gg)$/.test(hostname)) return 'duckduckgo';
+    if (/(?:^|\.)(?:ya\.ru|yandex\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,}))$/.test(hostname)) return 'yandex';
+    if (/(?:^|\.)brave\.com$/.test(hostname)) return 'brave';
+    if (/(?:^|\.)yahoo\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)$/i.test(hostname)) return 'yahoo';
+    return 'other';
+  }
