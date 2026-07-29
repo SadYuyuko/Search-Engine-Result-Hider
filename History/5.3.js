@@ -1,0 +1,1229 @@
+// ==UserScript==
+// @name         搜索引擎结果屏蔽器
+// @name:zh-CN   搜索引擎结果屏蔽器
+// @name:en      Search Engine Result Hider
+// @namespace    https://github.com/SadYuyuko
+// @version      5.3
+// @description        支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
+// @description:zh-CN  支持uBlacklist规则的Bing/Google/DuckDuckGo搜索结果屏蔽工具
+// @description:en     A search result blocking tool for Bing/Google/DuckDuckGo that supports uBlacklist rules.
+// @author       南雪莲
+// @homepageURL  https://greasyfork.org/zh-CN/scripts/552394
+// @homepageURL  https://github.com/SadYuyuko/Search-Engine-Result-Hider
+// @license      MIT
+// @match        https://www.bing.com/*
+// @match        https://cn.bing.com/*
+// @match        https://www.google.com/*
+// @match        https://www.google.com.*/*
+// @match        https://duckduckgo.com/*
+// @match        https://*.duckduckgo.com/*
+// @grant        GM_setValue
+// @grant        GM_getValue
+// @grant        GM_addStyle
+// @run-at       document-idle
+// ==/UserScript==
+
+(function() {
+    'use strict';
+    
+    // 默认配置
+    const CONFIG_KEY = 'searchfilter_blocker';
+    let currentConfig = GM_getValue(CONFIG_KEY, {
+        rules: ['*://*.example.com/*'],
+        enabled: true,
+        showCount: false,
+        bubbleSize: 'large',
+        bubblePosition: 'bottom-right',
+        debug: false,
+        showBlockBtn: false,
+        blockDomain: false,
+        blockConfirm: true
+    });
+
+    // 兼容旧配置
+    if (currentConfig.showBlockBtn === undefined) currentConfig.showBlockBtn = false;
+    if (currentConfig.blockDomain === undefined) currentConfig.blockDomain = false;
+    if (currentConfig.blockConfirm === undefined) currentConfig.blockConfirm = false;
+    
+    // 添加样式
+    GM_addStyle(`
+        #searchfilter-panel {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 13px;
+            box-sizing: border-box;
+        }
+        #searchfilter-panel textarea {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 11px;
+            line-height: 1.4;
+            box-sizing: border-box;
+        }
+        .searchfilter-button {
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            padding: 4px 8px;
+            transition: background-color 0.2s;
+            box-sizing: border-box;
+        }
+        .searchfilter-button-primary {
+            background: #2c5282;
+            color: white;
+        }
+        .searchfilter-button-primary:hover {
+            background: #1a365d;
+        }
+        .searchfilter-button-secondary {
+            background: #4a5568;
+            color: white;
+        }
+        .searchfilter-button-secondary:hover {
+            background: #2d3748;
+        }
+        .searchfilter-button-success {
+            background: #276749;
+            color: white;
+        }
+        .searchfilter-button-success:hover {
+            background: #22543d;
+        }
+        .searchfilter-button-danger {
+            background: #c53030;
+            color: white;
+        }
+        .searchfilter-button-danger:hover {
+            background: #9b2c2c;
+        }
+        .option-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .option-label {
+            font-size: 12px;
+            color: #4a5568;
+            white-space: nowrap;
+            margin-bottom: 4px;
+        }
+        .option-buttons {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        .option-button {
+            padding: 3px 8px;
+            font-size: 11px;
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #4a5568;
+            box-sizing: border-box;
+        }
+        .option-button.active {
+            background: #2c5282;
+            color: white;
+            border-color: #2c5282;
+        }
+        .compact-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .action-button {
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: 500;
+            box-sizing: border-box;
+        }
+        
+        #searchfilter-rules {
+            width: 100%;
+            height: 150px;
+            font-size: 11px;
+            padding: 8px;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            resize: none;
+            margin-bottom: 3px;
+            background: #f8fafc;
+            box-sizing: border-box;
+            font-family: 'Consolas', 'Monaco', monospace;
+            line-height: 1.4;
+            word-break: break-all;
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+        }
+        
+        #searchfilter-rules::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        
+        #searchfilter-rules::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        
+        #searchfilter-rules::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+        
+        #searchfilter-rules::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
+        #searchfilter-test-result {
+            max-height: 150px;
+            overflow-y: auto;
+            padding-right: 8px;
+            box-sizing: border-box;
+            margin-top: 10px;
+        }
+        
+        #searchfilter-test-result::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        
+        #searchfilter-test-result::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        
+        #searchfilter-test-result::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+        
+        #searchfilter-test-result::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        .searchfilter-quick-block {
+            position: absolute;
+            cursor: pointer;
+            font-size: 16px;
+            color: #000;
+            z-index: 99;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: transparent;
+            transition: transform 0.2s, opacity 0.2s;
+            user-select: none;
+            opacity: 0.8;
+            filter: grayscale(1) brightness(0);
+        }
+        
+        /* 深色模式切换 */
+        @media (prefers-color-scheme: dark) {
+            .searchfilter-quick-block {
+                filter: grayscale(1) brightness(0) invert(1);
+                opacity: 0.9;
+            }
+        }
+        
+        .searchfilter-quick-block:hover {
+            transform: scale(1.1);
+            opacity: 1;
+        }
+        
+        /* 隐藏非正文区域屏蔽按钮 */
+        header .searchfilter-quick-block,
+        [role="navigation"] .searchfilter-quick-block,
+        [role="tablist"] .searchfilter-quick-block,
+        [role="search"] .searchfilter-quick-block,
+        g-scrolling-carousel .searchfilter-quick-block,
+        #hdtb .searchfilter-quick-block,
+        #appbar .searchfilter-quick-block
+        #searchform .searchfilter-quick-block,
+        #top_nav .searchfilter-quick-block,
+        #extabar .searchfilter-quick-block {
+            display: none !important;
+        }
+    `);
+    
+    // 搜索引擎检测
+    function getSearchEngine() {
+        const hostname = window.location.hostname;
+        if (hostname.includes('bing.com')) return 'bing';
+        if (hostname.includes('google.com')) return 'google';
+        if (hostname.includes('duckduckgo.com')) return 'duckduckgo';
+        return 'other';
+    }
+    
+    // 选择器
+    const selectors = {
+        bing: 'li.b_algo, div.b_algo',
+        google: 'div.g, div[data-snf], div[data-hveid]',
+        duckduckgo: '[data-testid="result"], .result, .web-result, .tile, .tile--ad',
+        other: 'div.g, li.b_algo'
+    };
+    
+    // URL和标题规则转换正则
+    function ruleToRegex(rule) {
+        if (rule.startsWith('title/')) {
+            let remaining = rule.substring(6);
+            let pattern, flags = '';
+
+            const lastSlashIndex = remaining.lastIndexOf('/');
+            if (lastSlashIndex !== -1 && lastSlashIndex < remaining.length - 1) {
+                const possibleFlags = remaining.substring(lastSlashIndex + 1);
+                if (/^[ims]+$/i.test(possibleFlags)) {
+                    flags = possibleFlags.toLowerCase();
+                    pattern = remaining.substring(0, lastSlashIndex);
+                } else {
+                    pattern = remaining;
+                }
+            } else {
+                pattern = remaining;
+            }
+
+            if (!flags && remaining.endsWith('/')) {
+                pattern = remaining.slice(0, -1);
+            }
+
+            if (!flags) {
+                const oldFlagMatch = pattern.match(/^\(\?([ims]+)\)/);
+                if (oldFlagMatch) {
+                    flags = oldFlagMatch[1];
+                    pattern = pattern.substring(oldFlagMatch[0].length);
+                }
+            }
+
+            if (flags.includes('s')) {
+                pattern = pattern.replace(/\./g, '[\\s\\S]');
+                flags = flags.replace('s', '');
+            }
+
+            return { pattern, flags };
+        }
+        
+        let pattern = rule;
+        
+        if (pattern.startsWith('*://')) {
+            pattern = pattern.substring(4);
+        }
+        
+        // 处理路径匹配
+        if (pattern.includes('/')) {
+            const parts = pattern.split('/');
+            pattern = parts.map((part, index) => {
+                if (index === 0) {
+                    return part
+                        .replace(/\*/g, '.*')
+                        .replace(/\?/g, '\\?')
+                        .replace(/(?<!\\)\./g, '\\.');
+                } else {
+                    return part
+                        .replace(/\*/g, '.*')
+                        .replace(/\?/g, '\\?');
+                }
+            }).join('\\/');
+        } else {
+            pattern = pattern
+                .replace(/\*/g, '.*')
+                .replace(/\?/g, '\\?')
+                .replace(/(?<!\\)\./g, '\\.');
+        }
+        
+        return { pattern, flags: 'i' };
+    }
+    
+    // 正文选择器
+    function getResultSnippet(result, engine) {
+        const bingSnippetSelectors = ['.b_caption p', '.b_snippet', '.b_paractl p', '.b_lineclamp2'];
+        const googleSnippetSelectors = ['.st', '.VwiC3b', '.s3v9rd', '.IsZvec', '.lyLwlc', '.yXK7lf'];
+        const duckSnippetSelectors = ['[data-testid="result-snippet"]', '[data-result="snippet"]', '.result__snippet'];
+
+        let selectors;
+        if (engine === 'bing') selectors = bingSnippetSelectors;
+        else if (engine === 'google') selectors = googleSnippetSelectors;
+        else if (engine === 'duckduckgo') selectors = duckSnippetSelectors;
+        else return '';
+
+        for (let selector of selectors) {
+            const elem = result.querySelector(selector);
+            if (elem && elem.textContent) {
+                return elem.textContent.trim();
+            }
+        }
+        return '';
+    }
+
+    // 处理正文规则
+    function checkTextRule(rule, snippet) {
+        if (!snippet) return false;
+
+        let remaining = rule.substring(5);
+        let pattern, flags = '';
+
+        const lastSlashIndex = remaining.lastIndexOf('/');
+        if (lastSlashIndex !== -1 && lastSlashIndex < remaining.length - 1) {
+            const possibleFlags = remaining.substring(lastSlashIndex + 1);
+            if (/^[ims]+$/i.test(possibleFlags)) {
+                flags = possibleFlags.toLowerCase();
+                pattern = remaining.substring(0, lastSlashIndex);
+            } else {
+                pattern = remaining;
+            }
+        } else {
+            pattern = remaining;
+        }
+
+        if (!flags && remaining.endsWith('/')) {
+            pattern = remaining.slice(0, -1);
+        }
+
+        if (!flags) {
+            const oldFlagMatch = pattern.match(/^\(\?([ims]+)\)/);
+            if (oldFlagMatch) {
+                flags = oldFlagMatch[1];
+                pattern = pattern.substring(oldFlagMatch[0].length);
+            }
+        }
+
+        if (flags.includes('s')) {
+            pattern = pattern.replace(/\./g, '[\\s\\S]');
+            flags = flags.replace('s', '');
+        }
+
+        try {
+            const regex = new RegExp(pattern, flags);
+            return regex.test(snippet);
+        } catch (e) {
+            console.error('正文规则解析错误:', e, '规则:', rule);
+
+            const simplePattern = pattern.replace(/^\(\?[ims]+\)/, '');
+            if (flags.includes('i')) {
+                return snippet.toLowerCase().includes(simplePattern.toLowerCase());
+            }
+            return snippet.includes(simplePattern);
+        }
+    }
+    
+    // 检查规则匹配函数
+    function checkRuleMatch(rule, url, domain, title, snippet) {
+        if (rule.startsWith('text/')) {
+            return checkTextRule(rule, snippet);
+        }
+        
+        if (rule.startsWith('title/')) {
+            try {
+                const { pattern, flags } = ruleToRegex(rule);
+                
+                if (!title || title.trim() === '') return false;
+                
+                const regex = new RegExp(pattern, flags);
+                const matches = regex.test(title);
+                
+                if (currentConfig.debug && matches && Math.random() < 0.1) {
+                    console.log('标题匹配成功:', {
+                        rule: rule,
+                        pattern: pattern,
+                        title: title.substring(0, 50),
+                        matches: matches
+                    });
+                }
+                
+                return matches;
+            } catch (e) {
+                console.error('标题规则解析错误:', e, '规则:', rule);
+                
+                try {
+                    const simplePattern = rule.substring(6).replace(/^\(\?[ims]+\)/, '');
+                    if (rule.includes('(?i)') || rule.includes('(?i)')) {
+                        return title.toLowerCase().includes(simplePattern.toLowerCase());
+                    }
+                    return title.includes(simplePattern);
+                } catch (e2) {
+                    console.error('标题规则回退匹配失败:', e2);
+                    return false;
+                }
+            }
+        }
+        
+        // URL匹配
+        try {
+            const { pattern, flags } = ruleToRegex(rule);
+            const regex = new RegExp(pattern, flags);
+            
+            const fullMatch = regex.test(url);
+            const domainMatch = regex.test(domain);
+            
+            if (currentConfig.debug && (fullMatch || domainMatch) && Math.random() < 0.1) {
+                console.log('URL规则匹配检查:', {
+                    rule: rule,
+                    pattern: pattern,
+                    url: url,
+                    domain: domain,
+                    fullMatch: fullMatch,
+                    domainMatch: domainMatch
+                });
+            }
+            
+            return fullMatch || domainMatch;
+        } catch (e) {
+            console.error('URL规则解析错误:', e, '规则:', rule);
+            
+            try {
+                const simpleRule = rule.replace('*://', '').replace(/\*/g, '');
+                return url.includes(simpleRule) || domain.includes(simpleRule);
+            } catch (e2) {
+                console.error('URL规则回退匹配失败:', e2);
+                return false;
+            }
+        }
+    }
+    
+    // 屏蔽按钮
+    function injectBlockButton(result, engine, url, domain) {
+        if (!domain) return;
+        
+        if (result.closest('header, [role="navigation"], [role="tablist"], [role="search"], g-scrolling-carousel, #hdtb, #appbar, #searchform, #top_nav')) {
+            return;
+        }
+        
+        if (engine === 'google' && !result.closest('#center_col')) {
+            return;
+        }
+        
+        if (result.querySelector('.searchfilter-quick-block')) return;
+        
+        const btn = document.createElement('div');
+        btn.className = 'searchfilter-quick-block';
+        btn.innerHTML = '🚫';
+        btn.title = '屏蔽此词条';
+        
+        if (window.getComputedStyle(result).position === 'static') {
+            result.style.position = 'relative';
+        }
+        
+        if (engine === 'bing') {
+            btn.style.right = '5px';
+            btn.style.top = '10px';
+        } else {
+            btn.style.right = '35px';
+            btn.style.top = '10px';
+        }
+        
+        btn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            let newRule = '';
+            if (currentConfig.blockDomain) {
+                let baseDomain = domain.startsWith('www.') ? domain.substring(4) : domain;
+                newRule = baseDomain + '/*';
+            } else {
+                newRule = domain;
+            }
+            
+            if (currentConfig.blockConfirm) {
+                if (!confirm(`确定要屏蔽并添加规则 [ ${newRule} ] 吗？`)) {
+                    return;
+                }
+            }
+            
+            if (!currentConfig.rules.includes(newRule)) {
+                currentConfig.rules.push(newRule);
+                GM_setValue(CONFIG_KEY, currentConfig);
+                
+                const textarea = document.getElementById('searchfilter-rules');
+                if (textarea) {
+                    textarea.value = currentConfig.rules.join('\n');
+                }
+                
+                document.querySelectorAll('.searchfilter-quick-block').forEach(b => b.remove());
+                document.querySelectorAll('[data-blocker-processed]').forEach(el => {
+                    el.removeAttribute('data-blocker-processed');
+                });
+                blockResults();
+            } else {
+                result.style.display = 'none';
+            }
+        };
+        
+        result.appendChild(btn);
+    }
+
+    // 屏蔽结果
+    function blockResults() {
+        if (!currentConfig.enabled) {
+            updateStatus(0);
+            document.querySelectorAll('[data-blocker-processed]').forEach(result => {
+                result.style.display = '';
+                result.removeAttribute('data-blocker-processed');
+            });
+            return;
+        }
+        
+        const engine = getSearchEngine();
+        const selector = selectors[engine];
+        const results = document.querySelectorAll(selector);
+        
+        let blocked = 0;
+        results.forEach(result => {
+            if (result.hasAttribute('data-blocker-processed')) return;
+            
+            const link = getResultLink(result, engine);
+            if (!link || !link.href) return;
+            
+            const url = link.href;
+            let domain;
+            try {
+                domain = new URL(url).hostname;
+            } catch (e) {
+                domain = '';
+            }
+            
+            const title = getResultTitle(result, engine);
+            const snippet = getResultSnippet(result, engine);
+            
+            const shouldBlock = currentConfig.rules.some(rule => {
+                return checkRuleMatch(rule, url, domain, title, snippet);
+            });
+            
+            if (shouldBlock) {
+                result.style.display = 'none';
+                blocked++;
+                result.setAttribute('data-blocker-processed', 'true');
+                
+                if (currentConfig.debug) {
+                    console.log('屏蔽结果:', {
+                        engine: engine,
+                        url: url,
+                        domain: domain,
+                        title: title,
+                        snippet: snippet,
+                        ruleMatched: true
+                    });
+                }
+            } else {
+                result.setAttribute('data-blocker-processed', 'true');
+                if (currentConfig.showBlockBtn) {
+                    injectBlockButton(result, engine, url, domain);
+                }
+            }
+        });
+        
+        updateStatus(blocked);
+    }
+    
+    // 获取链接
+    function getResultLink(result, engine) {
+        if (engine === 'bing') {
+            return result.querySelector('a[href]');
+        } else if (engine === 'google') {
+            return result.querySelector('a[href]');
+        } else if (engine === 'duckduckgo') {
+            return result.querySelector('a[data-testid="result-extras-url-link"]') ||
+                   result.querySelector('a[data-testid="result-title-a"]') ||
+                   result.querySelector('.result__url') ||
+                   result.querySelector('.tile--title__domain') ||
+                   result.querySelector('a[href]');
+        }
+        return result.querySelector('a[href]');
+    }
+    
+    // 获取标题
+    function getResultTitle(result, engine) {
+        const bingSelectors = ['h2 a', 'a h2', '.b_title'];
+        const googleSelectors = ['h3', 'div[role="heading"]', '.LC20lb', '.DKV0Md', '.sXLaOe', '.c9DxTc', 'a h3'];
+        const duckSelectors = ['a[data-testid="result-title-a"]', '.result__title', '.tile__title', '.tile--title__title', 'h2 a', 'a h2'];
+
+        let selectors;
+        if (engine === 'bing') selectors = bingSelectors;
+        else if (engine === 'google') selectors = googleSelectors;
+        else if (engine === 'duckduckgo') selectors = duckSelectors;
+        else return '';
+
+        for (let i = 0; i < selectors.length; i++) {
+            const elem = result.querySelector(selectors[i]);
+            if (elem && elem.textContent) {
+                return elem.textContent.trim();
+            }
+        }
+        return '';
+    }
+    
+    // 更新状态显示
+    function updateStatus(blocked) {
+        let status = document.getElementById('searchfilter-status');
+        if (!status) {
+            status = document.createElement('div');
+            status.id = 'searchfilter-status';
+            
+            applyBubbleStyle(status);
+            
+            status.onmouseover = () => {
+                status.style.opacity = '1';
+                status.style.textShadow = '0 0 8px rgba(255,255,255,0.5)';
+            };
+            status.onmouseout = () => {
+                status.style.opacity = '0.8';
+                status.style.textShadow = '';
+            };
+            status.onclick = showConfigPanel;
+            document.body.appendChild(status);
+        }
+        
+        applyBubblePosition(status);
+        applyBubbleSize(status);
+        
+        if (currentConfig.showCount) {
+            status.textContent = `🚫 ${blocked}`;
+        } else {
+            status.textContent = '🚫';
+        }
+        status.title = '点击配置屏蔽规则';
+    }
+    
+    // 悬浮球样式
+    function applyBubbleStyle(element) {
+        element.style.cssText = `
+            position: fixed;
+            background: transparent;
+            color: #333;
+            border-radius: 4px;
+            z-index: 10000;
+            cursor: pointer;
+            font-weight: bold;
+            user-select: none;
+            transition: opacity 0.2s, text-shadow 0.2s;
+            opacity: 0.8;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            box-sizing: border-box;
+        `;
+    }
+    
+    // 悬浮球大小
+    function applyBubbleSize(element) {
+        let fontSize, padding, lineHeight;
+        switch(currentConfig.bubbleSize) {
+            case 'medium':
+                fontSize = '18px';
+                padding = '5px 5px';
+                lineHeight = '1.3';
+                break;
+            case 'large':
+                fontSize = '20px';
+                padding = '5px 5px';
+                lineHeight = '1.4';
+                break;
+            case 'larger':
+                fontSize = '22px';
+                padding = '5px 5px';
+                lineHeight = '1.5';
+                break;
+            case 'xlarge':
+                fontSize = '26px';
+                padding = '5px 5px';
+                lineHeight = '1.6';
+                break;
+            default:
+                fontSize = '20px';
+                padding = '5px 5px';
+                lineHeight = '1.4';
+        }
+        
+        element.style.fontSize = fontSize;
+        element.style.padding = padding;
+        element.style.lineHeight = lineHeight;
+    }
+    
+    // 悬浮球位置
+    function applyBubblePosition(element) {
+        element.style.top = 'auto';
+        element.style.bottom = 'auto';
+        element.style.left = 'auto';
+        element.style.right = 'auto';
+        
+        switch(currentConfig.bubblePosition) {
+            case 'top-left':
+                element.style.top = '5px';
+                element.style.left = '5px';
+                break;
+            case 'top-right':
+                element.style.top = '5px';
+                element.style.right = '5px';
+                break;
+            case 'bottom-left':
+                element.style.bottom = '5px';
+                element.style.left = '5px';
+                break;
+            default:
+                element.style.bottom = '5px';
+                element.style.right = '5px';
+        }
+    }
+    
+    // 创建选项按钮
+    function createOptionButtons(name, value, options) {
+        const buttons = options.map(option => {
+            const active = currentConfig[name] === option.value;
+            return `<button type="button" class="option-button ${active ? 'active' : ''}" 
+                    data-value="${option.value}" data-name="${name}">
+                ${option.label}
+            </button>`;
+        }).join('');
+        
+        return `<div class="option-buttons">${buttons}</div>`;
+    }
+    
+    // 显示配置面板
+    function showConfigPanel() {
+        const existing = document.getElementById('searchfilter-panel');
+        if (existing) {
+            existing.remove();
+            return;
+        }
+        
+        const panel = document.createElement('div');
+        panel.id = 'searchfilter-panel';
+        panel.style.cssText = `
+            position: fixed;
+            bottom: 60px;
+            right: 10px;
+            width: 325px;
+            max-width: 90vw;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 5px 15px 15px 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            z-index: 10001;
+            font-size: 13px;
+            box-sizing: border-box;
+        `;
+        
+        // 悬浮球位置
+        const positionOptions = [
+            { value: 'top-left', label: '左上' },
+            { value: 'top-right', label: '右上' },
+            { value: 'bottom-left', label: '左下' },
+            { value: 'bottom-right', label: '右下' }
+        ];
+        
+        // 悬浮球大小
+        const sizeOptions = [
+            { value: 'medium', label: '中杯' },
+            { value: 'large', label: '大杯' },
+            { value: 'larger', label: '超大' },
+            { value: 'xlarge', label: '特大' }
+        ];
+        
+        // 面板UI
+        panel.innerHTML = `
+            <div style="display: flex; gap: 8px; margin-top: 10px; margin-bottom: 8px;">
+                <label style="display: flex; align-items: center; flex: 1; justify-content: flex-start; white-space: nowrap;">
+                    <input type="checkbox" id="searchfilter-enabled" ${currentConfig.enabled ? 'checked' : ''} style="margin-right: 4px;">
+                    <span>启用屏蔽</span>
+                </label>
+                <label style="display: flex; align-items: center; flex: 1; justify-content: center; white-space: nowrap;">
+                    <input type="checkbox" id="searchfilter-show-count" ${currentConfig.showCount ? 'checked' : ''} style="margin-right: 4px;">
+                    <span>显示数量</span>
+                </label>
+                <label style="display: flex; align-items: center; flex: 1; justify-content: flex-end; white-space: nowrap;">
+                    <input type="checkbox" id="searchfilter-debug" ${currentConfig.debug ? 'checked' : ''} style="margin-right: 4px;">
+                    <span>调试模式</span>
+                </label>
+            </div>
+            
+            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                <label style="display: flex; align-items: center; flex: 1; justify-content: flex-start; white-space: nowrap;">
+                    <input type="checkbox" id="searchfilter-show-block-btn" ${currentConfig.showBlockBtn ? 'checked' : ''} style="margin-right: 4px;">
+                    <span>屏蔽按钮</span>
+                </label>
+                <label style="display: flex; align-items: center; flex: 1; justify-content: center; white-space: nowrap;">
+                    <input type="checkbox" id="searchfilter-block-domain" ${currentConfig.blockDomain ? 'checked' : ''} style="margin-right: 4px;">
+                    <span>屏蔽域名</span>
+                </label>
+                <label style="display: flex; align-items: center; flex: 1; justify-content: flex-end; white-space: nowrap;">
+                    <input type="checkbox" id="searchfilter-block-confirm" ${currentConfig.blockConfirm ? 'checked' : ''} style="margin-right: 4px;">
+                    <span>屏蔽确认</span>
+                </label>
+            </div>
+            
+            <div class="option-row">
+                <span class="option-label">悬浮球位置:</span>
+                ${createOptionButtons('bubblePosition', currentConfig.bubblePosition, positionOptions)}
+            </div>
+            
+            <div class="option-row">
+                <span class="option-label">悬浮球大小:</span>
+                ${createOptionButtons('bubbleSize', currentConfig.bubbleSize, sizeOptions)}
+            </div>
+            
+            <div style="margin-bottom: 8px;">
+                <div class="compact-row">
+                    <span style="font-size: 12px; color: #4a5568;">屏蔽规则:</span>
+                    <div style="display: flex; gap: 4px;">
+                        <button id="searchfilter-import-file" class="searchfilter-button searchfilter-button-secondary" style="padding: 3px 8px; border: 1px solid transparent;" title="从TXT文件导入">inTXT</button>
+                        <button id="searchfilter-export-file" class="searchfilter-button searchfilter-button-success" style="padding: 3px 8px; border: 1px solid transparent;" title="导出到TXT文件">toTXT</button>
+                        <button id="searchfilter-import" class="searchfilter-button searchfilter-button-secondary" style="padding: 3px 8px; border: 1px solid transparent;" title="从剪贴板导入">导入</button>
+                        <button id="searchfilter-export" class="searchfilter-button searchfilter-button-success" style="padding: 3px 8px; border: 1px solid transparent;" title="导出到剪贴板">导出</button>
+                    </div>
+                </div>
+                <textarea id="searchfilter-rules" placeholder="每行一个规则">${currentConfig.rules.join('\n')}</textarea>
+                <div style="font-size: 10px; color: #718096; margin-top: 3px; text-align: left;">
+                title/.*文本.*/ 匹配标题 | text/.*文本.*/ 匹配内容<br>
+                title/.*AbC.*/i 加i忽略大小写 | title/.*A(B|C).*/ 同时匹配AB和AC
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 6px; margin-top: 8px;">
+                <button id="searchfilter-save" class="searchfilter-button searchfilter-button-primary action-button" style="flex: 2;">保存</button>
+                <button id="searchfilter-test" class="searchfilter-button searchfilter-button-secondary action-button" style="flex: 1;">测试</button>
+                <button id="searchfilter-close" class="searchfilter-button searchfilter-button-danger action-button" style="flex: 1;">关闭</button>
+            </div>
+            
+            <div id="searchfilter-test-result" style="margin-top: 10px; font-size: 12px; display: none;"></div>
+        `;
+        
+        document.body.appendChild(panel);
+        
+        // 事件处理
+        document.getElementById('searchfilter-save').onclick = saveConfig;
+        document.getElementById('searchfilter-test').onclick = testRules;
+        document.getElementById('searchfilter-close').onclick = () => panel.remove();
+        document.getElementById('searchfilter-import').onclick = importRules;
+        document.getElementById('searchfilter-export').onclick = exportRules;
+        document.getElementById('searchfilter-import-file').onclick = (e) => {
+           e.stopPropagation();
+           importRulesFromFile();
+        };
+        document.getElementById('searchfilter-export-file').onclick = exportRulesToFile;
+        
+        panel.querySelectorAll('.option-button').forEach(button => {
+            button.addEventListener('click', function() {
+                const name = this.dataset.name;
+                const value = this.dataset.value;
+                
+                currentConfig[name] = value;
+                
+                const buttons = panel.querySelectorAll(`[data-name="${name}"]`);
+                buttons.forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.value === value);
+                });
+            });
+        });
+        
+        setTimeout(() => {
+            document.addEventListener('click', function closePanel(e) {
+                if (!panel.contains(e.target) && e.target.id !== 'searchfilter-status') {
+                    panel.remove();
+                    document.removeEventListener('click', closePanel);
+                }
+            });
+        }, 100);
+    }
+    
+    // 保存配置
+    function saveConfig() {
+        const panel = document.getElementById('searchfilter-panel');
+        const rulesText = document.getElementById('searchfilter-rules').value;
+        const enabled = document.getElementById('searchfilter-enabled').checked;
+        const showCount = document.getElementById('searchfilter-show-count').checked;
+        const debug = document.getElementById('searchfilter-debug').checked;
+        
+        const showBlockBtn = document.getElementById('searchfilter-show-block-btn').checked;
+        const blockDomain = document.getElementById('searchfilter-block-domain').checked;
+        const blockConfirm = document.getElementById('searchfilter-block-confirm').checked;
+        
+        currentConfig.rules = rulesText.split('\n')
+            .map(rule => rule.trim())
+            .filter(rule => rule.length > 0);
+        currentConfig.enabled = enabled;
+        currentConfig.showCount = showCount;
+        currentConfig.debug = debug;
+        currentConfig.showBlockBtn = showBlockBtn;
+        currentConfig.blockDomain = blockDomain;
+        currentConfig.blockConfirm = blockConfirm;
+        
+        GM_setValue(CONFIG_KEY, currentConfig);
+        panel.remove();
+        
+        document.querySelectorAll('.searchfilter-quick-block').forEach(btn => btn.remove());
+        
+        document.querySelectorAll('[data-blocker-processed]').forEach(el => {
+            el.removeAttribute('data-blocker-processed');
+        });
+        
+        const existingStatus = document.getElementById('searchfilter-status');
+        if (existingStatus) existingStatus.remove();
+        
+        blockResults();
+    }
+    
+    // 测试规则
+    function testRules() {
+        const rulesText = document.getElementById('searchfilter-rules').value;
+        const testRules = rulesText.split('\n')
+            .map(rule => rule.trim())
+            .filter(rule => rule.length > 0);
+        
+        const engine = getSearchEngine();
+        const results = document.querySelectorAll(selectors[engine]);
+        
+        const ruleStats = {};
+        const ruleErrors = {};
+        
+        results.forEach(result => {
+            const link = getResultLink(result, engine);
+            if (!link || !link.href) return;
+            
+            const url = link.href;
+            let domain = '';
+            try {
+                domain = new URL(url).hostname;
+            } catch (e) {
+                domain = '';
+            }
+            
+            const title = getResultTitle(result, engine) || '';
+            const snippet = getResultSnippet(result, engine) || '';
+            
+            testRules.forEach(rule => {
+                try {
+                    if (checkRuleMatch(rule, url, domain, title, snippet)) {
+                        if (!ruleStats[rule]) {
+                            ruleStats[rule] = 0;
+                        }
+                        ruleStats[rule]++;
+                    }
+                } catch (e) {
+                    if (!ruleErrors[rule]) {
+                        ruleErrors[rule] = [];
+                    }
+                    ruleErrors[rule].push(e.message);
+                }
+            });
+        });
+        
+        const ruleStatsArray = Object.entries(ruleStats)
+            .map(([rule, count]) => ({ rule, count }))
+            .sort((a, b) => b.count - a.count);
+        
+        const ruleErrorsArray = Object.entries(ruleErrors)
+            .map(([rule, errors]) => ({ rule, errors: [...new Set(errors)] }));
+        
+        const testResultEl = document.getElementById('searchfilter-test-result');
+        const rulesTextarea = document.getElementById('searchfilter-rules');
+        
+        testResultEl.style.maxHeight = 'none';
+        testResultEl.style.overflowY = 'visible';
+        testResultEl.style.paddingRight = '8px';
+        testResultEl.style.boxSizing = 'border-box';
+        
+        let resultHTML = '';
+        
+        if (ruleErrorsArray.length > 0) {
+            resultHTML += `<div style="color: #c53030; background: #fff5f5; padding: 8px; border-radius: 4px; margin-bottom: 12px;">
+                <strong>⚠️ 发现 ${ruleErrorsArray.length} 个规则错误：</strong><br>`;
+            
+            ruleErrorsArray.forEach(item => {
+                resultHTML += `<div style="margin: 4px 0; font-size: 11px;">
+                    <div style="color: #2d3748;"><strong>规则：</strong>${item.rule}</div>
+                    <div style="color: #c53030;"><strong>错误：</strong>${item.errors.join(', ')}</div>
+                </div>`;
+            });
+            
+            resultHTML += '</div>';
+        }
+        
+        if (ruleStatsArray.length > 0) {
+            const totalMatches = ruleStatsArray.reduce((sum, item) => sum + item.count, 0);
+            
+            resultHTML += `<div style="color: #2d3748; font-weight: bold; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #e2e8f0;">共匹配 ${totalMatches} 条结果</div>`;
+            
+            ruleStatsArray.forEach(item => {
+                let ruleType = 'URL规则';
+                if (item.rule.startsWith('title/')) ruleType = '标题规则';
+                else if (item.rule.startsWith('text/')) ruleType = '正文规则';
+                
+                resultHTML += `
+                    <div style="margin: 4px 0; padding: 6px 0; border-bottom: 1px solid #edf2f7;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                            <span style="font-size: 11px; color: #718096;">${ruleType}</span>
+                            <span style="font-size: 11px; color: #38a169; font-weight: bold;">匹配: ${item.count} 条</span>
+                        </div>
+                        <div style="font-size: 12px; color: #2d3748; word-break: break-all; font-family: 'Consolas', monospace;">${item.rule}</div>
+                    </div>
+                `;
+            });
+
+            const maxHeight = Math.max(rulesTextarea.offsetHeight * 1.2, 150);
+            testResultEl.style.maxHeight = maxHeight + 'px';
+            testResultEl.style.overflowY = 'auto';
+        } else if (ruleErrorsArray.length === 0) {
+            resultHTML = '<div style="color: #38a169; padding: 10px; border-radius: 4px; font-size: 12px; background: #f0fff4; text-align: center; width: 100%; box-sizing: border-box; display: block;">无匹配项</div>';
+            testResultEl.style.maxHeight = 'none';
+            testResultEl.style.overflowY = 'visible';
+            testResultEl.style.paddingRight = '0';
+        }
+        
+        testResultEl.innerHTML = resultHTML;
+        testResultEl.style.display = 'block';
+        
+        setTimeout(() => {
+            testResultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
+    }
+    
+    // 从剪贴板导入规则
+    function importRules() {
+        const textarea = document.getElementById('searchfilter-rules');
+        const importText = prompt('请粘贴规则（每行一个）:');
+        if (importText !== null) {
+            let rules = importText.split('\n')
+                .map(rule => rule.trim())
+                .filter(rule => rule.length > 0);
+            if (rules.length === 0) {
+                const confirmClear = confirm('当前剪贴板为空，若继续导入将会清空规则');
+                if (confirmClear) {
+                    textarea.value = '';
+                }
+            } else {
+                textarea.value = rules.join('\n');
+            }
+        }
+    }
+    
+    // 导出规则到剪贴板
+    function exportRules() {
+        const textarea = document.getElementById('searchfilter-rules');
+        const exportText = textarea.value;
+        
+        if (!exportText.trim()) {
+            alert('没有规则可导出');
+            return;
+        }
+        
+        const temp = document.createElement('textarea');
+        temp.value = exportText;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+        
+        alert('规则已复制到剪贴板');
+    }
+
+    // 从TXT导入规则
+    function importRulesFromFile() {
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '.txt,text/plain';
+        fileInput.style.display = 'none';
+        fileInput.addEventListener('click', e => e.stopPropagation());
+        document.body.appendChild(fileInput);
+        
+        fileInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) {
+                document.body.removeChild(fileInput);
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const content = event.target.result;
+                const textarea = document.getElementById('searchfilter-rules');
+                if (textarea) {
+                    textarea.value = content;
+                }
+                document.body.removeChild(fileInput);
+            };
+            reader.onerror = () => {
+                alert('读取文件失败');
+                document.body.removeChild(fileInput);
+            };
+            reader.readAsText(file, 'UTF-8');
+        };
+        
+        fileInput.click();
+    }
+
+    // 导出规则到TXT
+    function exportRulesToFile() {
+    const textarea = document.getElementById('searchfilter-rules');
+    const content = textarea.value;
+    
+    if (!content.trim()) {
+        alert('没有规则可导出');
+        return;
+    }
+    
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const filename = `rules-${month}-${day}-${hours}${minutes}${seconds}.txt`;
+    
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    
+    a.addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
+    
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    }
+    
+    // 初始化
+    function init() {
+        blockResults();
+        
+        const observer = new MutationObserver(() => {
+            setTimeout(blockResults, 500);
+        });
+        
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+        
+        let timeout;
+        window.addEventListener('scroll', () => {
+            clearTimeout(timeout);
+            timeout = setTimeout(blockResults, 300);
+        });
+        
+        const searchForm = document.querySelector('form[role="search"], form[name="search"], form[action*="search"]');
+        if (searchForm) {
+            searchForm.addEventListener('submit', () => {
+                setTimeout(() => {
+                    document.querySelectorAll('.searchfilter-quick-block').forEach(btn => btn.remove());
+                    document.querySelectorAll('[data-blocker-processed]').forEach(el => {
+                        el.removeAttribute('data-blocker-processed');
+                    });
+                }, 800);
+            });
+        }
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        setTimeout(init, 1000);
+    }
+})();
