@@ -3,7 +3,7 @@
 ### [Github](https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js) | [Greasy Fork](https://greasyfork.org/zh-CN/scripts/552394) 安装  
 [中文](README.md) | [English](README.en.md)  
 在仅支持安装脚本的浏览器上实现复杂规则屏蔽搜索结果功能  
-支持包括ublacklist基础规则在内的URL匹配、正则匹配、标题匹配、白名单匹配、高亮目标结果以及结果正文内容匹配  
+支持包括ublacklist基础规则在内的URL匹配、正则匹配、标题匹配、白名单匹配、高亮目标结果以及结果摘要(snippet)匹配  
 当前支持搜索引擎：Bing、Google、DuckDuckGo、Yandex、Brave，Yahoo  
   
 **当前功能：**  
@@ -73,8 +73,8 @@
 `@if (site = "google.com.hk") { *://*.example.com/* }` - 仅在Google HK中屏蔽`example.com`  
 `@if(Google) { *://*.example.com/* @if(title *= "示例") @if(site = "google.com") }` - 仅在Google中，屏蔽`example.com`的搜索结果中标题含有`示例`的结果  
   
-**正文匹配：**  
-`text/.*示例.*/` – 匹配结果词条的网页描述内容中包含`示例`的搜索结果，此规则不会匹配标题  
+**摘要匹配：**  
+`text/.*示例.*/` – 匹配结果的网页描述内容(snippet)中包含`示例`的搜索结果，此规则不会匹配标题  
 `text/.*示例abc.*/i` – 同上，加i忽略大小写  
 <br>
 
