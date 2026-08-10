@@ -30,10 +30,9 @@
 4. 同步配置在刷新后生效  
   
 **注意：**  
-1. 导出到TXT依赖blob处理，请确保浏览器blob功能正常  
-2. 订阅每天同步一次，只支持.txt文件远程链接且最多3条订阅，逻辑为在本地规则后应用。由于脚本可分配性能有限，规则总数建议不超过2w条避免手机爆炸🤳💥  
-3. 脚本扩展有限不支持`##`DOM语法规则，通过订阅导入会自动清除  
-4. 在脚本中添加域名规则时可不使用`*://*.`前缀直接写域名，但对于需要同时在ublacklist使用的规则必须加上  
+1. 订阅同步频率为每天一次，支持最多3条订阅且只支持.txt远程链接，例如`https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/rules.txt`，应用优先级在本地规则之后。由于脚本可分配性能有限，规则总数建议不超过2w条避免手机爆炸🤳💥  
+2. 脚本扩展有限不支持`##`DOM语法规则，通过订阅导入会自动清除  
+3. 在脚本中添加域名规则时可不使用`*://*.`前缀直接写域名，但对于需要同时在ublacklist使用的规则必须加上  
 <br>
   
 ### 基础规则：  
@@ -76,11 +75,11 @@
 **摘要匹配：**  
 `text/.*示例.*/` – 匹配结果的网页描述内容(snippet)中包含`示例`的搜索结果，此规则不会匹配标题  
 `text/.*示例abc.*/i` – 同上，加i忽略大小写  
-<br>
+<br>  
 
 ### 效果截图：  
 <img width="460" height="285" alt="01" src="https://github.com/user-attachments/assets/8523f109-84d1-4eba-b8d5-678b0a824340" />
 <br>
-<img width="267" height="250" alt="02" src="https://github.com/user-attachments/assets/abe39f77-d9e3-4a91-8148-5bcb548a7f6c" />
+<img width="214" height="206" alt="02" src="https://github.com/user-attachments/assets/e486984a-2d00-4639-94d1-cf37474cd860" />
 <br>
-<img width="256" height="170" alt="03" src="https://github.com/user-attachments/assets/dfb3aadc-5cdb-4da7-925f-e18d9f8c3a8f" />
+<img width="200" height="133" alt="03" src="https://github.com/user-attachments/assets/dfb3aadc-5cdb-4da7-925f-e18d9f8c3a8f" />
