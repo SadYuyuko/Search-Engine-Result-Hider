@@ -77,7 +77,7 @@
 `text/.*示例abc.*/i` – 同上，加i忽略大小写  
 <br>  
 
-### 效果截图：  
+### 截图：  
 <img width="460" height="285" alt="01" src="https://github.com/user-attachments/assets/8523f109-84d1-4eba-b8d5-678b0a824340" />
 <br>
 <img width="214" height="206" alt="02" src="https://github.com/user-attachments/assets/e486984a-2d00-4639-94d1-cf37474cd860" />
