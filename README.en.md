@@ -31,10 +31,9 @@ Currently supported search engines: Bing, Google, DuckDuckGo, Yandex, Brave, Yah
 4. Sync configuration takes effect after refreshing the page.  
 
 **Notes:**  
-1. Exporting to TXT relies on blob functionality. Please ensure your browser supports blob operations.  
-2. Subscriptions update once per day. Only remote `.txt` file links are supported, with a maximum of 3 subscriptions. Subscription rules are applied after local rules. Due to the limited performance budget of user scripts, the total number of rules should not exceed 20,000 to avoid performance issues on mobile devices.  
-3. `##` DOM syntax rules are not supported. Such rules will be automatically removed when imported via subscription.  
-4. When adding domain name rules in the script, you can write the domain directly without the `*://*.` prefix, but rules used in uBlacklist must include the full prefix.  
+1. Subscriptions update once per day. Only remote `.txt` file links are supported, with a maximum of 3 subscriptions. Subscription rules are applied after local rules. Due to the limited performance budget of user scripts, the total number of rules should not exceed 20,000 to avoid performance issues on mobile devices.  
+2. `##` DOM syntax rules are not supported. Such rules will be automatically removed when imported via subscription.  
+3. When adding domain name rules in the script, you can write the domain directly without the `*://*.` prefix, but rules used in uBlacklist must include the full prefix.  
 <br>
 
 ### Basic Rules:  
@@ -83,6 +82,6 @@ Note: Only 5 highlight colors are supported, numbered `@1` through `@5`. Open th
 ### Screenshots:  
 <img width="460" height="285" alt="01" src="https://github.com/user-attachments/assets/8523f109-84d1-4eba-b8d5-678b0a824340" />  
 <br>
-<img width="267" height="250" alt="02" src="https://github.com/user-attachments/assets/abe39f77-d9e3-4a91-8148-5bcb548a7f6c" />  
+<img width="214" height="206" alt="02" src="https://github.com/user-attachments/assets/e486984a-2d00-4639-94d1-cf37474cd860" />
 <br>
-<img width="256" height="170" alt="03" src="https://github.com/user-attachments/assets/dfb3aadc-5cdb-4da7-925f-e18d9f8c3a8f" />
+<img width="200" height="133" alt="03" src="https://github.com/user-attachments/assets/dfb3aadc-5cdb-4da7-925f-e18d9f8c3a8f" />
