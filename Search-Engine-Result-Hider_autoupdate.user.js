@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.4.2
+// @version      7.4.3
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -56,7 +56,7 @@
 
   // 默认配置
   let currentConfig = GM_getValue(CONFIG_KEY, {
-    rules: ['*://*.giffgaff.com/*\n*://*.example.com/*'],
+    rules: ['*://*.csdn.net/*\n*://*.giffgaff.com/*\n*://*.example.com/*'],
     enabled: true,
     showCount: false,
     bubbleSize: 30,
@@ -1221,7 +1221,7 @@
     return '';
   }
 
-  // 选择器链接
+  // URL选择器
   function getResultLink(result, engine) {
     const linkSelectors = (SELECTORS[engine] || SELECTORS.google).links;
     if (Array.isArray(linkSelectors)) {
@@ -2001,22 +2001,6 @@
             flex: 1 !important;
         }
 
-        #webdav-status {
-            margin-top: 8px !important;
-            font-size: 12px !important;
-            min-height: 18px !important;
-            line-height: 1.2 !important;
-            word-break: break-all !important;
-        }
-
-        #subscription-status {
-            margin-top: 8px !important;
-            font-size: 12px !important;
-            min-height: 18px !important;
-            line-height: 1.2 !important;
-            word-break: break-all !important;
-        }
-
         /* Webdav订阅面板深色 */
         @media (prefers-color-scheme: dark) {
             #searchfilter-webdav-panel,
@@ -2062,14 +2046,6 @@
                 border-color: #4b5563 !important;
                 color: #f3f4f6 !important;
             }
-            #webdav-status {
-                color: #9ca3af !important;
-            }
-
-            #subscription-status {
-                color: #9ca3af !important;
-            }
-
         }
 
         /* 面板渐入渐出动画 */
@@ -2346,6 +2322,57 @@
             cursor: pointer;
             border: none;
         }
+
+        /* 悬浮通知 */
+        #searchfilter-toast-container {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 2147483647;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 8px;
+            pointer-events: none;
+            max-width: min(320px, calc(100vw - 16px));
+        }
+
+        .searchfilter-toast {
+            pointer-events: auto;
+            box-sizing: border-box;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-left: 3px solid #2c5282;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+            color: #2d3748;
+            font-size: 12px;
+            line-height: 1.4;
+            padding: 8px 12px;
+            word-break: break-all;
+            cursor: pointer;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity 0.25s ease, transform 0.25s ease;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .searchfilter-toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .searchfilter-toast {
+                background: #171717 !important;
+                color: #f3f4f6 !important;
+                border-color: #374151;
+            }
+        }
+
+        .searchfilter-toast-success { border-left-color: #276749; }
+        .searchfilter-toast-error { border-left-color: #c53030; }
+        .searchfilter-toast-info { border-left-color: #2c5282; }
     `);
 
   // 悬浮球样式
@@ -2703,6 +2730,52 @@
 
   function escHtml(str) {
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  // 悬浮通知
+  function showToast(message, type = 'info', duration = 3000) {
+    let container = document.getElementById('searchfilter-toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'searchfilter-toast-container';
+      document.body.appendChild(container);
+    }
+
+    const panel = document.getElementById('searchfilter-webdav-panel') ||
+      document.getElementById('searchfilter-subscription-panel') ||
+      document.getElementById('searchfilter-panel');
+    if (panel) {
+      const rect = panel.getBoundingClientRect();
+      container.style.left = Math.max(8, rect.left) + 'px';
+      container.style.top = (rect.bottom + 8) + 'px';
+      container.style.right = '';
+      container.style.bottom = '';
+      container.style.width = Math.min(rect.width, window.innerWidth - 16) + 'px';
+    } else {
+      container.style.left = '';
+      container.style.top = '15px';
+      container.style.right = '15px';
+      container.style.bottom = '';
+      container.style.width = '';
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `searchfilter-toast searchfilter-toast-${type}`;
+    toast.textContent = message;
+    container.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('show'));
+
+    let timer = null;
+    const dismiss = () => {
+      if (!toast.parentElement) return;
+      clearTimeout(timer);
+      toast.classList.remove('show');
+      toast.addEventListener('transitionend', () => toast.remove(), { once: true });
+      setTimeout(() => toast.remove(), 400);
+    };
+    toast.addEventListener('click', dismiss);
+    timer = setTimeout(dismiss, duration);
+    return { dismiss };
   }
 
   // 统计面板
@@ -3568,7 +3641,6 @@
             <div id="subscription-rows-container">${rowsHtml}</div>
             <div class="add-subscription-btn"><button id="add-subscription" class="searchfilter-button searchfilter-button-secondary" style="width:100%;" ${subscriptions.length >= 3 ? 'disabled' : ''}>${t('addSubscription')}</button></div>
             <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:0px;"><button id="subscription-save" class="searchfilter-button searchfilter-button-primary" style="flex:1;">${t('save')}</button><button id="subscription-import" class="searchfilter-button searchfilter-button-primary" style="flex:1;">${t('import')}</button><button id="subscription-cancel" class="searchfilter-button searchfilter-button-secondary" style="flex:1;">${t('cancel')}</button></div>
-            <div id="subscription-status" style="color:#4a5568;"></div>
         `;
 
     document.body.appendChild(panel);
@@ -3576,7 +3648,6 @@
 
     const container = document.getElementById('subscription-rows-container');
     const addBtn = document.getElementById('add-subscription');
-    const statusDiv = document.getElementById('subscription-status');
     const autoUpdateSwitch = document.getElementById('subscription-auto-update');
     if (autoUpdateSwitch) {
       autoUpdateSwitch.addEventListener('change', function() {
@@ -3585,18 +3656,13 @@
       });
     }
 
-    function setStatus(msg, isError = false) {
-      statusDiv.textContent = msg;
-      statusDiv.style.color = isError ? '#c53030' : '#4a5568';
-    }
-
     function updateAddButtonState() {
       addBtn.disabled = container.querySelectorAll('.subscription-row').length >= 3;
     }
 
     addBtn.onclick = () => {
       if (container.querySelectorAll('.subscription-row').length >= 3) {
-        setStatus(t('maxSubscriptions'), true);
+        showToast(t('maxSubscriptions'), 'error');
         return;
       }
       const newRow = document.createElement('div');
@@ -3666,7 +3732,7 @@
       });
       if (hasError) return;
       saveSubscriptions(newSubs);
-      setStatus(t('subscriptionSaved'));
+      showToast(t('subscriptionSaved'), 'success');
       subscriptions = newSubs;
       forceReprocessAll();
     };
@@ -3674,10 +3740,10 @@
     document.getElementById('subscription-import').onclick = async () => {
       const rows = container.querySelectorAll('.subscription-row');
       if (rows.length === 0) {
-        setStatus(t('subLinkEmpty'), true);
+        showToast(t('subLinkEmpty'), 'error');
         return;
       }
-      setStatus(t('importing'));
+      const loadingToast = showToast(t('importing'), 'info', 10000);
       let hasError = false;
       for (let row of rows) {
         const input = row.querySelector('.subscription-url');
@@ -3708,8 +3774,9 @@
           hasError = true;
         }
       }
+      loadingToast.dismiss();
       if (!hasError) {
-        setStatus(t('importDone'));
+        showToast(t('importDone'), 'success');
       }
       forceReprocessAll();
     };
@@ -3791,7 +3858,6 @@
         <button id="webdav-download" class="searchfilter-button searchfilter-button-primary">${t('download')}</button>
         <button id="webdav-cancel" class="searchfilter-button searchfilter-button-secondary">${t('cancel')}</button>
     </div>
-    <div id="webdav-status"></div>
 `;
 
     document.body.appendChild(panel);
@@ -3802,7 +3868,6 @@
     const usernameInput = document.getElementById('webdav-username');
     const passwordInput = document.getElementById('webdav-password');
     const filenameInput = document.getElementById('webdav-filename');
-    const statusDiv = document.getElementById('webdav-status');
 
     // 密码显隐
     const togglePasswordBtn = document.getElementById('webdav-toggle-password');
@@ -3814,11 +3879,6 @@
         passwordInput.type = type;
         togglePasswordBtn.textContent = type === 'password' ? '🐵' : '🙈';
       });
-    }
-
-    function setStatus(msg, isError = false) {
-      statusDiv.textContent = msg;
-      statusDiv.style.color = isError ? '#e53e3e' : '';
     }
 
     function saveWebDAVConfig() {
@@ -3846,11 +3906,11 @@
     document.getElementById('webdav-upload').onclick = async () => {
       const url = urlInput.value.trim();
       if (!url) {
-        setStatus(t('webdavUrlEmpty'), true);
+        showToast(t('webdavUrlEmpty'), 'error');
         return;
       }
       if (!url.toLowerCase().startsWith('https://')) {
-        alert(t('webdavHttpsRequired'));
+        showToast(t('webdavHttpsRequired'), 'error');
         return;
       }
       const config = saveWebDAVConfig();
@@ -3861,7 +3921,7 @@
         const uploadPayload = { ...settings, subscriptions: getSubscriptions().map(s => ({ url: s.url, enabled: s.enabled, lastUpdate: s.lastUpdate })) };
         content = '# ScriptConfig:' + JSON.stringify(uploadPayload) + '\n' + content;
       }
-      setStatus(t('webdavUploading'));
+      const loadingToast = showToast(t('webdavUploading'), 'info', 10000);
       try {
         const fullUrl = config.url.replace(/\/$/, '') + '/' + config.filename;
         const headers = {};
@@ -3880,9 +3940,11 @@
             ontimeout: () => reject(new Error(t('requestTimeout')))
           });
         });
-        setStatus(t('uploadSuccess'));
+        loadingToast.dismiss();
+        showToast(t('uploadSuccess'), 'success');
       } catch (err) {
-        setStatus(t('webdavUploadFailed') + err.message, true);
+        loadingToast.dismiss();
+        showToast(t('webdavUploadFailed') + err.message, 'error', 5000);
       }
     };
 
@@ -3897,20 +3959,22 @@
     document.getElementById('webdav-download').onclick = async () => {
       const url = urlInput.value.trim();
       if (!url) {
-        setStatus(t('webdavUrlEmpty'), true);
+        showToast(t('webdavUrlEmpty'), 'error');
         return;
       }
       if (!url.toLowerCase().startsWith('https://')) {
-        alert(t('webdavHttpsRequired'));
+        showToast(t('webdavHttpsRequired'), 'error');
         return;
       }
       const config = saveWebDAVConfig();
-      setStatus(t('webdavDownloading'));
+      const loadingToast = showToast(t('webdavDownloading'), 'info', 10000);
       try {
-        await performWebDAVDownload(config, true, setStatus);
-        setStatus(t('downloadSuccess'));
+        await performWebDAVDownload(config, true);
+        loadingToast.dismiss();
+        showToast(t('downloadSuccess'), 'success');
       } catch (err) {
-        setStatus(t('webdavDownloadFailed') + err.message, true);
+        loadingToast.dismiss();
+        showToast(t('webdavDownloadFailed') + err.message, 'error', 5000);
       }
     };
 
@@ -3925,7 +3989,7 @@
     setTimeout(() => document.addEventListener('click', closeHandler), 200);
   }
 
-  async function performWebDAVDownload(config, showAlerts = true, statusCallback = null) {
+  async function performWebDAVDownload(config, showAlerts = true) {
     const fullUrl = config.url.replace(/\/$/, '') + '/' + config.filename;
     const headers = {};
     if (config.username) headers['Authorization'] = 'Basic ' + btoa(`${config.username}:${config.password}`);
