@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.4.3
+// @version      7.4.4
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -2077,7 +2077,7 @@
             display: flex;
             flex-direction: column;
             gap: 4px;
-            margin-bottom: 12px;
+            margin-bottom: 0;
         }
         .subscription-input-row {
             display: flex;
@@ -2114,7 +2114,7 @@
             color: #c53030;
         }
         .add-subscription-btn {
-            margin-top: 4px;
+            margin-top: 0;
             margin-bottom: 16px;
         }
 
@@ -2746,11 +2746,18 @@
       document.getElementById('searchfilter-panel');
     if (panel) {
       const rect = panel.getBoundingClientRect();
+      const showAbove = !currentConfig.panelCentered &&
+        (rect.top + rect.height / 2) > window.innerHeight / 2;
       container.style.left = Math.max(8, rect.left) + 'px';
-      container.style.top = (rect.bottom + 8) + 'px';
       container.style.right = '';
-      container.style.bottom = '';
       container.style.width = Math.min(rect.width, window.innerWidth - 16) + 'px';
+      if (showAbove) {
+        container.style.top = 'auto';
+        container.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
+      } else {
+        container.style.top = (rect.bottom + 8) + 'px';
+        container.style.bottom = '';
+      }
     } else {
       container.style.left = '';
       container.style.top = '15px';
