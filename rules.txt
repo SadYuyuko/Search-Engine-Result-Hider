@@ -1,4 +1,4 @@
-#260812
+#260813
 #文件
 /^https?:\/\/[^\s"'<>]+\.pdf$/
 /^https?:\/\/[^\s"'<>]+\.xls$/
@@ -34,13 +34,13 @@ text/.*您暂无购买权限.*
 *://developer.aliyun.com/article/*
 *://developer.baidu.com/article/*
 *://developer.volcengine.com/articles/*
+*://developer.cloud.tencent.com/*
 *://cloud.baidu.com/article/*
 *://cloud.tencent.cn/developer/*
 *://cloud.tencent.com/developer/*
 *://cloud.tencent.com.cn/developer/*
 *://support.huaweicloud.com/*
 #搜索引流
-*://x.com/search?src=*
 *://*.bing.com/videos/search?q=*
 *://*.douyin.com/user/*
 *://*.douyin.com/note/*
@@ -142,6 +142,7 @@ text/.*您暂无购买权限.*
 *://wenxue.iqiyi.com/book/search*
 *://word.baidu.com/view/*
 *://x.com/search?lang=*
+*://.x.com/search?src=*
 *://x.com/search?q=*
 #购物平台
 *://*.1688.com/*
@@ -691,3 +692,8 @@ text/.*您暂无购买权限.*
 *://*.home.miot-spec.com/*
 *://*.g9.baidu.com/*
 *://*.wdsj2.com/*
+*://*.shoulian.org/*
+*://*.zjgkw.org/*
+*://*.xizhengw.com/*
+*://*.nwgw.taojindi.com/*
+*://*.2109.top/*
