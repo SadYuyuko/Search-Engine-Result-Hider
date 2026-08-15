@@ -5,7 +5,7 @@
 在仅支持安装脚本的浏览器上实现复杂规则屏蔽搜索结果功能  
 支持包括ublacklist基础规则在内的URL匹配、正则匹配、标题匹配、白名单匹配、高亮目标结果以及结果摘要(snippet)匹配  
 当前支持搜索引擎：Bing、Google、DuckDuckGo、Yandex、Brave，Yahoo  
-[反馈群](https://t.me/+qBqMTqjc4Xk5M2Jh)  
+交流群 [TG](https://t.me/+qBqMTqjc4Xk5M2Jh)  
   
 **当前功能：**  
 - 屏蔽按钮一键屏蔽域名  
