@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.4.4
+// @version      7.5.0
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -228,6 +228,18 @@
       hlColorReset: '重置',
       autoUpdate: '自动更新',
       errorWord: '错误',
+      warningWord: '警告',
+      statsWarnings: '发现 {count} 个规则警告: ',
+      duplicateRules: '重复规则',
+      invalidRule: '规则无效',
+      hlColorError: '高亮级别需在 1-5 之间',
+      ifParenError: '@if(...) 括号未闭合',
+      condUnknown: '无法识别的条件: {part}',
+      condRegexError: '条件正则无效: {part}',
+      regexError: '正则表达式无效',
+      urlError: 'URL规则无效',
+      slashWarning: '以 / 开头但未闭合，将按URL规则处理',
+      ruleDuplicate: '重复了 {count} 次',
     },
     'en': {
       enableBlock: 'Enable Block',
@@ -310,6 +322,18 @@
       hlColorReset: 'Reset',
       autoUpdate: 'Auto Update',
       errorWord: 'Error',
+      warningWord: 'Warning',
+      statsWarnings: 'Found {count} rule warnings: ',
+      duplicateRules: 'Duplicate Rules',
+      invalidRule: 'Invalid rule',
+      hlColorError: 'Highlight level must be 1-5',
+      ifParenError: 'Unbalanced @if(...) parentheses',
+      condUnknown: 'Unknown condition: {part}',
+      condRegexError: 'Invalid condition regex: {part}',
+      regexError: 'Invalid regex',
+      urlError: 'Invalid URL rule',
+      slashWarning: 'Starts with / but has no closing slash, treated as URL rule',
+      ruleDuplicate: 'duplicated {count} times',
     }
   };
 
@@ -404,45 +428,42 @@
     return parts;
   }
 
+  // 解析单个条件片段
+  function parseConditionPart(trimmed, currentEngine, currentSite) {
+    if (/^(google|bing|duckduckgo|yandex|brave|yahoo)$/i.test(trimmed)) {
+      return { matched: true, static: currentEngine === trimmed.toLowerCase() };
+    }
+
+    let siteMatch = trimmed.match(/^site\s*[=:]\s*['"](.*?)['"]$/i);
+    if (!siteMatch) siteMatch = trimmed.match(/^site\s*\(\s*['"](.*?)['"]\s*\)$/i);
+    if (siteMatch) {
+      return { matched: true, static: currentSite.endsWith(siteMatch[1].toLowerCase()) };
+    }
+
+    const titleMatch = trimmed.match(/^title\s*\*\=\s*['"](.*?)['"]$/i);
+    if (titleMatch) {
+      return { matched: true, dynamic: { type: 'title', op: '*=', val: titleMatch[1].toLowerCase() } };
+    }
+
+    const regexMatch = trimmed.match(/^title\s*=\~\s*\/((?:[^/\\]|\\.)*)\/([a-z]*)$/i);
+    if (regexMatch) {
+      return { matched: true, dynamic: { type: 'title', op: '=~', regex: new RegExp(regexMatch[1], regexMatch[2]) } };
+    }
+
+    return { matched: false };
+  }
+
   function evaluateCondition(condStr, dynamicConditionsList) {
     const currentEngine = getSearchEngine();
     const currentSite = window.location.hostname;
     const parts = splitByPipe(condStr);
 
     if (parts.length === 1) {
-      const cond = parts[0].trim();
-
-      if (/^(google|bing|duckduckgo|yandex|brave|yahoo)$/i.test(cond)) {
-        return currentEngine === cond.toLowerCase();
-      }
-
-      let siteMatch = cond.match(/^site\s*[=:]\s*['"](.*?)['"]$/i);
-      if (!siteMatch) siteMatch = cond.match(/^site\s*\(\s*['"](.*?)['"]\s*\)$/i);
-      if (siteMatch) {
-        return currentSite.endsWith(siteMatch[1].toLowerCase());
-      }
-
-      const titleMatch = cond.match(/^title\s*\*\=\s*['"](.*?)['"]$/i);
-      if (titleMatch) {
-        dynamicConditionsList.push({
-          type: 'title',
-          op: '*=',
-          val: titleMatch[1].toLowerCase()
-        });
-        return true;
-      }
-
-      const regexMatch = cond.match(/^title\s*=\~\s*\/((?:[^/\\]|\\.)*)\/([a-z]*)$/i);
-      if (regexMatch) {
-        dynamicConditionsList.push({
-          type: 'title',
-          op: '=~',
-          regex: new RegExp(regexMatch[1], regexMatch[2])
-        });
-        return true;
-      }
-
-      return false;
+      const parsed = parseConditionPart(parts[0].trim(), currentEngine, currentSite);
+      if (!parsed.matched) return false;
+      if (parsed.static !== undefined) return parsed.static;
+      dynamicConditionsList.push(parsed.dynamic);
+      return true;
     }
 
     const orGroup = ++_orGroupCounter;
@@ -453,37 +474,13 @@
       const trimmed = part.trim();
       if (!trimmed) continue;
 
-      if (/^(google|bing|duckduckgo|yandex|brave|yahoo)$/i.test(trimmed)) {
-        if (currentEngine === trimmed.toLowerCase()) anyStaticPass = true;
+      const parsed = parseConditionPart(trimmed, currentEngine, currentSite);
+      if (!parsed.matched) continue;
+      if (parsed.static !== undefined) {
+        if (parsed.static) anyStaticPass = true;
         continue;
       }
-
-      let siteMatch = trimmed.match(/^site\s*[=:]\s*['"](.*?)['"]$/i);
-      if (!siteMatch) siteMatch = trimmed.match(/^site\s*\(\s*['"](.*?)['"]\s*\)$/i);
-      if (siteMatch) {
-        if (currentSite.endsWith(siteMatch[1].toLowerCase())) anyStaticPass = true;
-        continue;
-      }
-
-      const titleMatch = trimmed.match(/^title\s*\*\=\s*['"](.*?)['"]$/i);
-      if (titleMatch) {
-        pendingDynamic.push({
-          type: 'title',
-          op: '*=',
-          val: titleMatch[1].toLowerCase()
-        });
-        continue;
-      }
-
-      const regexMatch = trimmed.match(/^title\s*=\~\s*\/((?:[^/\\]|\\.)*)\/([a-z]*)$/i);
-      if (regexMatch) {
-        pendingDynamic.push({
-          type: 'title',
-          op: '=~',
-          regex: new RegExp(regexMatch[1], regexMatch[2])
-        });
-        continue;
-      }
+      pendingDynamic.push(parsed.dynamic);
     }
 
     if (anyStaticPass) return true;
@@ -517,12 +514,12 @@
     return null;
   }
 
-  function parseRuleWithConditions(ruleStr) {
+  // 剥离@if条件
+  function stripIfConditions(ruleStr, evaluateCond) {
     let coreRule = ruleStr.trim();
     let staticPass = true;
-    let dynamicConditions = [];
 
-    // 处理@if
+    // 处理前置@if
     const prefixIfIdx = coreRule.search(/@if\s*\(/i);
     if (prefixIfIdx !== -1) {
       const parenResult = extractBalancedParens(coreRule, coreRule.indexOf('(', prefixIfIdx));
@@ -532,7 +529,7 @@
         const braceMatch = afterParen.match(/^\{\s*([\s\S]*?)\s*\}$/);
         if (braceMatch) {
           coreRule = braceMatch[1].trim();
-          if (!evaluateCondition(cond, dynamicConditions)) staticPass = false;
+          if (evaluateCond && !evaluateCond(cond)) staticPass = false;
         }
       }
     }
@@ -554,9 +551,7 @@
         end: parenResult.endIndex
       });
 
-      if (!evaluateCondition(cond, dynamicConditions)) {
-        staticPass = false;
-      }
+      if (evaluateCond && !evaluateCond(cond)) staticPass = false;
     }
 
     ranges.sort((a, b) => b.start - a.start);
@@ -573,110 +568,129 @@
 
     return {
       coreRule,
+      staticPass
+    };
+  }
+
+  function parseRuleWithConditions(ruleStr) {
+    const dynamicConditions = [];
+    const { coreRule, staticPass } = stripIfConditions(ruleStr, (cond) => evaluateCondition(cond, dynamicConditions));
+    return {
+      coreRule,
       staticPass,
       dynamicConditions
     };
   }
 
-  // 语法检查
-  function validateRule(rule) {
-    if (!rule || rule.trim() === '') return true;
+  // 处理@if条件
+  function extractIfConditions(ruleStr) {
+    const conds = [];
+    const ifRegex = /@if\s*\(/gi;
+    let match;
+    while ((match = ifRegex.exec(ruleStr)) !== null) {
+      const parenResult = extractBalancedParens(ruleStr, match.index + match[0].length - 1);
+      if (parenResult) conds.push(parenResult.content.trim());
+    }
+    return conds;
+  }
+
+  // 校验@if条件语法
+  function validateCondition(condStr) {
+    const errors = [];
+    const warnings = [];
+    for (const part of splitByPipe(condStr)) {
+      const trimmed = part.trim();
+      if (!trimmed) continue;
+      if (/^(google|bing|duckduckgo|yandex|brave|yahoo)$/i.test(trimmed)) continue;
+      if (/^site\s*[=:]\s*['"][^'"]*['"]$/i.test(trimmed)) continue;
+      if (/^site\s*\(\s*['"][^'"]*['"]\s*\)$/i.test(trimmed)) continue;
+      if (/^title\s*\*\=\s*['"][^'"]*['"]$/i.test(trimmed)) continue;
+      const regexMatch = trimmed.match(/^title\s*=\~\s*\/((?:[^/\\]|\\.)*)\/([a-z]*)$/i);
+      if (regexMatch) {
+        try {
+          new RegExp(regexMatch[1], regexMatch[2]);
+        } catch (e) {
+          errors.push(t('condRegexError', { part: trimmed }));
+        }
+        continue;
+      }
+      warnings.push(t('condUnknown', { part: trimmed }));
+    }
+    return { errors, warnings };
+  }
+
+  // 规则语法分析
+  function analyzeRule(rule) {
+    if (!rule || rule.trim() === '') return { valid: true, errors: [], warnings: [] };
 
     let ruleToCheck = rule.trim();
+    const errors = [];
+    const warnings = [];
 
     const hlValMatch = ruleToCheck.match(/^@(\d+)/);
     if (hlValMatch) {
       const N = parseInt(hlValMatch[1]);
-      if (N < 1 || N > 5) return false;
+      if (N < 1 || N > 5) {
+        return { valid: false, errors: [t('hlColorError')], warnings };
+      }
       ruleToCheck = ruleToCheck.substring(hlValMatch[0].length).trim();
-      if (!ruleToCheck) return true;
+      if (!ruleToCheck) return { valid: true, errors, warnings };
     }
 
-    const prefixIfIdx = ruleToCheck.search(/@if\s*\(/i);
-    if (prefixIfIdx !== -1) {
-      const parenResult = extractBalancedParens(ruleToCheck, ruleToCheck.indexOf('(', prefixIfIdx));
-      if (parenResult) {
-        const afterParen = ruleToCheck.substring(parenResult.endIndex).trim();
-        const braceMatch = afterParen.match(/^\{\s*([\s\S]*?)\s*\}$/);
-        if (braceMatch) {
-          ruleToCheck = braceMatch[1].trim();
+    // @if条件语法检查
+    if (!ruleToCheck.startsWith('/') && !ruleToCheck.startsWith('title/') && !ruleToCheck.startsWith('text/')) {
+      if (/@if\s*\(/i.test(ruleToCheck)) {
+        const ifRegex = /@if\s*\(/gi;
+        let m;
+        let unbalanced = false;
+        while ((m = ifRegex.exec(ruleToCheck)) !== null) {
+          const parenResult = extractBalancedParens(ruleToCheck, m.index + m[0].length - 1);
+          if (!parenResult) { unbalanced = true; break; }
+        }
+        if (unbalanced) return { valid: false, errors: [t('ifParenError')], warnings };
+        for (const cond of extractIfConditions(ruleToCheck)) {
+          const r = validateCondition(cond);
+          errors.push(...r.errors);
+          warnings.push(...r.warnings);
         }
       }
     }
 
-    const ifRegex = /@if\s*\(/gi;
-    let match;
-    const ranges = [];
-    while ((match = ifRegex.exec(ruleToCheck)) !== null) {
-      const condStartIdx = match.index + match[0].length - 1;
-      const parenResult = extractBalancedParens(ruleToCheck, condStartIdx);
-      if (parenResult) {
-        ranges.push({ start: match.index, end: parenResult.endIndex });
-      }
-    }
-    if (ranges.length > 0) {
-      ranges.sort((a, b) => b.start - a.start);
-      for (const r of ranges) {
-        ruleToCheck = ruleToCheck.slice(0, r.start) + ruleToCheck.slice(r.end);
-      }
-      ruleToCheck = ruleToCheck.replace(/\s{2,}/g, ' ').trim();
-    }
-
-    if (ruleToCheck.startsWith('{') && ruleToCheck.endsWith('}') && ruleToCheck.length > 1) {
-      ruleToCheck = ruleToCheck.slice(1, -1).trim();
-    }
+    const stripped = stripIfConditions(ruleToCheck);
+    ruleToCheck = stripped.coreRule;
 
     // 白名单规则
     if (ruleToCheck.startsWith('@')) {
       ruleToCheck = ruleToCheck.substring(1).trim();
-      if (!ruleToCheck) return true;
+      if (!ruleToCheck) return { valid: true, errors, warnings };
     }
 
-    if (ruleToCheck.startsWith('/') && ruleToCheck.lastIndexOf('/') > 0) {
-      const lastSlash = ruleToCheck.lastIndexOf('/');
-      const pattern = ruleToCheck.slice(1, lastSlash);
-      const flags = ruleToCheck.slice(lastSlash + 1);
-      try {
-        new RegExp(pattern, flags);
-        return true;
-      } catch (e) {
-        return false;
-      }
+    // 未闭合正则提示
+    if (ruleToCheck.startsWith('/') && ruleToCheck.lastIndexOf('/') === 0) {
+      warnings.push(t('slashWarning'));
     }
 
-    // 标题/正文规则
-    if (ruleToCheck.startsWith('text/') || ruleToCheck.startsWith('title/')) {
-      const prefixLen = ruleToCheck.startsWith('title/') ? 6 : 5;
-      const { pattern, flags } = parsePrefixedRegexRule(ruleToCheck, prefixLen);
-      try {
-        new RegExp(pattern, flags);
-        return true;
-      } catch (e) {
-        return false;
-      }
-    }
-
-    // URL通配符规则
-    let pattern = ruleToCheck;
-    if (pattern.startsWith('*://')) pattern = pattern.substring(4);
-    if (pattern.includes('/')) {
-      const parts = pattern.split('/');
-      pattern = parts.map((part, index) => {
-        if (index === 0) {
-          return part.replace(/(?<!\\)\./g, '\\.').replace(/\*/g, '.*').replace(/\?/g, '\\?');
-        } else {
-          return part.replace(/\*/g, '.*').replace(/\?/g, '\\?');
-        }
-      }).join('\\/');
-    } else {
-      pattern = pattern.replace(/(?<!\\)\./g, '\\.').replace(/\*/g, '.*').replace(/\?/g, '\\?');
-    }
     try {
-      new RegExp(pattern, 'i');
-      return true;
+      if (ruleToCheck.startsWith('/') && ruleToCheck.lastIndexOf('/') > 0) {
+        const { pattern, flags } = ruleToRegex(ruleToCheck);
+        new RegExp(pattern, flags);
+      } else if (ruleToCheck.startsWith('text/') || ruleToCheck.startsWith('title/')) {
+        const prefixLen = ruleToCheck.startsWith('title/') ? 6 : 5;
+        const { pattern, flags } = parsePrefixedRegexRule(ruleToCheck, prefixLen);
+        new RegExp(pattern, flags);
+      } else {
+        new RegExp(wildcardToRegex(ruleToCheck), 'i');
+      }
     } catch (e) {
-      return false;
+      errors.push((ruleToCheck.startsWith('/') || ruleToCheck.startsWith('text/') || ruleToCheck.startsWith('title/')) ? t('regexError') : t('urlError'));
     }
+
+    return { valid: errors.length === 0, errors, warnings };
+  }
+
+  // 语法检查
+  function validateRule(rule) {
+    return analyzeRule(rule).valid;
   }
 
   function parsePrefixedRegexRule(rawRule, prefixLen) {
@@ -709,7 +723,23 @@
     return { pattern, flags };
   }
 
-  // 规则转换
+  // URL通配符转正则
+  function wildcardToRegex(pattern) {
+    if (pattern.startsWith('*://')) pattern = pattern.substring(4);
+    if (pattern.includes('/')) {
+      const parts = pattern.split('/');
+      return parts.map((part, index) => {
+        if (index === 0) {
+          return part.replace(/(?<!\\)\./g, '\\.').replace(/\*/g, '.*').replace(/\?/g, '\\?');
+        } else {
+          return part.replace(/\*/g, '.*').replace(/\?/g, '\\?');
+        }
+      }).join('\\/');
+    } else {
+      return pattern.replace(/(?<!\\)\./g, '\\.').replace(/\*/g, '.*').replace(/\?/g, '\\?');
+    }
+  }
+
   function ruleToRegex(rule) {
     if (!rule.startsWith('/') && !rule.startsWith('title/') && !rule.startsWith('text/') &&
       !rule.includes('*') && !rule.includes('://') && !rule.startsWith('.')) {
@@ -737,46 +767,31 @@
     }
 
     // URL规则
-    let pattern = rule;
-    if (pattern.startsWith('*://')) pattern = pattern.substring(4);
-    if (pattern.includes('/')) {
-      const parts = pattern.split('/');
-      pattern = parts.map((part, index) => {
-        if (index === 0) {
-          return part.replace(/(?<!\\)\./g, '\\.').replace(/\*/g, '.*').replace(/\?/g, '\\?');
-        } else {
-          return part.replace(/\*/g, '.*').replace(/\?/g, '\\?');
-        }
-      }).join('\\/');
-    } else {
-      pattern = pattern.replace(/(?<!\\)\./g, '\\.').replace(/\*/g, '.*').replace(/\?/g, '\\?');
-    }
     return {
-      pattern,
+      pattern: wildcardToRegex(rule),
       flags: 'i'
     };
   }
 
+  // 匹配通配域名
+  function matchWildcardDomainPattern(pattern) {
+    const wildcardMatch = pattern.match(/^\*:\/\/\*\.([^\/\*]+)\/\*$/);
+    if (wildcardMatch) return { domain: wildcardMatch[1].toLowerCase(), domainType: 'wildcard' };
+    const exactMatch = pattern.match(/^\*:\/\/([^\/\*]+)\/\*$/);
+    if (exactMatch) return { domain: exactMatch[1].toLowerCase(), domainType: 'exact' };
+    return null;
+  }
+
   // 白名单简单域名
   function extractSimpleWhitelistDomain(rule) {
-    const wildcardMatch = rule.match(/^@\*:\/\*\.([^\/\*]+)\/\*$/);
-    if (wildcardMatch) return {domain: wildcardMatch[1].toLowerCase(), type: 'wildcard'};
-    const exactMatch = rule.match(/^@\*:\/\/([^\/\*]+)\/\*$/);
-    if (exactMatch) return {domain: exactMatch[1].toLowerCase(), type: 'exact'};
-    return null;
+    const m = matchWildcardDomainPattern(rule.substring(1));
+    if (!m) return null;
+    return { domain: m.domain, type: m.domainType };
   }
 
   // 辅助匹配简单域名
   function matchSimpleDomain(coreRule) {
-    let domainMatch = coreRule.match(/^\*:\/\/\*\.([^\/\*]+)\/\*$/);
-    if (!domainMatch) domainMatch = coreRule.match(/^\*:\/\/([^\/\*]+)\/\*$/);
-    if (domainMatch) {
-      const domain = domainMatch[1].toLowerCase();
-      if (!domain.includes('/')) {
-        return {domain, domainType: coreRule.startsWith('*://*.') ? 'wildcard' : 'exact'};
-      }
-    }
-    return null;
+    return matchWildcardDomainPattern(coreRule);
   }
 
   // 辅助分类正则
@@ -844,7 +859,13 @@
         if (N < 1 || N > 5) return;
         let hlRule = rule.trim().substring(hlMatch[0].length).trim();
         if (!hlRule) return;
-        const parsed = parseRuleWithConditions(hlRule);
+        let parsed;
+        try {
+          parsed = parseRuleWithConditions(hlRule);
+        } catch (e) {
+          if (currentConfig.debug) console.warn('高亮规则解析失败:', hlRule, e);
+          return;
+        }
         if (!parsed.staticPass) return;
         let coreRule = parsed.coreRule;
 
@@ -883,7 +904,13 @@
 
       const source = getRuleSource(rule);
 
-      const parsed = parseRuleWithConditions(rule);
+      let parsed;
+      try {
+        parsed = parseRuleWithConditions(rule);
+      } catch (e) {
+        if (currentConfig.debug) console.warn('规则解析失败:', rule, e);
+        return;
+      }
       if (!parsed.staticPass) return;
 
       const coreRule = parsed.coreRule;
@@ -959,11 +986,15 @@
     });
   }
 
+  function cachedAnalyzeRule(rule) {
+    if (!validationCache.has(rule)) {
+      validationCache.set(rule, analyzeRule(rule));
+    }
+    return validationCache.get(rule);
+  }
+
   function cachedValidateRule(rule) {
-    if (validationCache.has(rule)) return validationCache.get(rule);
-    const result = validateRule(rule);
-    validationCache.set(rule, result);
-    return result;
+    return cachedAnalyzeRule(rule).valid;
   }
 
   function checkDynamicConditions(conditions, title) {
@@ -1212,13 +1243,16 @@
   }
 
   // 正文选择器
-  function getResultSnippet(result, engine) {
-    const selectors = (SELECTORS[engine] || SELECTORS.bing).snippets;
+  function getResultText(result, selectors) {
     for (let selector of selectors) {
       const elem = result.querySelector(selector);
       if (elem && elem.textContent) return elem.textContent.trim();
     }
     return '';
+  }
+
+  function getResultSnippet(result, engine) {
+    return getResultText(result, (SELECTORS[engine] || SELECTORS.bing).snippets);
   }
 
   // URL选择器
@@ -1237,12 +1271,12 @@
 
   // 标题选择器
   function getResultTitle(result, engine) {
-    const selectors = (SELECTORS[engine] || SELECTORS.google).titles;
-    for (let selector of selectors) {
-      const elem = result.querySelector(selector);
-      if (elem && elem.textContent) return elem.textContent.trim();
-    }
-    return '';
+    return getResultText(result, (SELECTORS[engine] || SELECTORS.google).titles);
+  }
+
+  // 元素定位
+  function ensurePositioned(el) {
+    if (window.getComputedStyle(el).position === 'static') el.style.position = 'relative';
   }
 
   // 一键屏蔽
@@ -1270,7 +1304,7 @@
     const iconColor = isBlocked ? '#3182ce' : 'currentColor';
     btn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>`;
 
-    if (window.getComputedStyle(result).position === 'static') result.style.position = 'relative';
+    ensurePositioned(result);
     if (engine === 'bing' || engine === 'yandex' || engine === 'brave' || engine === 'yahoo') {
       btn.style.right = '5px';
       btn.style.top = '10px';
@@ -1373,17 +1407,42 @@
     result.appendChild(btn);
   }
 
+  // 移除匹配规则标签
+  function removeMatchedRuleLabel(result) {
+    const label = result.querySelector('.searchfilter-matched-rule');
+    if (label) label.remove();
+  }
+
+  // 清除匹配信息属性
+  function clearMatchedData(result) {
+    result.removeAttribute('data-matched-rule');
+    result.removeAttribute('data-matched-source');
+  }
+
+  // 重置结果样式/状态
+  function resetResultStyles(result) {
+    result.removeAttribute('data-blocker-processed');
+    result.removeAttribute('data-is-blocked');
+    result.removeAttribute('data-is-highlighted');
+    result.removeAttribute('data-highlight-n');
+    clearMatchedData(result);
+    result.classList.remove('searchfilter-blocked-visible');
+    result.style.outline = '';
+    result.style.outlineOffset = '';
+    result.style.display = '';
+    removeMatchedRuleLabel(result);
+  }
+
   // 添加匹配规则标签
   function addMatchedRuleLabel(result) {
     if (!result.dataset.matchedRule) return;
-    let existing = result.querySelector('.searchfilter-matched-rule');
-    if (existing) existing.remove();
+    removeMatchedRuleLabel(result);
     const label = document.createElement('div');
     label.className = 'searchfilter-matched-rule';
     const sourceText = result.dataset.matchedSource || t('matchedRule');
     const ruleText = result.dataset.matchedRule;
     label.textContent = `${sourceText}: ${ruleText}`;
-    if (window.getComputedStyle(result).position === 'static') result.style.position = 'relative';
+    ensurePositioned(result);
     result.appendChild(label);
   }
 
@@ -1467,16 +1526,14 @@
       result.setAttribute('data-is-highlighted', 'true');
       result.setAttribute('data-highlight-n', matchHL);
       result.removeAttribute('data-is-blocked');
-      result.removeAttribute('data-matched-rule');
-      result.removeAttribute('data-matched-source');
+      clearMatchedData(result);
       if (currentConfig.showBlockBtn) {
         injectBlockButton(result, engine, url, domain);
       }
       return false;
     }
 
-    result.removeAttribute('data-matched-rule');
-    result.removeAttribute('data-matched-source');
+    clearMatchedData(result);
     result.setAttribute('data-blocker-processed', 'true');
     if (currentConfig.showBlockBtn) injectBlockButton(result, engine, url, domain);
     return false;
@@ -1509,17 +1566,8 @@
     if (!currentConfig.enabled) {
       document.querySelectorAll('[data-blocker-processed], [data-observed]').forEach(result => {
         resultObserver.unobserve(result);
-        result.style.display = '';
-        result.style.outline = '';
-        result.style.outlineOffset = '';
-        result.removeAttribute('data-blocker-processed');
-        result.removeAttribute('data-is-blocked');
-        result.removeAttribute('data-is-highlighted');
-        result.removeAttribute('data-highlight-n');
+        resetResultStyles(result);
         result.removeAttribute('data-observed');
-        result.classList.remove('searchfilter-blocked-visible');
-        const label = result.querySelector('.searchfilter-matched-rule');
-        if (label) label.remove();
       });
       showHiddenResults = false;
       return;
@@ -1594,18 +1642,7 @@
       const end = Math.min(processIdx + batchSize, allResults.length);
       for (; processIdx < end; processIdx++) {
         const result = allResults[processIdx];
-        result.removeAttribute('data-blocker-processed');
-        result.removeAttribute('data-is-blocked');
-        result.removeAttribute('data-is-highlighted');
-        result.removeAttribute('data-highlight-n');
-        result.removeAttribute('data-matched-rule');
-        result.removeAttribute('data-matched-source');
-        result.classList.remove('searchfilter-blocked-visible');
-        result.style.outline = '';
-        result.style.outlineOffset = '';
-        result.style.display = '';
-        const label = result.querySelector('.searchfilter-matched-rule');
-        if (label) label.remove();
+        resetResultStyles(result);
         try {
           if (processSingleResult(result)) totalBlocked++;
         } catch (e) {
@@ -2052,7 +2089,7 @@
         .searchfilter-panel-fade {
             opacity: 0;
             transform: translate(-50%, -48%);
-            transition: opacity 0.2s ease, transform 0.2s ease;
+            transition: opacity 0.1s ease, transform 0.1s ease;
         }
         .searchfilter-panel-fade.show {
             opacity: 1;
@@ -2060,16 +2097,16 @@
         }
 
         #searchfilter-panel:not(.searchfilter-panel-fade) {
-            transition: opacity 0.2s ease;
+            transition: opacity 0.1s ease;
         }
         #searchfilter-webdav-panel:not(.searchfilter-panel-fade) {
-            transition: opacity 0.2s ease;
+            transition: opacity 0.1s ease;
         }
         #searchfilter-subscription-panel:not(.searchfilter-panel-fade) {
-            transition: opacity 0.2s ease;
+            transition: opacity 0.1s ease;
         }
         #searchfilter-hlcolor-panel:not(.searchfilter-panel-fade) {
-            transition: opacity 0.2s ease;
+            transition: opacity 0.1s ease;
         }
 
         /* 订阅布局 */
@@ -2398,7 +2435,7 @@
   }
 
   // 悬浮球大小
-  function applyBubbleSize(element) {
+  function getBubbleSize() {
     let size = 20;
     if (typeof currentConfig.bubbleSize === 'number') {
       size = currentConfig.bubbleSize;
@@ -2413,7 +2450,11 @@
           size = isNaN(parsed) ? 20 : parsed;
       }
     }
-    size = Math.max(15, Math.min(40, size));
+    return Math.max(15, Math.min(40, size));
+  }
+
+  function applyBubbleSize(element) {
+    const size = getBubbleSize();
     element.style.fontSize = size + 'px';
     element.style.padding = '5px 5px';
     element.style.lineHeight = (1 + (size - 12) * 0.015).toFixed(2);
@@ -2424,9 +2465,10 @@
     const isLeft = currentConfig.bubbleState ? currentConfig.bubbleState.isLeftHalf : false;
     const isToggleMode = currentConfig.bubbleAction === 'toggleHidden';
 
+    const bubbleIcon = (inner) => `<span style="display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; flex-shrink: 0; line-height: 0;"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg></span>`;
     const icon = isToggleMode
-      ? `<span style="display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; flex-shrink: 0; line-height: 0;"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg></span>`
-      : `<span style="display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; flex-shrink: 0; line-height: 0;"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></span>`;
+      ? bubbleIcon('<circle cx="12" cy="12" r="10"/>')
+      : bubbleIcon('<circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>');
 
     let newHtml;
     if (currentConfig.showCount) {
@@ -2644,8 +2686,7 @@
         addMatchedRuleLabel(el);
       } else {
         el.classList.remove('searchfilter-blocked-visible');
-        const label = el.querySelector('.searchfilter-matched-rule');
-        if (label) label.remove();
+        removeMatchedRuleLabel(el);
       }
     });
     const status = document.getElementById('searchfilter-status');
@@ -2654,78 +2695,96 @@
     }
   }
 
-  function createOptionButtons(name, value, options) {
-    const buttons = options.map(option => {
-      const active = currentConfig[name] === option.value;
-      return `<button type="button" class="option-button ${active ? 'active' : ''}" data-value="${option.value}" data-name="${name}">${option.label}</button>`;
-    }).join('');
-    return `<div class="option-buttons">${buttons}</div>`;
-  }
-
   // 行号与语法检查
+  let _lineUpdatePending = false;
+  let _lineUpdateDirty = false;
+  let _lineChunkToken = 0;
+  const LINE_NUM_CHUNK = 200;
+
   function updateLineNumbersIncremental() {
     const textarea = document.getElementById('searchfilter-rules');
     const lineNums = document.getElementById('searchfilter-line-numbers');
-    if (!textarea || !lineNums) return;
-
-    const lines = textarea.value.split('\n');
-    const prevLines = _prevLineArray;
-    _prevLineArray = lines;
-    const children = lineNums.children;
-
-    if (!prevLines || Math.abs(lines.length - children.length) > 50) {
-      let html = '';
-      for (let i = 0; i < lines.length; i++) {
-        const isValid = cachedValidateRule(lines[i]);
-        html += `<div style="position: relative; color: #a0aec0;">${i + 1}${isValid ? '' : '<span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 10px; background: #edf2f7; z-index: 1;">⚠️</span>'}</div>`;
-      }
-      lineNums.innerHTML = html;
+    if (!textarea || !lineNums) {
+      _lineUpdatePending = false;
       return;
     }
 
+    const lines = textarea.value.split('\n');
     const len = lines.length;
-    const prevLen = prevLines.length;
+    const token = ++_lineChunkToken;
 
-    if (len === prevLen) {
-      for (let i = 0; i < len; i++) {
-        if (lines[i] === prevLines[i]) continue;
-        const isValid = cachedValidateRule(lines[i]);
-        children[i].innerHTML = `${i + 1}${isValid ? '' : '<span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 10px; background: #edf2f7; z-index: 1;">⚠️</span>'}`;
-      }
-    } else {
-      let firstDiff = 0;
-      const minLen = Math.min(len, prevLen);
-      while (firstDiff < minLen && lines[firstDiff] === prevLines[firstDiff]) {
-        firstDiff++;
-      }
+    // 预留行宽
+    lineNums.style.minWidth = `max(20px, calc(${String(len).length}ch + 8px))`;
 
-      while (children.length > len) {
-        lineNums.removeChild(lineNums.lastChild);
-      }
-      while (children.length < len) {
-        const div = document.createElement('div');
-        div.style.position = 'relative';
-        div.style.color = '#a0aec0';
-        lineNums.appendChild(div);
-      }
-
-      for (let i = firstDiff; i < len; i++) {
-        const isValid = cachedValidateRule(lines[i]);
-        children[i].innerHTML = `${i + 1}${isValid ? '' : '<span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 10px; background: #edf2f7; z-index: 1;">⚠️</span>'}`;
-      }
+    // 预留行高
+    const children = lineNums.children;
+    while (children.length < len) {
+      const div = document.createElement('div');
+      div.style.position = 'relative';
+      div.style.color = '#a0aec0';
+      div.style.height = '1.4em';
+      lineNums.appendChild(div);
     }
+
+    // 分帧处理
+    let index = 0;
+    const step = () => {
+      if (token !== _lineChunkToken) return;
+      if (!lineNums.isConnected) {
+        _lineUpdatePending = false;
+        _lineUpdateDirty = false;
+        return;
+      }
+
+      const children = lineNums.children;
+      while (children.length > len) {
+        lineNums.removeChild(children[children.length - 1]);
+      }
+
+      const end = Math.min(index + LINE_NUM_CHUNK, len);
+      for (let i = index; i < end; i++) {
+        const node = children[i];
+        const analysis = cachedAnalyzeRule(lines[i]);
+        const valid = analysis.valid;
+        const errMsg = valid ? '' : analysis.errors.join(' | ');
+        const html = `${i + 1}${valid ? '' : `<span class="searchfilter-line-error" title="${escHtml(errMsg)}" data-error="${escHtml(errMsg)}" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 10px; background: #edf2f7; z-index: 1; cursor: pointer;">⚠️</span>`}`;
+        if (node.dataset.v === html) continue;
+        node.innerHTML = html;
+        node.dataset.v = html;
+      }
+
+      index = end;
+      if (index < len) {
+        requestAnimationFrame(step);
+        return;
+      }
+
+      _prevLineArray = lines;
+      if (_lineUpdateDirty) {
+        _lineUpdateDirty = false;
+        requestAnimationFrame(updateLineNumbersIncremental);
+      } else {
+        _lineUpdatePending = false;
+      }
+    };
+    requestAnimationFrame(step);
   }
 
   function scheduleLineNumbersUpdate() {
     if (_lineDebounceTimer) clearTimeout(_lineDebounceTimer);
     _lineDebounceTimer = setTimeout(() => {
       _lineDebounceTimer = null;
-      requestAnimationFrame(updateLineNumbersIncremental);
+      updateLineNumbers();
     }, 100);
   }
 
   function updateLineNumbers() {
-    requestAnimationFrame(updateLineNumbersIncremental);
+    if (_lineUpdatePending) {
+      _lineUpdateDirty = true;
+      return;
+    }
+    _lineUpdatePending = true;
+    updateLineNumbersIncremental();
   }
 
   function escHtml(str) {
@@ -2817,11 +2876,15 @@
 
     // 静态语法
     const ruleErrors = {};
+    const ruleWarnings = {};
+    const ruleCounts = new Map();
     activeRules.forEach(rule => {
-      if (!cachedValidateRule(rule)) {
-        ruleErrors[rule] = ['Invalid syntax'];
-      }
+      const analysis = cachedAnalyzeRule(rule);
+      if (!analysis.valid) ruleErrors[rule] = analysis.errors.length ? analysis.errors : [t('invalidRule')];
+      if (analysis.warnings.length) ruleWarnings[rule] = analysis.warnings;
+      ruleCounts.set(rule, (ruleCounts.get(rule) || 0) + 1);
     });
+    const duplicateRules = [...ruleCounts.entries()].filter(([, c]) => c > 1);
 
     const whitelistRules = activeRules
       .filter(rule => rule.startsWith('@') && !rule.toLowerCase().startsWith('@if') && !HL_STATS_REGEX.test(rule))
@@ -2859,12 +2922,24 @@
       rule,
       errors
     }));
+    const ruleWarningsArray = Object.entries(ruleWarnings).map(([rule, warnings]) => ({
+      rule,
+      warnings
+    }));
     let resultHTML = '';
 
     if (ruleErrorsArray.length > 0) {
       resultHTML += `<div style="color: #c53030; background: #fff5f5; padding: 8px; border-radius: 4px; margin-bottom: 12px;"><strong>⚠️ ${t('statsErrors', {count: ruleErrorsArray.length})}</strong><br>`;
       ruleErrorsArray.forEach(item => {
         resultHTML += `<div style="margin: 4px 0; font-size: 11px;"><div style="color: #2d3748;"><strong>${t('matchedRule')}: </strong>${escHtml(item.rule)}</div><div style="color: #c53030;"><strong>${t('errorWord')}: </strong>${escHtml(item.errors.join(', '))}</div></div>`;
+      });
+      resultHTML += '</div>';
+    }
+
+    if (ruleWarningsArray.length > 0) {
+      resultHTML += `<div style="color: #b7791f; background: #fffff0; padding: 8px; border-radius: 4px; margin-bottom: 12px;"><strong>⚠️ ${t('statsWarnings', {count: ruleWarningsArray.length})}</strong><br>`;
+      ruleWarningsArray.forEach(item => {
+        resultHTML += `<div style="margin: 4px 0; font-size: 11px;"><div style="color: #2d3748;"><strong>${t('matchedRule')}: </strong>${escHtml(item.rule)}</div><div style="color: #b7791f;"><strong>${t('warningWord')}: </strong>${escHtml(item.warnings.join(', '))}</div></div>`;
       });
       resultHTML += '</div>';
     }
@@ -2942,6 +3017,19 @@
       resultHTML += `</div>`;
     }
 
+    // 重复规则
+    if (duplicateRules.length > 0) {
+      resultHTML += `<div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #e2e8f0;">`;
+      resultHTML += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #cbd5e0;">`;
+      resultHTML += `<span style="font-weight: bold; color: #2d3748; font-size: 14px;">${t('duplicateRules')}</span>`;
+      resultHTML += `<span style="background: #2c5282; color: white; padding: 2px 10px; border-radius: 12px; font-size: 12px;">${duplicateRules.length} ${t('matchedCountUnit')}</span>`;
+      resultHTML += `</div>`;
+      duplicateRules.forEach(([rule, count]) => {
+        resultHTML += `<div style="font-size: 11px; color: #4a5568; word-break: break-all; font-family: 'Consolas', monospace;">${escHtml(rule)} <span style="color:#c53030;">${t('ruleDuplicate', {count})}</span></div>`;
+      });
+      resultHTML += `</div>`;
+    }
+
     statsContent.innerHTML = resultHTML;
   }
 
@@ -2976,6 +3064,34 @@
     return 'bottom: 10px; right: 10px; transform: none;';
   }
 
+  // 创建面板
+  function createPanel(id, width = '320px', padding = '15px') {
+    const panel = document.createElement('div');
+    panel.id = id;
+    panel.classList.add('searchfilter-panel-fade');
+    panel.style.cssText = `
+        position: fixed;
+        ${getPanelPositionStyles()}
+        width: ${width};
+        z-index: 10001;
+        padding: ${padding};
+        display: flex;
+        flex-direction: column;
+    `;
+    document.body.appendChild(panel);
+    requestAnimationFrame(() => panel.classList.add('show'));
+    return panel;
+  }
+
+  // 面板淡出移除
+  function fadeOutAndRemovePanel(panel, onClosed) {
+    panel.classList.remove('show');
+    panel.addEventListener('transitionend', () => {
+      panel.remove();
+      if (onClosed) onClosed();
+    }, { once: true });
+  }
+
   // 主面板样式
   function showConfigPanel() {
     const existingPanel = document.getElementById('searchfilter-panel');
@@ -2993,37 +3109,10 @@
       window._panelCloseHandler = null;
     }
 
-    const panel = document.createElement('div');
-    panel.id = 'searchfilter-panel';
-    panel.classList.add('searchfilter-panel-fade');
-
-    const statusBtn = document.getElementById('searchfilter-status');
-    panel.style.cssText = `
-        position: fixed;
-        ${getPanelPositionStyles()}
-        width: 320px;
-        z-index: 10001;
-        padding: 15px;
-        display: flex;
-        flex-direction: column;
-    `;
+    const panel = createPanel('searchfilter-panel');
 
     // 兼容旧悬浮球设置
-    let initialSize = 20;
-    if (typeof currentConfig.bubbleSize === 'number') {
-      initialSize = currentConfig.bubbleSize;
-    } else {
-      switch (currentConfig.bubbleSize) {
-        case 'medium': initialSize = 18; break;
-        case 'large': initialSize = 20; break;
-        case 'larger': initialSize = 22; break;
-        case 'xlarge': initialSize = 26; break;
-        default:
-          const parsed = parseInt(currentConfig.bubbleSize);
-          initialSize = isNaN(parsed) ? 20 : parsed;
-      }
-    }
-    initialSize = Math.max(15, Math.min(40, initialSize));
+    const initialSize = getBubbleSize();
 
     panel.innerHTML = `
             <div style="display: flex; gap: 8px; margin-top: 0px; margin-bottom: 8px;">
@@ -3107,9 +3196,6 @@
             </div>
         `;
 
-    document.body.appendChild(panel);
-    requestAnimationFrame(() => panel.classList.add('show'));
-
     updateLineNumbers();
 
     const textarea = document.getElementById('searchfilter-rules');
@@ -3119,18 +3205,18 @@
     textarea.addEventListener('scroll', () => {
       lineNums.scrollTop = textarea.scrollTop;
     });
+    lineNums.addEventListener('click', (e) => {
+      const errorEl = e.target.closest('.searchfilter-line-error');
+      if (errorEl) showToast(errorEl.getAttribute('data-error') || t('invalidRule'), 'error');
+    });
 
     const closePanel = () => {
-      panel.classList.remove('show');
-      panel.addEventListener('transitionend', () => {
-        panel.remove();
+      fadeOutAndRemovePanel(panel, () => {
         document.removeEventListener('click', window._panelCloseHandler);
         window._panelCloseHandler = null;
 
         const savedConfig = GM_getValue(CONFIG_KEY, currentConfig);
         currentConfig = savedConfig;
-      }, {
-        once: true
       });
     };
 
@@ -3288,18 +3374,7 @@
       return '#' + [r,g,b].map(x => x.toString(16).padStart(2,'0').toUpperCase()).join('');
     }
 
-    const panel = document.createElement('div');
-    panel.id = 'searchfilter-hlcolor-panel';
-    panel.classList.add('searchfilter-panel-fade');
-    panel.style.cssText = `
-        position: fixed;
-        ${getPanelPositionStyles()}
-        width: auto; max-width: 350px;
-        z-index: 10001;
-        padding: 15px;
-        display: flex;
-        flex-direction: column;
-    `;
+    const panel = createPanel('searchfilter-hlcolor-panel', 'auto; max-width: 350px');
 
     const colors = currentConfig.highlightColors || {};
     let rowsHtml = '';
@@ -3338,9 +3413,6 @@
         <button id="hlcolor-cancel" class="searchfilter-button searchfilter-button-secondary" style="flex:1;">${t('cancel')}</button>
       </div>
     `;
-
-    document.body.appendChild(panel);
-    requestAnimationFrame(() => panel.classList.add('show'));
 
     function resizeCanvasToMatch() {
       const left = document.getElementById('hlcolor-left');
@@ -3488,19 +3560,12 @@
 
     document.getElementById('hlcolor-cancel').onclick = (e) => {
       e.stopPropagation();
-      panel.classList.remove('show');
-      panel.addEventListener('transitionend', () => {
-        panel.remove();
-      }, {once: true});
+      fadeOutAndRemovePanel(panel);
     };
 
     const closeHandler = (e) => {
       if (!panel.contains(e.target)) {
-        panel.classList.remove('show');
-        panel.addEventListener('transitionend', () => {
-          panel.remove();
-          document.removeEventListener('click', closeHandler);
-        }, {once: true});
+        fadeOutAndRemovePanel(panel, () => document.removeEventListener('click', closeHandler));
       }
     };
     setTimeout(() => document.addEventListener('click', closeHandler), 200);
@@ -3544,19 +3609,47 @@
   }
 
   // 订阅管理
-  async function performSubscriptionForUrl(url, showAlerts = true) {
-    const resp = await new Promise((resolve, reject) => {
+  // GM_xmlhttpRequest Promise封装
+  function gmRequest(method, url, { headers, data, allow404 = false } = {}) {
+    return new Promise((resolve, reject) => {
       GM_xmlhttpRequest({
-        method: 'GET',
+        method,
         url,
-        onload: (r) => {
-          if (r.status >= 200 && r.status < 300) resolve(r);
-          else reject(new Error(`HTTP ${r.status}`));
+        headers,
+        data,
+        onload: (resp) => {
+          if (resp.status >= 200 && resp.status < 300) resolve(resp);
+          else if (allow404 && resp.status === 404) resolve(resp);
+          else reject(new Error(`HTTP ${resp.status}`));
         },
         onerror: () => reject(new Error(t('networkError'))),
         ontimeout: () => reject(new Error(t('requestTimeout')))
       });
     });
+  }
+
+  // 同步配置打包/解析
+  function buildSyncPayload() {
+    const { rules, bubbleState, bubbleSize, ...settings } = currentConfig;
+    return { ...settings, subscriptions: getSubscriptions().map(s => ({ url: s.url, enabled: s.enabled, lastUpdate: s.lastUpdate })) };
+  }
+
+  function parseSyncHeader(content) {
+    const lines = content.split('\n');
+    if (lines.length > 0 && lines[0].startsWith('# ScriptConfig:')) {
+      let config = null;
+      try {
+        config = JSON.parse(lines[0].substring('# ScriptConfig:'.length));
+      } catch (e) {
+        if (currentConfig.debug) console.warn('[WebDAV] 配置头解析失败:', e);
+      }
+      return { config, restLines: lines.slice(1) };
+    }
+    return { config: null, restLines: lines };
+  }
+
+  async function performSubscriptionForUrl(url, showAlerts = true) {
+    const resp = await gmRequest('GET', url);
     const content = resp.responseText;
 
     const lines = content.split('\n').map(line => line.trim());
@@ -3607,18 +3700,7 @@
     }
 
     // 订阅面板样式
-    const panel = document.createElement('div');
-    panel.id = 'searchfilter-subscription-panel';
-    panel.classList.add('searchfilter-panel-fade');
-    panel.style.cssText = `
-        position: fixed;
-        ${getPanelPositionStyles()}
-        width: 320px;
-        z-index: 10001;
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-    `;
+    const panel = createPanel('searchfilter-subscription-panel', '320px', '20px');
 
     let subscriptions = getSubscriptions();
     if (!subscriptions) subscriptions = [];
@@ -3649,9 +3731,6 @@
             <div class="add-subscription-btn"><button id="add-subscription" class="searchfilter-button searchfilter-button-secondary" style="width:100%;" ${subscriptions.length >= 3 ? 'disabled' : ''}>${t('addSubscription')}</button></div>
             <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:0px;"><button id="subscription-save" class="searchfilter-button searchfilter-button-primary" style="flex:1;">${t('save')}</button><button id="subscription-import" class="searchfilter-button searchfilter-button-primary" style="flex:1;">${t('import')}</button><button id="subscription-cancel" class="searchfilter-button searchfilter-button-secondary" style="flex:1;">${t('cancel')}</button></div>
         `;
-
-    document.body.appendChild(panel);
-    requestAnimationFrame(() => panel.classList.add('show'));
 
     const container = document.getElementById('subscription-rows-container');
     const addBtn = document.getElementById('add-subscription');
@@ -3693,24 +3772,12 @@
 
     const closeHandler = (e) => {
       if (!panel.contains(e.target)) {
-        panel.classList.remove('show');
-        panel.addEventListener('transitionend', () => {
-          panel.remove();
-          document.removeEventListener('click', closeHandler);
-        }, {
-          once: true
-        });
+        fadeOutAndRemovePanel(panel, () => document.removeEventListener('click', closeHandler));
       }
     };
 
     const closePanel = () => {
-      panel.classList.remove('show');
-      panel.addEventListener('transitionend', () => {
-        panel.remove();
-        document.removeEventListener('click', closeHandler);
-      }, {
-        once: true
-      });
+      fadeOutAndRemovePanel(panel, () => document.removeEventListener('click', closeHandler));
     };
 
     document.getElementById('subscription-save').onclick = () => {
@@ -3813,18 +3880,7 @@
     });
 
     // webdav面板样式
-    const panel = document.createElement('div');
-    panel.id = 'searchfilter-webdav-panel';
-    panel.classList.add('searchfilter-panel-fade');
-    panel.style.cssText = `
-        position: fixed;
-        ${getPanelPositionStyles()}
-        width: 320px;
-        z-index: 10001;
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-    `;
+    const panel = createPanel('searchfilter-webdav-panel', '320px', '20px');
 
     const autoSyncEnabled = GM_getValue(WEBDAV_AUTO_SYNC_KEY, false);
     const syncConfigEnabled = GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false);
@@ -3867,9 +3923,6 @@
     </div>
 `;
 
-    document.body.appendChild(panel);
-    requestAnimationFrame(() => panel.classList.add('show'));
-
     // 获取输入
     const urlInput = document.getElementById('webdav-url');
     const usernameInput = document.getElementById('webdav-username');
@@ -3900,13 +3953,7 @@
     }
 
     const closePanel = () => {
-      panel.classList.remove('show');
-      panel.addEventListener('transitionend', () => {
-        panel.remove();
-        document.removeEventListener('click', closeHandler);
-      }, {
-        once: true
-      });
+      fadeOutAndRemovePanel(panel, () => document.removeEventListener('click', closeHandler));
     };
 
     // webdav上传
@@ -3924,29 +3971,14 @@
       const textarea = document.getElementById('searchfilter-rules');
       let content = textarea ? textarea.value : currentConfig.rules.join('\n');
       if (GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)) {
-        const { rules, bubbleState, bubbleSize, ...settings } = currentConfig;
-        const uploadPayload = { ...settings, subscriptions: getSubscriptions().map(s => ({ url: s.url, enabled: s.enabled, lastUpdate: s.lastUpdate })) };
-        content = '# ScriptConfig:' + JSON.stringify(uploadPayload) + '\n' + content;
+        content = '# ScriptConfig:' + JSON.stringify(buildSyncPayload()) + '\n' + content;
       }
       const loadingToast = showToast(t('webdavUploading'), 'info', 10000);
       try {
         const fullUrl = config.url.replace(/\/$/, '') + '/' + config.filename;
         const headers = {};
         if (config.username) headers['Authorization'] = 'Basic ' + btoa(`${config.username}:${config.password}`);
-        await new Promise((resolve, reject) => {
-          GM_xmlhttpRequest({
-            method: 'PUT',
-            url: fullUrl,
-            headers,
-            data: content,
-            onload: (resp) => {
-              if (resp.status >= 200 && resp.status < 300) resolve(resp);
-              else reject(new Error(`HTTP ${resp.status}`));
-            },
-            onerror: (err) => reject(new Error(t('networkError'))),
-            ontimeout: () => reject(new Error(t('requestTimeout')))
-          });
-        });
+        await gmRequest('PUT', fullUrl, { headers, data: content });
         loadingToast.dismiss();
         showToast(t('uploadSuccess'), 'success');
       } catch (err) {
@@ -4000,39 +4032,16 @@
     const fullUrl = config.url.replace(/\/$/, '') + '/' + config.filename;
     const headers = {};
     if (config.username) headers['Authorization'] = 'Basic ' + btoa(`${config.username}:${config.password}`);
-    const resp = await new Promise((resolve, reject) => {
-      GM_xmlhttpRequest({
-        method: 'GET',
-        url: fullUrl,
-        headers,
-        onload: (resp) => {
-          if (resp.status >= 200 && resp.status < 300) resolve(resp);
-          else reject(new Error(`HTTP ${resp.status}`));
-        },
-        onerror: () => reject(new Error(t('networkError'))),
-        ontimeout: () => reject(new Error(t('requestTimeout')))
-      });
-    });
+    const resp = await gmRequest('GET', fullUrl, { headers });
     const content = resp.responseText;
-    const lines = content.split('\n');
-    let configParsed = false;
-    if (lines.length > 0 && lines[0].startsWith('# ScriptConfig:')) {
-      if (GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)) {
-        try {
-          const jsonStr = lines[0].substring('# ScriptConfig:'.length);
-          const parsed = JSON.parse(jsonStr);
-          const { subscriptions, bubbleState, bubbleSize, ...settings } = parsed;
-          Object.assign(currentConfig, settings);
-          GM_setValue(CONFIG_KEY, currentConfig);
-          if (subscriptions) saveSubscriptions(subscriptions);
-        } catch (e) {
-          if (currentConfig.debug) console.warn('[WebDAV] 配置头解析失败:', e);
-        }
-      }
-      configParsed = true;
+    const parsedHeader = parseSyncHeader(content);
+    if (parsedHeader.config && GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)) {
+      const { subscriptions, bubbleState, bubbleSize, ...settings } = parsedHeader.config;
+      Object.assign(currentConfig, settings);
+      GM_setValue(CONFIG_KEY, currentConfig);
+      if (subscriptions) saveSubscriptions(subscriptions);
     }
-    const newLines = configParsed ? lines.slice(1) : lines;
-    const newRules = newLines.map(r => r.trim()).filter(r => r);
+    const newRules = parsedHeader.restLines.map(r => r.trim()).filter(r => r);
     const textarea = document.getElementById('searchfilter-rules');
     if (textarea) {
       textarea.value = newRules.join('\n');
@@ -4052,42 +4061,18 @@
     const headers = {};
     if (config.username) headers['Authorization'] = 'Basic ' + btoa(`${config.username}:${config.password}`);
 
-    const resp = await new Promise((resolve, reject) => {
-      GM_xmlhttpRequest({
-        method: 'GET',
-        url: fullUrl,
-        headers,
-        onload: (r) => {
-          if (r.status >= 200 && r.status < 300) resolve(r);
-          else if (r.status === 404) resolve(r);
-          else reject(new Error(`HTTP ${r.status}`));
-        },
-        onerror: () => reject(new Error(t('networkError'))),
-        ontimeout: () => reject(new Error(t('requestTimeout')))
-      });
-    });
+    const resp = await gmRequest('GET', fullUrl, { headers, allow404: true });
 
     let cloudRules = [];
     let cloudConfig = null;
     let cloudTime = 0;
     if (resp.status !== 404) {
       const content = resp.responseText;
-      const rawLines = content.split('\n');
-      let hasConfigHeader = false;
-      if (rawLines.length > 0 && rawLines[0].startsWith('# ScriptConfig:')) {
-        if (GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)) {
-          try {
-            const jsonStr = rawLines[0].substring('# ScriptConfig:'.length);
-            cloudConfig = JSON.parse(jsonStr);
-          } catch (e) {
-            if (currentConfig.debug) console.warn('[自动 WebDAV] 配置头解析失败:', e);
-          }
-        }
-        hasConfigHeader = true;
-        cloudRules = rawLines.slice(1).map(r => r.trim()).filter(r => r);
-      } else {
-        cloudRules = rawLines.map(r => r.trim()).filter(r => r);
+      const parsedHeader = parseSyncHeader(content);
+      if (parsedHeader.config && GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)) {
+        cloudConfig = parsedHeader.config;
       }
+      cloudRules = parsedHeader.restLines.map(r => r.trim()).filter(r => r);
       const lastModMatch = resp.responseHeaders.match(/last-modified:\s*(.*)/i);
       if (lastModMatch) cloudTime = Date.parse(lastModMatch[1]);
       if (isNaN(cloudTime)) cloudTime = 0;
@@ -4101,23 +4086,9 @@
       console.log('[自动 WebDAV] 本地规则较新，合并后上传...');
       let uploadData = mergedRules.join('\n');
       if (GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)) {
-        const { rules, bubbleState, bubbleSize, ...settings } = currentConfig;
-        const uploadPayload = { ...settings, subscriptions: getSubscriptions().map(s => ({ url: s.url, enabled: s.enabled, lastUpdate: s.lastUpdate })) };
-        uploadData = '# ScriptConfig:' + JSON.stringify(uploadPayload) + '\n' + uploadData;
+        uploadData = '# ScriptConfig:' + JSON.stringify(buildSyncPayload()) + '\n' + uploadData;
       }
-      await new Promise((resolve, reject) => {
-        GM_xmlhttpRequest({
-          method: 'PUT',
-          url: fullUrl,
-          headers,
-          data: uploadData,
-          onload: (r) => {
-            if (r.status >= 200 && r.status < 300) resolve(r);
-            else reject(new Error(`HTTP ${r.status}`));
-          },
-          onerror: reject
-        });
-      });
+      await gmRequest('PUT', fullUrl, { headers, data: uploadData });
     }
 
     if (cloudConfig && GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)) {
@@ -4161,10 +4132,7 @@
       const reader = new FileReader();
       reader.onload = (event) => {
         let content = event.target.result;
-        const lines = content.split('\n');
-        if (lines.length > 0 && lines[0].startsWith('# ScriptConfig:')) {
-          content = lines.slice(1).join('\n');
-        }
+        content = parseSyncHeader(content).restLines.join('\n');
         const textarea = document.getElementById('searchfilter-rules');
         if (textarea) {
           textarea.value = content;
@@ -4205,28 +4173,28 @@
   }
 
   // 管理器菜单
+  function registerToggleMenu(labelKey, isOn, onText, offText, markerOn, markerOff, apply) {
+    const on = isOn();
+    GM_registerMenuCommand((on ? markerOn : markerOff) + t(labelKey) + (on ? `: ${t(onText)}` : `: ${t(offText)}`), () => {
+      apply();
+      GM_setValue(CONFIG_KEY, currentConfig);
+      location.reload();
+    });
+  }
+
   function registerMenu() {
     GM_registerMenuCommand(t('menuOpenPanel'), () => showConfigPanel());
-    GM_registerMenuCommand((currentConfig.enabled ? "🟢 " : "🔴 ") + t('menuEnable') + (currentConfig.enabled ? `: ${t('stateEnabled')}` : `: ${t('stateDisabled')}`), () => {
+    registerToggleMenu('menuEnable', () => currentConfig.enabled, 'stateEnabled', 'stateDisabled', '🟢 ', '🔴 ', () => {
       currentConfig.enabled = !currentConfig.enabled;
-      GM_setValue(CONFIG_KEY, currentConfig);
-      location.reload();
     });
-
-    GM_registerMenuCommand((currentConfig.panelCentered ? "🟢 " : "🔴 ") + t('menuCenter') + (currentConfig.panelCentered ? `: ${t('stateEnabled')}` : `: ${t('stateDisabled')}`), () => {
+    registerToggleMenu('menuCenter', () => currentConfig.panelCentered, 'stateEnabled', 'stateDisabled', '🟢 ', '🔴 ', () => {
       currentConfig.panelCentered = !currentConfig.panelCentered;
-      GM_setValue(CONFIG_KEY, currentConfig);
-      location.reload();
     });
-    GM_registerMenuCommand((currentConfig.showBubble ? "🟢 " : "🔴 ") + t('menuBubble') + (currentConfig.showBubble ? `: ${t('menuBubbleStateShow')}` : `: ${t('menuBubbleStateHide')}`), () => {
+    registerToggleMenu('menuBubble', () => currentConfig.showBubble, 'menuBubbleStateShow', 'menuBubbleStateHide', '🟢 ', '🔴 ', () => {
       currentConfig.showBubble = !currentConfig.showBubble;
-      GM_setValue(CONFIG_KEY, currentConfig);
-      location.reload();
     });
-    GM_registerMenuCommand((currentConfig.bubbleAction === 'openPanel' ? "🟢 " : "🔵 ") + t('menuBubbleAction') + (currentConfig.bubbleAction === 'openPanel' ? `: ${t('menuBubbleActionOpen')}` : `: ${t('menuBubbleActionToggle')}`), () => {
+    registerToggleMenu('menuBubbleAction', () => currentConfig.bubbleAction === 'openPanel', 'menuBubbleActionOpen', 'menuBubbleActionToggle', '🟢 ', '🔵 ', () => {
       currentConfig.bubbleAction = currentConfig.bubbleAction === 'openPanel' ? 'toggleHidden' : 'openPanel';
-      GM_setValue(CONFIG_KEY, currentConfig);
-      location.reload();
     });
     const langDisplay = currentConfig.language === 'zh-CN' ? t('menuLang') : t('menuLangEn');
     GM_registerMenuCommand((currentConfig.language === 'zh-CN' ? '🟢 ' : '🔵 ') + langDisplay, () => {
