@@ -8,11 +8,12 @@ Supports uBlacklist compatible basic rules, URL matching, regex matching, title 
 Currently supported search engines: Bing, Google, DuckDuckGo, Yandex, Brave, Yahoo  
 
 **Features:**  
-- One-click domain blocking via a block button  
-- Display matched rule counts and debug output  
-- Import/export rules to timestamped TXT files  
-- Rule subscriptions  
-- WebDAV synchronization  
+- One-click domain blocking via a block button
+- Display matched rule counts and debug output
+- Import/export rules to timestamped TXT files
+- Rule error detection
+- Rule subscriptions
+- WebDAV synchronization
 - Script manager menu settings  
   ┣ Open configuration panel directly  
   ┣ Toggle blocking on/off  
