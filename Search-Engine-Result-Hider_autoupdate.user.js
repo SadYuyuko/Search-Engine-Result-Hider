@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.5.0
+// @version      7.5.1
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -31,8 +31,6 @@
 // @grant        GM_xmlhttpRequest
 // @grant        GM_registerMenuCommand
 // @run-at       document-idle
-// @downloadURL  https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js
-// @updateURL    https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js
 // ==/UserScript==
 
 (function() {
@@ -191,7 +189,7 @@
       menuLang: 'Language: 中文',
       menuLangEn: 'Language: English',
       subscriptionSuccess: '订阅成功！已更新 {count} 条规则。',
-      subscriptionSaved: '订阅配置已保存',
+      saved: '已保存',
       importDone: '导入操作完成',
       uploadSuccess: '上传成功！',
       downloadSuccess: '下载成功！规则已加载到编辑区，保存生效',
@@ -285,7 +283,7 @@
       menuLang: 'Language: 中文',
       menuLangEn: 'Language: English',
       subscriptionSuccess: 'Subscription successful! Updated {count} rules.',
-      subscriptionSaved: 'Subscription config saved',
+      saved: 'Saved',
       importDone: 'Import completed',
       uploadSuccess: 'Upload successful!',
       downloadSuccess: 'Download successful! Rules loaded into editor, save to apply.',
@@ -3223,14 +3221,7 @@
     document.getElementById('searchfilter-save').onclick = () => {
       hideStatsPanel();
       saveConfig();
-      const saveBtn = document.getElementById('searchfilter-save');
-      const originalText = saveBtn.textContent;
-      saveBtn.textContent = t('save');
-      saveBtn.style.backgroundColor = '#276749';
-      setTimeout(() => {
-        saveBtn.textContent = originalText;
-        saveBtn.style.backgroundColor = '';
-      }, 1200);
+      showToast(t('saved'), 'success');
     };
     document.getElementById('searchfilter-test').onclick = toggleStatsPanel;
     document.getElementById('searchfilter-close').onclick = (e) => {
@@ -3806,7 +3797,7 @@
       });
       if (hasError) return;
       saveSubscriptions(newSubs);
-      showToast(t('subscriptionSaved'), 'success');
+      showToast(t('saved'), 'success');
       subscriptions = newSubs;
       forceReprocessAll();
     };
