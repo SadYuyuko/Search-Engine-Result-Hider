@@ -14,7 +14,7 @@ Currently supported search engines: Bing, Google, DuckDuckGo, Yandex, Brave, Yah
 - Rule error detection
 - Rule subscriptions
 - WebDAV synchronization
-- Script manager menu settings  
+- Script manager menu  
   ┣ Open configuration panel directly  
   ┣ Toggle blocking on/off  
   ┣ Toggle floating bubble visibility  
