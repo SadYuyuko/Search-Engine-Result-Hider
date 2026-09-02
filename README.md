@@ -9,14 +9,14 @@
   
 **当前功能：**  
 - 一键屏蔽域名
-- 统计命中规则数量和调试输出
+- 统计命中规则和调试输出
 - 导入/导出规则到TXT
 - 规则错误检测
 - 规则订阅
 - Webdav同步
 - 脚本管理器菜单  
   ┣ 直接打开面板  
-  ┣ 开关屏蔽功能  
+  ┣ 开关错误检测  
   ┣ 隐藏悬浮球  
   ┣ 语言切换  
   ┣ 自定义高亮结果颜色  
@@ -84,4 +84,4 @@
 <br>
 <img width="214" height="206" alt="02" src="https://github.com/user-attachments/assets/e486984a-2d00-4639-94d1-cf37474cd860" />
 <br>
-<img width="200" height="133" alt="03" src="https://github.com/user-attachments/assets/dfb3aadc-5cdb-4da7-925f-e18d9f8c3a8f" />
+<img width="200" height="133" alt="03" src="https://github.com/user-attachments/assets/32cdce71-23b3-4ed9-9ac7-9220af80beb1" />
