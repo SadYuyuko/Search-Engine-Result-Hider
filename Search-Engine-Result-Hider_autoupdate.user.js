@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.5.1
+// @version      7.5.2
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -160,7 +160,7 @@
       import: '导入',
       export: '导出',
       save: '保存',
-      test: '统计',
+      stats: '统计',
       close: '关闭',
       cancel: '取消',
       placeholder: '每行一个规则',
@@ -254,7 +254,7 @@
       import: 'Import',
       export: 'Export',
       save: 'Save',
-      test: 'Stats',
+      stats: 'Stats',
       close: 'Close',
       cancel: 'Cancel',
       placeholder: 'One rule per line',
@@ -2804,23 +2804,23 @@
       document.getElementById('searchfilter-subscription-panel') ||
       document.getElementById('searchfilter-panel');
     if (panel) {
-      const rect = panel.getBoundingClientRect();
-      const showAbove = !currentConfig.panelCentered &&
-        (rect.top + rect.height / 2) > window.innerHeight / 2;
-      container.style.left = Math.max(8, rect.left) + 'px';
-      container.style.right = '';
-      container.style.width = Math.min(rect.width, window.innerWidth - 16) + 'px';
-      if (showAbove) {
-        container.style.top = 'auto';
-        container.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
-      } else {
-        container.style.top = (rect.bottom + 8) + 'px';
-        container.style.bottom = '';
+      if (container.parentElement !== panel) {
+        panel.appendChild(container);
       }
+      container.style.position = 'absolute';
+      container.style.top = 'calc(100% + 4px)';
+      container.style.left = '0';
+      container.style.right = '0';
+      container.style.bottom = '';
+      container.style.width = '';
     } else {
+      if (container.parentElement !== document.body) {
+        document.body.appendChild(container);
+      }
+      container.style.position = '';
+      container.style.top = '';
+      container.style.right = '';
       container.style.left = '';
-      container.style.top = '15px';
-      container.style.right = '15px';
       container.style.bottom = '';
       container.style.width = '';
     }
@@ -3187,7 +3187,7 @@
             
             <div style="display: flex; gap: 6px; margin-top: 8px;" id="searchfilter-panel-footer">
                 <button id="searchfilter-save" class="searchfilter-button searchfilter-button-primary action-button" style="flex: 2;">${t('save')}</button>
-                <button id="searchfilter-test" class="searchfilter-button searchfilter-button-secondary action-button" style="flex: 1;">${t('test')}</button>
+                <button id="searchfilter-test" class="searchfilter-button searchfilter-button-secondary action-button" style="flex: 1;">${t('stats')}</button>
                 <button id="searchfilter-close" class="searchfilter-button searchfilter-button-danger action-button" style="flex: 1;">${t('close')}</button>
             </div>
             
@@ -3218,6 +3218,8 @@
         const savedConfig = GM_getValue(CONFIG_KEY, currentConfig);
         currentConfig = savedConfig;
       });
+      const toastContainer = document.getElementById('searchfilter-toast-container');
+      if (toastContainer) toastContainer.remove();
     };
 
     document.getElementById('searchfilter-save').onclick = () => {
