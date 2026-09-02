@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.5.2
+// @version      7.5.3
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -70,7 +70,8 @@
     bubbleAction: 'openPanel',
     language: 'zh-CN',
     highlightColors: {1:'#CE2029', 2:'#FF8C00', 3:'#FFD700', 4:'#228B22', 5:'#1E90FF'},
-    subscriptionAutoUpdate: false
+    subscriptionAutoUpdate: false,
+    errorDetection: true
   });
 
   // 兼容旧配置
@@ -83,6 +84,7 @@
   if (currentConfig.language === undefined) currentConfig.language = 'zh-CN';
   if (currentConfig.highlightColors === undefined) currentConfig.highlightColors = {1:'#CE2029', 2:'#FF8C00', 3:'#FFD700', 4:'#228B22', 5:'#1E90FF'};
   if (currentConfig.subscriptionAutoUpdate === undefined) currentConfig.subscriptionAutoUpdate = false;
+  if (currentConfig.errorDetection === undefined) currentConfig.errorDetection = true;
   let showHiddenResults = false;
   let _orGroupCounter = 0;
 
@@ -185,6 +187,7 @@
       whitelistRules: '白名单规则',
       menuOpenPanel: '⚙️ 打开配置面板',
       menuEnable: '屏蔽功能',
+      menuErrorDetection: '错误检测',
       menuCenter: '面板居中',
       menuBubble: '悬浮球状态',
       menuBubbleAction: '悬浮球功能',
@@ -242,11 +245,11 @@
       ruleDuplicate: '重复了 {count} 次',
     },
     'en': {
-      enableBlock: 'Enable Block',
-      showCount: 'Show Count',
+      enableBlock: 'Enable',
+      showCount: 'Count',
       debugMode: 'Debug',
-      oneClickBlock: 'Click Block',
-      blockDomain: 'Block Domain',
+      oneClickBlock: 'Button',
+      blockDomain: 'Domain',
       doubleConfirm: 'Confirm',
       bubbleSize: 'Bubble Size:',
       blockRules: 'Block Rules:',
@@ -279,6 +282,7 @@
       whitelistRules: 'Whitelist Rules',
       menuOpenPanel: '⚙️ Open Panel',
       menuEnable: 'Block',
+      menuErrorDetection: 'Error Detection',
       menuCenter: 'Center Panel',
       menuBubble: 'Bubble',
       menuBubbleAction: 'Bubble Action',
@@ -2744,7 +2748,7 @@
       const end = Math.min(index + LINE_NUM_CHUNK, len);
       for (let i = index; i < end; i++) {
         const node = children[i];
-        const analysis = cachedAnalyzeRule(lines[i]);
+        const analysis = currentConfig.errorDetection !== false ? cachedAnalyzeRule(lines[i]) : { valid: true, errors: [], warnings: [] };
         const valid = analysis.valid;
         const errMsg = valid ? '' : analysis.errors.join(' | ');
         const html = `${i + 1}${valid ? '' : `<span class="searchfilter-line-error" title="${escHtml(errMsg)}" data-error="${escHtml(errMsg)}" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 10px; background: #edf2f7; z-index: 1; cursor: pointer;">⚠️</span>`}`;
@@ -2802,6 +2806,7 @@
 
     const panel = document.getElementById('searchfilter-webdav-panel') ||
       document.getElementById('searchfilter-subscription-panel') ||
+      document.getElementById('searchfilter-hlcolor-panel') ||
       document.getElementById('searchfilter-panel');
     if (panel) {
       if (container.parentElement !== panel) {
@@ -2879,9 +2884,11 @@
     const ruleWarnings = {};
     const ruleCounts = new Map();
     activeRules.forEach(rule => {
-      const analysis = cachedAnalyzeRule(rule);
-      if (!analysis.valid) ruleErrors[rule] = analysis.errors.length ? analysis.errors : [t('invalidRule')];
-      if (analysis.warnings.length) ruleWarnings[rule] = analysis.warnings;
+      if (currentConfig.errorDetection !== false) {
+        const analysis = cachedAnalyzeRule(rule);
+        if (!analysis.valid) ruleErrors[rule] = analysis.errors.length ? analysis.errors : [t('invalidRule')];
+        if (analysis.warnings.length) ruleWarnings[rule] = analysis.warnings;
+      }
       ruleCounts.set(rule, (ruleCounts.get(rule) || 0) + 1);
     });
     const duplicateRules = [...ruleCounts.entries()].filter(([, c]) => c > 1);
@@ -2929,7 +2936,7 @@
     let resultHTML = '';
 
     if (ruleErrorsArray.length > 0) {
-      resultHTML += `<div style="color: #c53030; background: #fff5f5; padding: 8px; border-radius: 4px; margin-bottom: 12px;"><strong>⚠️ ${t('statsErrors', {count: ruleErrorsArray.length})}</strong><br>`;
+      resultHTML += `<div style="color: #c53030; background: #fff5f5; padding: 8px; border-radius: 4px; margin-bottom: 12px;"><strong>${t('statsErrors', {count: ruleErrorsArray.length})}</strong><br>`;
       ruleErrorsArray.forEach(item => {
         resultHTML += `<div style="margin: 4px 0; font-size: 11px;"><div style="color: #2d3748;"><strong>${t('matchedRule')}: </strong>${escHtml(item.rule)}</div><div style="color: #c53030;"><strong>${t('errorWord')}: </strong>${escHtml(item.errors.join(', '))}</div></div>`;
       });
@@ -2937,7 +2944,7 @@
     }
 
     if (ruleWarningsArray.length > 0) {
-      resultHTML += `<div style="color: #b7791f; background: #fffff0; padding: 8px; border-radius: 4px; margin-bottom: 12px;"><strong>⚠️ ${t('statsWarnings', {count: ruleWarningsArray.length})}</strong><br>`;
+      resultHTML += `<div style="color: #b7791f; background: #fffff0; padding: 8px; border-radius: 4px; margin-bottom: 12px;"><strong>${t('statsWarnings', {count: ruleWarningsArray.length})}</strong><br>`;
       ruleWarningsArray.forEach(item => {
         resultHTML += `<div style="margin: 4px 0; font-size: 11px;"><div style="color: #2d3748;"><strong>${t('matchedRule')}: </strong>${escHtml(item.rule)}</div><div style="color: #b7791f;"><strong>${t('warningWord')}: </strong>${escHtml(item.warnings.join(', '))}</div></div>`;
       });
@@ -3116,50 +3123,62 @@
 
     panel.innerHTML = `
             <div style="display: flex; gap: 8px; margin-top: 0px; margin-bottom: 8px;">
-                <label style="display: flex; align-items: center; flex: 1; justify-content: flex-start; white-space: nowrap; cursor: pointer; font-size: 12px; color: #4a5568;">
-                    <span class="searchfilter-switch">
-                        <input type="checkbox" id="searchfilter-enabled" ${currentConfig.enabled ? 'checked' : ''}>
-                        <span class="searchfilter-slider"></span>
+                <label style="display: flex; align-items: center; flex: 1; justify-content: space-between; white-space: nowrap; cursor: pointer; font-size: 12px; color: #4a5568;">
+                    <span style="display: flex; align-items: center;">
+                        <span class="searchfilter-switch">
+                            <input type="checkbox" id="searchfilter-enabled" ${currentConfig.enabled ? 'checked' : ''}>
+                            <span class="searchfilter-slider"></span>
+                        </span>
+                        <span>${t('enableBlock')}</span>
                     </span>
-                    <span>${t('enableBlock')}</span>
                 </label>
-                <label style="display: flex; align-items: center; flex: 1; justify-content: center; white-space: nowrap; cursor: pointer; font-size: 12px; color: #4a5568;">
-                    <span class="searchfilter-switch">
-                        <input type="checkbox" id="searchfilter-show-count" ${currentConfig.showCount ? 'checked' : ''}>
-                        <span class="searchfilter-slider"></span>
+                <label style="display: flex; align-items: center; flex: 1; justify-content: space-between; white-space: nowrap; cursor: pointer; font-size: 12px; color: #4a5568;">
+                    <span style="display: flex; align-items: center;">
+                        <span class="searchfilter-switch">
+                            <input type="checkbox" id="searchfilter-show-count" ${currentConfig.showCount ? 'checked' : ''}>
+                            <span class="searchfilter-slider"></span>
+                        </span>
+                        <span>${t('showCount')}</span>
                     </span>
-                    <span>${t('showCount')}</span>
                 </label>
-                <label style="display: flex; align-items: center; flex: 1; justify-content: flex-end; white-space: nowrap; cursor: pointer; font-size: 12px; color: #4a5568;">
-                    <span class="searchfilter-switch">
-                        <input type="checkbox" id="searchfilter-debug" ${currentConfig.debug ? 'checked' : ''}>
-                        <span class="searchfilter-slider"></span>
+                <label style="display: flex; align-items: center; flex: 1; justify-content: space-between; white-space: nowrap; cursor: pointer; font-size: 12px; color: #4a5568;">
+                    <span style="display: flex; align-items: center;">
+                        <span class="searchfilter-switch">
+                            <input type="checkbox" id="searchfilter-debug" ${currentConfig.debug ? 'checked' : ''}>
+                            <span class="searchfilter-slider"></span>
+                        </span>
+                        <span>${t('debugMode')}</span>
                     </span>
-                    <span>${t('debugMode')}</span>
                 </label>
             </div>
             
             <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-                <label style="display: flex; align-items: center; flex: 1; justify-content: flex-start; white-space: nowrap; cursor: pointer; font-size: 12px; color: #4a5568;">
-                    <span class="searchfilter-switch">
-                        <input type="checkbox" id="searchfilter-show-block-btn" ${currentConfig.showBlockBtn ? 'checked' : ''}>
-                        <span class="searchfilter-slider"></span>
+                <label style="display: flex; align-items: center; flex: 1; justify-content: space-between; white-space: nowrap; cursor: pointer; font-size: 12px; color: #4a5568;">
+                    <span style="display: flex; align-items: center;">
+                        <span class="searchfilter-switch">
+                            <input type="checkbox" id="searchfilter-show-block-btn" ${currentConfig.showBlockBtn ? 'checked' : ''}>
+                            <span class="searchfilter-slider"></span>
+                        </span>
+                        <span>${t('oneClickBlock')}</span>
                     </span>
-                    <span>${t('oneClickBlock')}</span>
                 </label>
-                <label style="display: flex; align-items: center; flex: 1; justify-content: center; white-space: nowrap; cursor: pointer; font-size: 12px; color: #4a5568;">
-                    <span class="searchfilter-switch">
-                        <input type="checkbox" id="searchfilter-block-domain" ${currentConfig.blockDomain ? 'checked' : ''}>
-                        <span class="searchfilter-slider"></span>
+                <label style="display: flex; align-items: center; flex: 1; justify-content: space-between; white-space: nowrap; cursor: pointer; font-size: 12px; color: #4a5568;">
+                    <span style="display: flex; align-items: center;">
+                        <span class="searchfilter-switch">
+                            <input type="checkbox" id="searchfilter-block-domain" ${currentConfig.blockDomain ? 'checked' : ''}>
+                            <span class="searchfilter-slider"></span>
+                        </span>
+                        <span>${t('blockDomain')}</span>
                     </span>
-                    <span>${t('blockDomain')}</span>
                 </label>
-                <label style="display: flex; align-items: center; flex: 1; justify-content: flex-end; white-space: nowrap; cursor: pointer; font-size: 12px; color: #4a5568;">
-                    <span class="searchfilter-switch">
-                        <input type="checkbox" id="searchfilter-block-confirm" ${currentConfig.blockConfirm ? 'checked' : ''}>
-                        <span class="searchfilter-slider"></span>
+                <label style="display: flex; align-items: center; flex: 1; justify-content: space-between; white-space: nowrap; cursor: pointer; font-size: 12px; color: #4a5568;">
+                    <span style="display: flex; align-items: center;">
+                        <span class="searchfilter-switch">
+                            <input type="checkbox" id="searchfilter-block-confirm" ${currentConfig.blockConfirm ? 'checked' : ''}>
+                            <span class="searchfilter-slider"></span>
+                        </span>
+                        <span>${t('doubleConfirm')}</span>
                     </span>
-                    <span>${t('doubleConfirm')}</span>
                 </label>
             </div>
             
@@ -3534,11 +3553,7 @@
       GM_setValue(CONFIG_KEY, currentConfig);
       buildRuleIndex();
       forceReprocessAll();
-      const saveBtn = document.getElementById('hlcolor-save');
-      saveBtn.style.backgroundColor = '#276749';
-      setTimeout(() => {
-        saveBtn.style.backgroundColor = '';
-      }, 800);
+      showToast(t('saved'), 'success');
     };
 
     document.getElementById('hlcolor-reset').onclick = () => {
@@ -4179,8 +4194,8 @@
 
   function registerMenu() {
     GM_registerMenuCommand(t('menuOpenPanel'), () => showConfigPanel());
-    registerToggleMenu('menuEnable', () => currentConfig.enabled, 'stateEnabled', 'stateDisabled', '🟢 ', '🔴 ', () => {
-      currentConfig.enabled = !currentConfig.enabled;
+    registerToggleMenu('menuErrorDetection', () => currentConfig.errorDetection !== false, 'stateEnabled', 'stateDisabled', '🟢 ', '🔴 ', () => {
+      currentConfig.errorDetection = currentConfig.errorDetection === false ? true : false;
     });
     registerToggleMenu('menuCenter', () => currentConfig.panelCentered, 'stateEnabled', 'stateDisabled', '🟢 ', '🔴 ', () => {
       currentConfig.panelCentered = !currentConfig.panelCentered;
