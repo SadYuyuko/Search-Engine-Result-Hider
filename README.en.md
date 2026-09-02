@@ -16,7 +16,7 @@ Currently supported search engines: Bing, Google, DuckDuckGo, Yandex, Brave, Yah
 - WebDAV synchronization
 - Script manager menu  
   ┣ Open configuration panel directly  
-  ┣ Toggle blocking on/off  
+  ┣ Toggle error detection on/off  
   ┣ Toggle floating bubble visibility  
   ┣ Language switching  
   ┣ Edit highlight result colors  
@@ -85,4 +85,4 @@ Note: Only 5 highlight colors are supported, numbered `@1` through `@5`. Open th
 <br>
 <img width="214" height="206" alt="02" src="https://github.com/user-attachments/assets/e486984a-2d00-4639-94d1-cf37474cd860" />
 <br>
-<img width="200" height="133" alt="03" src="https://github.com/user-attachments/assets/dfb3aadc-5cdb-4da7-925f-e18d9f8c3a8f" />
+<img width="200" height="133" alt="03" src="https://github.com/user-attachments/assets/32cdce71-23b3-4ed9-9ac7-9220af80beb1" />
