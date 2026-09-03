@@ -15,15 +15,15 @@ Currently supported search engines: Bing, Google, DuckDuckGo, Yandex, Brave, Yah
 - Rule subscriptions
 - WebDAV synchronization
 - Script manager menu  
-  ┣ Open configuration panel directly  
-  ┣ Toggle error detection on/off  
-  ┣ Toggle floating bubble visibility  
-  ┣ Language switching  
-  ┣ Edit highlight result colors  
-  ┣ Toggle panel centering: centered by default; when disabled, the panel appears in one of four corners based on the floating bubble's position  
+┣ Open configuration panel  
+┣ Language switching  
+┣ Edit highlight result colors  
+┣ Toggle error detection on/off  
+┣ Toggle floating bubble visibility  
+┣ Toggle panel centering: centered by default; when disabled, the panel appears in one of four corners based on the floating bubble's position  
   ┗ Toggle floating bubble function:  
  　 ┗ 🟢 Click to open the panel  
-　  ┗ 🔵 Click to toggle visibility of blocked results; long-press to open the configuration panel. Clicking the block button on a blocked result unblocks it.  
+　  ┗ 🔵 Click to toggle visibility of blocked results; long-press toopen the configuration panel. Clicking the block button on a blocked result unblocks it.  
 
 **About WebDAV:**  
 1. Auto-sync runs once per hour, performing deduplication and merging. Manual upload/download performs an overwrite sync. Currently tested only in single-device setups. In theory, it can sync the same configuration file as uBlacklist, but no guarantees are made regarding file overwrite logic conflicts. Always back up your files first.  
