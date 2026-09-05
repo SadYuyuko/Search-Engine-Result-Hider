@@ -70,7 +70,7 @@ Note: Only 5 highlight colors are supported, numbered `@1` through `@5`. Open th
 **Composite Rules:**  
 `*://*.example.com/* @if(title *= "keyword")` – block results from `example.com` whose title contains the `keyword`. Title rules in composite rules are case-insensitive by default  
 `*://*.example.com/* @if(title *= "keyword1" | title *= "keyword2" | title *= "keyword3")` – multi-keyword support for the above rule  
-`*://*.example.com/* @if(title =~ /keyword1|keyword2|keyword3/)` – regex form of the above rule  
+`*://*.example.com/* @if(title =~ /keyword1|keyword2|keyword3/)` – regex form of the above rule, the rule need `i` to case-insensitive (`title =~ /.../i`)  
 `@if (Google) { *://*.example.com/* }` – block `example.com` only on Google  
 `@if (site = "google.com.hk") { *://*.example.com/* }` – block `example.com` only on Google HK  
 `@if(Google) { *://*.example.com/* @if(title *= "keyword") @if(site = "google.com") }` – block results from `example.com` whose title contains `keyword`, only on Google  
