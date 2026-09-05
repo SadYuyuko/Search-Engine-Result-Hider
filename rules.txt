@@ -1,9 +1,9 @@
-#260813
-#文件
+# 260905
+# ==== 文件 ====
 /^https?:\/\/[^\s"'<>]+\.pdf$/
 /^https?:\/\/[^\s"'<>]+\.xls$/
 /^https?:\/\/[^\s"'<>]+\.xlsx$/
-#标题
+# ==== 标题 ====
 title/.*笔趣阁.*/
 title/.*吧友互助吧.*/
 title/.*pikpak.*优惠码.*/i
@@ -14,15 +14,17 @@ title/.*(️威|葳|㣲|幑|薇|嶶|溦|徽|微)芯.*/
 title/^(?=.*telegram)(?=.*(?:86|短信)).*/i
 title/^(?=.*github)(?=.*(?:在线教程网|中文教程网|中文站|中文网)).*/i
 title/^(?=.*clash)(?=.*(?:官网|官方网站|中文官方|中文站|中文网|中文官网|中文教程|教程网|中文...|免费|免 …)).*/i
-#摘要
+# ==== 摘要 ====
 text/.*验证码_哔哩哔哩.*/
 text/.*来到了没有知识存在的荒原.*/
-text/.*您暂无购买权限.*
-#域名-标题
+text/.*暂无购买权限.*
+# ==== 域名-标题 ====
 *://*.ali213.net/* @if(title *= "视频指南")
 *://*.gamersky.com/* @if(title *= "视频")
 *://*.github.com/* @if(title *= "pikpak")
-#社区
+*://*.news.qq.com/* @if(title =~ /攻略|一图流/)
+# ==== 社区 ====
+*://*.ali213.net/*
 *://*.linux.do/*
 *://*.php.cn/*
 *://*.csdn.net/*
@@ -31,6 +33,8 @@ text/.*您暂无购买权限.*
 *://*.cnblogs.com/*
 *://*.51cto.com/*
 *://*.juejin.cn/*
+*://*.bbs.nasdiyer.com/*
+*://*.dj.sina.com.cn/*
 *://developer.aliyun.com/article/*
 *://developer.baidu.com/article/*
 *://developer.volcengine.com/articles/*
@@ -40,7 +44,7 @@ text/.*您暂无购买权限.*
 *://cloud.tencent.com/developer/*
 *://cloud.tencent.com.cn/developer/*
 *://support.huaweicloud.com/*
-#搜索引流
+# ==== 搜索引流 ====
 *://*.bing.com/videos/search?q=*
 *://*.douyin.com/user/*
 *://*.douyin.com/note/*
@@ -51,6 +55,7 @@ text/.*您暂无购买权限.*
 *://*.douyin.com/zhuanti/*
 *://*.douyin.com/hashtag/*
 *://*.douyin.com/share/video/*
+*://v.douyin.com/*
 *://*.tiktok.com/tag/*
 *://*.tiktok.com/*/video/*
 *://*.tiktok.com/*/photo/*
@@ -65,6 +70,7 @@ text/.*您暂无购买权限.*
 *://*.baidu.com/video/*
 *://*.baidu.com/vsearch/*
 *://*.baidu.com/tashuo/*
+*://*.ziliao.baidu.com/*
 *://*.bowlroll.net/file/keyword/*
 *://*.duitang.com/search/?kw=*
 *://*.gamersky.com/handbook/*
@@ -92,7 +98,6 @@ text/.*您暂无购买权限.*
 *://*.so.com/index.php?q=*
 *://*.soft.zol.com.cn/*
 *://*.sogou.com/sohu/*
-*://*.taptap.cn/moment/*
 *://*.tgstat.com/*
 *://*.tieba.com/f/*
 *://*.tieba.com/f?kw*
@@ -106,6 +111,7 @@ text/.*您暂无购买权限.*
 *://*.worldvectorlogo.com/search/*
 *://*.ximalaya.com/ask/*
 *://*.yandex.com/search?text=*
+*://*.yandex.com/video/search?text=*
 *://*.z.sogou.com/web/*
 *://*.zaixianjisuan.com/*
 *://*.zhihu.com/zvideo/*
@@ -144,7 +150,9 @@ text/.*您暂无购买权限.*
 *://x.com/search?lang=*
 *://.x.com/search?src=*
 *://x.com/search?q=*
-#购物平台
+*://*.fetcherx.com/*
+*://3g.ali213.net/down/*
+# ==== 购物平台 ====
 *://*.1688.com/*
 *://*.amazon.co.jp/*
 *://*.amazon.co.uk/*
@@ -186,6 +194,7 @@ text/.*您暂无购买权限.*
 *://*.suning.com/*
 *://*.t880.com/*
 *://*.taobao.com/*
+*://*.taobao.lc/*
 *://*.temu.com/*
 *://*.tokukai.com/*
 *://*.tw.coupang.com/*
@@ -194,9 +203,16 @@ text/.*您暂无购买权限.*
 *://*.zh.accio.com/*
 *://baike.baidu.com/tashuo/*
 *://shopee.tw/*
-#域名
-*://*.github.com/cirosantilli/*
-*://*.github.com/wumaoland/*
+*://*.biggo.com.tw/*
+*://*.ultrahd.highdefdigest.com/*
+*://*.mr-bd.com.tw/*
+*://*.diabolikdvd.com/*
+*://*.dvdhub.com.au/*
+*://*.bestbuy.com/*
+*://*.mall.blufans.com/*
+# ==== 其他 ====
+*://github.com/cirosantilli/*
+*://github.com/wumaoland/*
 *://*.soundofhope.org/*
 *://baijiahao.baidu.com/*
 *://health.baidu.com/*
@@ -205,7 +221,6 @@ text/.*您暂无购买权限.*
 *://zh.wikihow.com/*
 *://*.qidian.com/*
 *://cj.sina.cn/*
-*://finance.sina.com.cn/*
 *://*.msn.cn/zh-cn/*
 *://*.msn.com/zh-cn/*
 *://*.hubeilong.com/*
@@ -697,3 +712,79 @@ text/.*您暂无购买权限.*
 *://*.xizhengw.com/*
 *://*.nwgw.taojindi.com/*
 *://*.2109.top/*
+*://*.soft112.com/*
+*://*.dlandroid.com/*
+*://*.apkcombo.com/*
+*://*.appbrain.com/*
+*://*.pt.droidinformer.org/*
+*://*.download.cnet.com/*
+*://*.droidinformer.org/*
+*://*.softonic.com/*
+*://*.androidblip.com/*
+*://*.grand-screen.com/*
+*://*.appagg.com/*
+*://*.jysafe.cn/*
+*://*.fpwap.com/*
+*://*.linksoft.com.tw/*
+*://*.m.gamedog.cn/*
+*://*.weixinss.com/*
+*://*.hangge.com/*
+*://*.192-168-1-1.com.cn/*
+*://*.crifan.com/*
+*://*.yingjianzhijia.com/*
+*://*.luyouqi.com/*
+*://*.m.51nacs.com/*
+*://*.pcsoft.com.cn/*
+*://*.skyjos.cn/*
+*://*.skyjos.com/*
+*://*.it699.cn/*
+*://*.pc.yxmin.com/*
+*://*.dianwannan.com/*
+*://*.m.521g.com/*
+*://*.m.shuajizhijia.net/*
+*://*.vkxiazai.com/*
+*://*.37uu.cn/*
+*://*.aitaa.cn/*
+*://*.gamedog.cn/*
+*://*.uc129.com/*
+*://*.k73.com/*
+*://*.m.itmop.com/*
+*://*.game735.com/*
+*://*.anfensi.com/*
+*://*.youxibao.com/*
+*://*.7273.com/*
+*://*.shuajizhijia.net/*
+*://*.m.xitieba.com/*
+*://*.52miji.com/*
+*://*.bufan.com/*
+*://*.fxxz.com/*
+*://*.zhanghaobang.cn/*
+*://*.raremoviecollector.com/*
+*://*.cinema.be/*
+*://*.www4.fusionmovies.to/*
+*://*.amazon.se/*
+*://*.amazon.it/*
+*://*.kittysb.pro/*
+*://*.kalet.cn/*
+*://*.qjfyx.com/*
+*://*.92zl.cn/*
+*://*.simaek.com/*
+*://*.b.youngcheers.org/*
+*://*.kuliyx.com/*
+*://*.m.xyzs.com/*
+*://*.jqyou.com/*
+*://*.gamer520.com/*
+*://*.hncj.com/*
+*://*.youxiniao.com/*
+*://*.m.pcdown.net/*
+*://*.dnfziliao.com/*
+*://*.yxbao.com/*
+*://*.okemu.com/*
+*://*.m.te5.com/*
+*://*.galgamewebsite.com/*
+*://*.tianqiongfaniya.cc/*
+*://*.eaaog.com/*
+*://*.acgknow.info/*
+*://*.game.3loumao.org/*
+*://*.4kgou.com/*
+*://*.tourismtoyota.jp/*
