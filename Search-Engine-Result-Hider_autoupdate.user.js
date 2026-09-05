@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.5.3
+// @version      7.5.4
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -245,7 +245,7 @@
       ruleDuplicate: '重复了 {count} 次',
     },
     'en': {
-      enableBlock: 'Enable',
+      enableBlock: 'Block',
       showCount: 'Count',
       debugMode: 'Debug',
       oneClickBlock: 'Button',
@@ -364,7 +364,6 @@
   const validationCache = new Map();
   const subdomainCache = new Map();
   let cachedSubscriptionRules = null;
-  let _prevLineArray = null;
   let _lineDebounceTimer = null;
   let forceReprocessBatchId = 0;
 
@@ -379,14 +378,13 @@
     return text;
   }
 
-  // 规则过滤
+  // 规则处理
   function filterValidRuleLines(lines) {
     return lines
       .map(line => line.trim())
       .filter(line => line.length > 0);
   }
 
-  // 解析规则
   function splitByPipe(str) {
     const parts = [];
     let current = '';
@@ -432,7 +430,7 @@
     return parts;
   }
 
-  // 解析单个条件片段
+  // 解析条件片段
   function parseConditionPart(trimmed, currentEngine, currentSite) {
     if (/^(google|bing|duckduckgo|yandex|brave|yahoo)$/i.test(trimmed)) {
       return { matched: true, static: currentEngine === trimmed.toLowerCase() };
@@ -777,7 +775,7 @@
     };
   }
 
-  // 匹配通配域名
+  // 域名检检查
   function matchWildcardDomainPattern(pattern) {
     const wildcardMatch = pattern.match(/^\*:\/\/\*\.([^\/\*]+)\/\*$/);
     if (wildcardMatch) return { domain: wildcardMatch[1].toLowerCase(), domainType: 'wildcard' };
@@ -786,14 +784,12 @@
     return null;
   }
 
-  // 白名单简单域名
   function extractSimpleWhitelistDomain(rule) {
     const m = matchWildcardDomainPattern(rule.substring(1));
     if (!m) return null;
     return { domain: m.domain, type: m.domainType };
   }
 
-  // 辅助匹配简单域名
   function matchSimpleDomain(coreRule) {
     return matchWildcardDomainPattern(coreRule);
   }
@@ -997,10 +993,6 @@
     return validationCache.get(rule);
   }
 
-  function cachedValidateRule(rule) {
-    return cachedAnalyzeRule(rule).valid;
-  }
-
   function checkDynamicConditions(conditions, title) {
     const groups = new Map();
     const ungrouped = [];
@@ -1056,6 +1048,10 @@
     return levels;
   }
 
+  function matchDomainEntryType(entryType, level, lowerDomain) {
+    return entryType === 'wildcard' || (entryType === 'exact' && level === lowerDomain);
+  }
+
   // 规则优先级
   function checkRuleMatchOptimized(url, domain, title, snippet, subdomainLevels) {
     const lowerDomain = domain.toLowerCase();
@@ -1067,7 +1063,7 @@
       const hlEntries = compiledRules.highlightDomains.get(level);
       if (hlEntries) {
         for (const hlData of hlEntries) {
-          if (hlData.type === 'wildcard' || (hlData.type === 'exact' && level === lowerDomain)) {
+          if (matchDomainEntryType(hlData.type, level, lowerDomain)) {
             highlightN = hlData.N; break;
           }
         }
@@ -1094,7 +1090,7 @@
         const rules = compiledRules.highlightConditionalDomains.get(level);
         if (rules) {
           for (const item of rules) {
-            if ((item.domainType === 'wildcard' || (item.domainType === 'exact' && level === lowerDomain)) && checkDynamicConditions(item.conditions, title)) {
+            if (matchDomainEntryType(item.domainType, level, lowerDomain) && checkDynamicConditions(item.conditions, title)) {
               highlightN = item.N; break;
             }
           }
@@ -1119,8 +1115,7 @@
       const types = compiledRules.whitelistDomains.get(level);
       if (types) {
         for (const matchType of types) {
-          if (matchType === 'wildcard') { whitelisted = true; break; }
-          if (matchType === 'exact' && level === lowerDomain) { whitelisted = true; break; }
+          if (matchDomainEntryType(matchType, level, lowerDomain)) { whitelisted = true; break; }
         }
         if (whitelisted) break;
       }
@@ -1148,8 +1143,7 @@
         const entries = compiledRules.domains.get(level);
         if (entries) {
           for (const dm of entries) {
-            if (dm.type === 'wildcard') { blockedInfo = {rule: dm.originalRule, source: dm.source}; break; }
-            if (dm.type === 'exact' && level === lowerDomain) { blockedInfo = {rule: dm.originalRule, source: dm.source}; break; }
+            if (matchDomainEntryType(dm.type, level, lowerDomain)) { blockedInfo = {rule: dm.originalRule, source: dm.source}; break; }
           }
           if (blockedInfo) break;
         }
@@ -1177,7 +1171,7 @@
           const rules = compiledRules.conditionalDomains.get(level);
           if (rules) {
             for (const ruleObj of rules) {
-              if ((ruleObj.domainType === 'wildcard' || (ruleObj.domainType === 'exact' && level === lowerDomain)) && checkDynamicConditions(ruleObj.conditions, title)) {
+              if (matchDomainEntryType(ruleObj.domainType, level, lowerDomain) && checkDynamicConditions(ruleObj.conditions, title)) {
                 blockedInfo = {rule: ruleObj.originalRule, source: ruleObj.source}; break;
               }
             }
@@ -1246,7 +1240,17 @@
     return url;
   }
 
-  // 正文选择器
+  // 提取链接
+  function resolveUrlDomain(link, engine) {
+    const url = getCleanUrlAndFixDOM(link, engine);
+    let domain = '';
+    try {
+      domain = new URL(url).hostname;
+    } catch (e) {}
+    return { url, domain };
+  }
+
+  // 选择器适配
   function getResultText(result, selectors) {
     for (let selector of selectors) {
       const elem = result.querySelector(selector);
@@ -1259,7 +1263,6 @@
     return getResultText(result, (SELECTORS[engine] || SELECTORS.bing).snippets);
   }
 
-  // URL选择器
   function getResultLink(result, engine) {
     const linkSelectors = (SELECTORS[engine] || SELECTORS.google).links;
     if (Array.isArray(linkSelectors)) {
@@ -1273,12 +1276,10 @@
     return result.querySelector('a[href]');
   }
 
-  // 标题选择器
   function getResultTitle(result, engine) {
     return getResultText(result, (SELECTORS[engine] || SELECTORS.google).titles);
   }
 
-  // 元素定位
   function ensurePositioned(el) {
     if (window.getComputedStyle(el).position === 'static') el.style.position = 'relative';
   }
@@ -1353,13 +1354,8 @@
         }
 
         if (ruleRemoved) {
-          GM_setValue(CONFIG_KEY, currentConfig);
-          GM_setValue(LOCAL_LAST_MODIFIED_KEY, Date.now());
-          const textarea = document.getElementById('searchfilter-rules');
-          if (textarea) {
-            textarea.value = currentConfig.rules.join('\n');
-            updateLineNumbers();
-          }
+          persistConfig();
+          syncRulesTextarea();
           forceReprocessAll();
         }
         return;
@@ -1390,16 +1386,10 @@
           }))) return;
       }
 
-      // 避免重复
       if (!currentConfig.rules.includes(newRule)) {
         currentConfig.rules.push(newRule);
-        GM_setValue(CONFIG_KEY, currentConfig);
-        GM_setValue(LOCAL_LAST_MODIFIED_KEY, Date.now());
-        const textarea = document.getElementById('searchfilter-rules');
-        if (textarea) {
-          textarea.value = currentConfig.rules.join('\n');
-          updateLineNumbers();
-        }
+        persistConfig();
+        syncRulesTextarea();
         forceReprocessAll();
       } else {
         result.style.display = 'none';
@@ -1411,19 +1401,17 @@
     result.appendChild(btn);
   }
 
-  // 移除匹配规则标签
+  // 移除标签
   function removeMatchedRuleLabel(result) {
     const label = result.querySelector('.searchfilter-matched-rule');
     if (label) label.remove();
   }
 
-  // 清除匹配信息属性
   function clearMatchedData(result) {
     result.removeAttribute('data-matched-rule');
     result.removeAttribute('data-matched-source');
   }
 
-  // 重置结果样式/状态
   function resetResultStyles(result) {
     result.removeAttribute('data-blocker-processed');
     result.removeAttribute('data-is-blocked');
@@ -1437,7 +1425,7 @@
     removeMatchedRuleLabel(result);
   }
 
-  // 添加匹配规则标签
+  // 添加标签
   function addMatchedRuleLabel(result) {
     if (!result.dataset.matchedRule) return;
     removeMatchedRuleLabel(result);
@@ -1469,11 +1457,7 @@
       return false;
     }
 
-    const url = getCleanUrlAndFixDOM(link, engine);
-    let domain = '';
-    try {
-      domain = new URL(url).hostname;
-    } catch (e) {}
+    const { url, domain } = resolveUrlDomain(link, engine);
 
     const title = getResultTitle(result, engine);
     const snippet = getResultSnippet(result, engine);
@@ -2492,6 +2476,13 @@
 
   // 拖动与边缘吸附
   function updateStatus(blocked) {
+    function applyBubbleStatePosition(el) {
+      if (!currentConfig.bubbleState) return;
+      el.style.top = currentConfig.bubbleState.top || 'auto';
+      el.style.left = currentConfig.bubbleState.left || 'auto';
+      el.style.right = currentConfig.bubbleState.right || 'auto';
+      el.style.bottom = 'auto';
+    }
     if (!currentConfig.showBubble) {
       const status = document.getElementById('searchfilter-status');
       if (status) status.remove();
@@ -2622,15 +2613,10 @@
             right: status.style.right,
             isLeftHalf
           };
-          GM_setValue(CONFIG_KEY, currentConfig);
+          persistConfig();
           updateBubbleContent(status, parseInt(status.dataset.blockedCount || 0));
         } else {
-          if (currentConfig.bubbleState) {
-            status.style.top = currentConfig.bubbleState.top || 'auto';
-            status.style.left = currentConfig.bubbleState.left || 'auto';
-            status.style.right = currentConfig.bubbleState.right || 'auto';
-            status.style.bottom = 'auto';
-          }
+          applyBubbleStatePosition(status);
 
           // 判断短按点击
           if (!hasLongPressed && Date.now() - dragStartTime < 300) {
@@ -2648,10 +2634,7 @@
       document.body.appendChild(status);
 
       if (currentConfig.bubbleState) {
-        status.style.top = currentConfig.bubbleState.top || 'auto';
-        status.style.left = currentConfig.bubbleState.left || 'auto';
-        status.style.right = currentConfig.bubbleState.right || 'auto';
-        status.style.bottom = 'auto';
+        applyBubbleStatePosition(status);
       } else {
         status.style.top = (window.innerHeight - 60) + 'px';
         status.style.right = '5px';
@@ -2678,11 +2661,7 @@
         const engine = getSearchEngine();
         const link = getResultLink(el, engine);
         if (link && link.href && currentConfig.showBlockBtn) {
-          let url = getCleanUrlAndFixDOM(link, engine);
-          let domain = '';
-          try {
-            domain = new URL(url).hostname;
-          } catch (e) {}
+          const { url, domain } = resolveUrlDomain(link, engine);
           if (!el.querySelector('.searchfilter-quick-block')) {
             injectBlockButton(el, engine, url, domain);
           }
@@ -2717,10 +2696,8 @@
     const len = lines.length;
     const token = ++_lineChunkToken;
 
-    // 预留行宽
     lineNums.style.minWidth = `max(20px, calc(${String(len).length}ch + 8px))`;
 
-    // 预留行高
     const children = lineNums.children;
     while (children.length < len) {
       const div = document.createElement('div');
@@ -2763,7 +2740,6 @@
         return;
       }
 
-      _prevLineArray = lines;
       if (_lineUpdateDirty) {
         _lineUpdateDirty = false;
         requestAnimationFrame(updateLineNumbersIncremental);
@@ -2793,6 +2769,20 @@
 
   function escHtml(str) {
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  // 配置持久化
+  function persistConfig() {
+    GM_setValue(CONFIG_KEY, currentConfig);
+    GM_setValue(LOCAL_LAST_MODIFIED_KEY, Date.now());
+  }
+
+  function syncRulesTextarea() {
+    const textarea = document.getElementById('searchfilter-rules');
+    if (textarea) {
+      textarea.value = currentConfig.rules.join('\n');
+      updateLineNumbers();
+    }
   }
 
   // 悬浮通知
@@ -2900,8 +2890,6 @@
     const highlightRules = activeRules
       .filter(rule => HL_STATS_REGEX.test(rule));
 
-    const compoundRules = activeRules.filter(rule => /@if\s*\(/i.test(rule) && !HL_STATS_REGEX.test(rule));
-
     const engine = getSearchEngine();
     const selector = getContainerSelector(engine);
     const results = document.querySelectorAll(selector);
@@ -2924,31 +2912,36 @@
       ruleMap.set(matchedRule, (ruleMap.get(matchedRule) || 0) + 1);
     });
 
-    // 错误信息
     const ruleErrorsArray = Object.entries(ruleErrors).map(([rule, errors]) => ({
       rule,
-      errors
+      msg: errors.join(', ')
     }));
     const ruleWarningsArray = Object.entries(ruleWarnings).map(([rule, warnings]) => ({
       rule,
-      warnings
+      msg: warnings.join(', ')
     }));
     let resultHTML = '';
 
+    // 统计面板复用
+    function issueBlockHtml(title, accent, bg, wordKey, rows) {
+      if (!rows.length) return '';
+      let html = `<div style="color: ${accent}; background: ${bg}; padding: 8px; border-radius: 4px; margin-bottom: 12px;"><strong>${title}</strong><br>`;
+      for (const row of rows) {
+        html += `<div style="margin: 4px 0; font-size: 11px;"><div style="color: #2d3748;"><strong>${t('matchedRule')}: </strong>${escHtml(row.rule)}</div><div style="color: ${accent};"><strong>${t(wordKey)}: </strong>${escHtml(row.msg)}</div></div>`;
+      }
+      return html + '</div>';
+    }
+
+    function statsSectionStartHtml(title, badge) {
+      return `<div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #e2e8f0;"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #cbd5e0;"><span style="font-weight: bold; color: #2d3748; font-size: 14px;">${title}</span><span style="background: #2c5282; color: white; padding: 2px 10px; border-radius: 12px; font-size: 12px;">${badge}</span></div>`;
+    }
+
     if (ruleErrorsArray.length > 0) {
-      resultHTML += `<div style="color: #c53030; background: #fff5f5; padding: 8px; border-radius: 4px; margin-bottom: 12px;"><strong>${t('statsErrors', {count: ruleErrorsArray.length})}</strong><br>`;
-      ruleErrorsArray.forEach(item => {
-        resultHTML += `<div style="margin: 4px 0; font-size: 11px;"><div style="color: #2d3748;"><strong>${t('matchedRule')}: </strong>${escHtml(item.rule)}</div><div style="color: #c53030;"><strong>${t('errorWord')}: </strong>${escHtml(item.errors.join(', '))}</div></div>`;
-      });
-      resultHTML += '</div>';
+      resultHTML += issueBlockHtml(t('statsErrors', {count: ruleErrorsArray.length}), '#c53030', '#fff5f5', 'errorWord', ruleErrorsArray);
     }
 
     if (ruleWarningsArray.length > 0) {
-      resultHTML += `<div style="color: #b7791f; background: #fffff0; padding: 8px; border-radius: 4px; margin-bottom: 12px;"><strong>${t('statsWarnings', {count: ruleWarningsArray.length})}</strong><br>`;
-      ruleWarningsArray.forEach(item => {
-        resultHTML += `<div style="margin: 4px 0; font-size: 11px;"><div style="color: #2d3748;"><strong>${t('matchedRule')}: </strong>${escHtml(item.rule)}</div><div style="color: #b7791f;"><strong>${t('warningWord')}: </strong>${escHtml(item.warnings.join(', '))}</div></div>`;
-      });
-      resultHTML += '</div>';
+      resultHTML += issueBlockHtml(t('statsWarnings', {count: ruleWarningsArray.length}), '#b7791f', '#fffff0', 'warningWord', ruleWarningsArray);
     }
 
     // 匹配规则
@@ -2998,39 +2991,24 @@
       resultHTML = `<div style="color: #38a169; padding: 10px; border-radius: 4px; font-size: 12px; background: #f0fff4; text-align: center;">${t('noMatch')}</div>`;
     }
 
-    // 白名单
     if (whitelistRules.length > 0) {
-      resultHTML += `<div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #e2e8f0;">`;
-      resultHTML += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #cbd5e0;">`;
-      resultHTML += `<span style="font-weight: bold; color: #2d3748; font-size: 14px;">${t('whitelistRules')}</span>`;
-      resultHTML += `<span style="background: #2c5282; color: white; padding: 2px 10px; border-radius: 12px; font-size: 12px;">${t('stateEnabled')} ${whitelistRules.length} ${t('matchedCountUnit')}</span>`;
-      resultHTML += `</div>`;
+      resultHTML += statsSectionStartHtml(t('whitelistRules'), `${t('stateEnabled')} ${whitelistRules.length} ${t('matchedCountUnit')}`);
       whitelistRules.forEach(rule => {
         resultHTML += `<div style="font-size: 11px; color: #4a5568; word-break: break-all; font-family: 'Consolas', monospace;">@${escHtml(rule)}</div>`;
       });
       resultHTML += `</div>`;
     }
 
-    // 高亮
     if (highlightRules.length > 0) {
-      resultHTML += `<div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #e2e8f0;">`;
-      resultHTML += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #cbd5e0;">`;
-      resultHTML += `<span style="font-weight: bold; color: #2d3748; font-size: 14px;">${t('highlightRules')}</span>`;
-      resultHTML += `<span style="background: #2c5282; color: white; padding: 2px 10px; border-radius: 12px; font-size: 12px;">${t('stateEnabled')} ${highlightRules.length} ${t('matchedCountUnit')}</span>`;
-      resultHTML += `</div>`;
+      resultHTML += statsSectionStartHtml(t('highlightRules'), `${t('stateEnabled')} ${highlightRules.length} ${t('matchedCountUnit')}`);
       highlightRules.forEach(rule => {
         resultHTML += `<div style="font-size: 11px; color: #4a5568; word-break: break-all; font-family: 'Consolas', monospace;">${escHtml(rule)}</div>`;
       });
       resultHTML += `</div>`;
     }
 
-    // 重复规则
     if (duplicateRules.length > 0) {
-      resultHTML += `<div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #e2e8f0;">`;
-      resultHTML += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #cbd5e0;">`;
-      resultHTML += `<span style="font-weight: bold; color: #2d3748; font-size: 14px;">${t('duplicateRules')}</span>`;
-      resultHTML += `<span style="background: #2c5282; color: white; padding: 2px 10px; border-radius: 12px; font-size: 12px;">${duplicateRules.length} ${t('matchedCountUnit')}</span>`;
-      resultHTML += `</div>`;
+      resultHTML += statsSectionStartHtml(t('duplicateRules'), `${duplicateRules.length} ${t('matchedCountUnit')}`);
       duplicateRules.forEach(([rule, count]) => {
         resultHTML += `<div style="font-size: 11px; color: #4a5568; word-break: break-all; font-family: 'Consolas', monospace;">${escHtml(rule)} <span style="color:#c53030;">${t('ruleDuplicate', {count})}</span></div>`;
       });
@@ -3097,6 +3075,18 @@
       panel.remove();
       if (onClosed) onClosed();
     }, { once: true });
+  }
+
+  // 点击面板外关闭
+  function bindOutsideClickClose(panel) {
+    const closePanel = () => {
+      fadeOutAndRemovePanel(panel, () => document.removeEventListener('click', closeHandler));
+    };
+    const closeHandler = (e) => {
+      if (!panel.contains(e.target)) closePanel();
+    };
+    setTimeout(() => document.addEventListener('click', closeHandler), 200);
+    return closePanel;
   }
 
   // 主面板样式
@@ -3277,7 +3267,7 @@
         }
         const statusBtn = document.getElementById('searchfilter-status');
         if (statusBtn) applyBubbleSize(statusBtn);
-        GM_setValue(CONFIG_KEY, currentConfig);
+        persistConfig();
       });
     }
 
@@ -3295,8 +3285,7 @@
       if (el) {
         el.addEventListener('change', function() {
           currentConfig[sw.key] = this.checked;
-          GM_setValue(CONFIG_KEY, currentConfig);
-          GM_setValue(LOCAL_LAST_MODIFIED_KEY, Date.now());
+          persistConfig();
           if (sw.apply) sw.apply();
         });
       }
@@ -3314,7 +3303,6 @@
 
   // 保存配置
   function saveConfig() {
-    const panel = document.getElementById('searchfilter-panel');
     const rulesText = document.getElementById('searchfilter-rules').value;
     const enabled = document.getElementById('searchfilter-enabled').checked;
     const showCount = document.getElementById('searchfilter-show-count').checked;
@@ -3332,8 +3320,7 @@
     currentConfig.blockDomain = blockDomain;
     currentConfig.blockConfirm = blockConfirm;
 
-    GM_setValue(CONFIG_KEY, currentConfig);
-    GM_setValue(LOCAL_LAST_MODIFIED_KEY, Date.now());
+    persistConfig();
 
     showHiddenResults = false;
     forceReprocessAll();
@@ -3550,7 +3537,7 @@
       }
       if (hasError) return;
       currentConfig.highlightColors = newColors;
-      GM_setValue(CONFIG_KEY, currentConfig);
+      persistConfig();
       buildRuleIndex();
       forceReprocessAll();
       showToast(t('saved'), 'success');
@@ -3568,17 +3555,12 @@
       updatePickedColor();
     };
 
+    const closePanel = bindOutsideClickClose(panel);
+
     document.getElementById('hlcolor-cancel').onclick = (e) => {
       e.stopPropagation();
-      fadeOutAndRemovePanel(panel);
+      closePanel();
     };
-
-    const closeHandler = (e) => {
-      if (!panel.contains(e.target)) {
-        fadeOutAndRemovePanel(panel, () => document.removeEventListener('click', closeHandler));
-      }
-    };
-    setTimeout(() => document.addEventListener('click', closeHandler), 200);
   }
 
   function migrateSubscriptions() {
@@ -3619,7 +3601,6 @@
   }
 
   // 订阅管理
-  // GM_xmlhttpRequest Promise封装
   function gmRequest(method, url, { headers, data, allow404 = false } = {}) {
     return new Promise((resolve, reject) => {
       GM_xmlhttpRequest({
@@ -3638,10 +3619,14 @@
     });
   }
 
-  // 同步配置打包/解析
+  // 同步配置处理
   function buildSyncPayload() {
     const { rules, bubbleState, bubbleSize, ...settings } = currentConfig;
-    return { ...settings, subscriptions: getSubscriptions().map(s => ({ url: s.url, enabled: s.enabled, lastUpdate: s.lastUpdate })) };
+    return {
+      ...settings,
+      subscriptions: getSubscriptions().map(s => ({ url: s.url, enabled: s.enabled, lastUpdate: s.lastUpdate })),
+      syncedAt: Date.now()
+    };
   }
 
   function parseSyncHeader(content) {
@@ -3656,6 +3641,23 @@
       return { config, restLines: lines.slice(1) };
     }
     return { config: null, restLines: lines };
+  }
+
+  // WebDAV请求
+  function getWebDAVRequest(config) {
+    const headers = {};
+    if (config.username) headers['Authorization'] = 'Basic ' + btoa(`${config.username}:${config.password}`);
+    return {
+      fullUrl: config.url.replace(/\/$/, '') + '/' + config.filename,
+      headers
+    };
+  }
+
+  // 配置头上传
+  function buildUploadContent(content) {
+    return GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)
+      ? '# ScriptConfig:' + JSON.stringify(buildSyncPayload()) + '\n' + content
+      : content;
   }
 
   async function performSubscriptionForUrl(url, showAlerts = true) {
@@ -3679,7 +3681,7 @@
       }
     }
 
-    let subs = getSubscriptions();
+    const subs = getSubscriptions();
     const existingIndex = subs.findIndex(s => s.url === url);
     const subData = {
       url,
@@ -3713,7 +3715,6 @@
     const panel = createPanel('searchfilter-subscription-panel', '320px', '20px');
 
     let subscriptions = getSubscriptions();
-    if (!subscriptions) subscriptions = [];
 
     let rowsHtml = '';
     subscriptions.forEach((sub, index) => {
@@ -3748,7 +3749,7 @@
     if (autoUpdateSwitch) {
       autoUpdateSwitch.addEventListener('change', function() {
         currentConfig.subscriptionAutoUpdate = this.checked;
-        GM_setValue(CONFIG_KEY, currentConfig);
+        persistConfig();
       });
     }
 
@@ -3780,15 +3781,7 @@
     }
     bindDeleteEvents();
 
-    const closeHandler = (e) => {
-      if (!panel.contains(e.target)) {
-        fadeOutAndRemovePanel(panel, () => document.removeEventListener('click', closeHandler));
-      }
-    };
-
-    const closePanel = () => {
-      fadeOutAndRemovePanel(panel, () => document.removeEventListener('click', closeHandler));
-    };
+    const closePanel = bindOutsideClickClose(panel);
 
     document.getElementById('subscription-save').onclick = () => {
       const rows = container.querySelectorAll('.subscription-row');
@@ -3870,8 +3863,6 @@
       closePanel();
     };
 
-    setTimeout(() => document.addEventListener('click', closeHandler), 200);
-
   }
 
   function showWebDAVPanel() {
@@ -3889,7 +3880,6 @@
       filename: 'rules.txt'
     });
 
-    // webdav面板样式
     const panel = createPanel('searchfilter-webdav-panel', '320px', '20px');
 
     const autoSyncEnabled = GM_getValue(WEBDAV_AUTO_SYNC_KEY, false);
@@ -3962,32 +3952,32 @@
       return config;
     }
 
-    const closePanel = () => {
-      fadeOutAndRemovePanel(panel, () => document.removeEventListener('click', closeHandler));
-    };
-
-    // webdav上传
-    document.getElementById('webdav-upload').onclick = async () => {
+    // 校验面板输入
+    function getValidatedWebDAVConfig() {
       const url = urlInput.value.trim();
       if (!url) {
         showToast(t('webdavUrlEmpty'), 'error');
-        return;
+        return null;
       }
       if (!url.toLowerCase().startsWith('https://')) {
         showToast(t('webdavHttpsRequired'), 'error');
-        return;
+        return null;
       }
-      const config = saveWebDAVConfig();
+      return saveWebDAVConfig();
+    }
+
+    const closePanel = bindOutsideClickClose(panel);
+
+    // webdav上传
+    document.getElementById('webdav-upload').onclick = async () => {
+      const config = getValidatedWebDAVConfig();
+      if (!config) return;
       const textarea = document.getElementById('searchfilter-rules');
       let content = textarea ? textarea.value : currentConfig.rules.join('\n');
-      if (GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)) {
-        content = '# ScriptConfig:' + JSON.stringify(buildSyncPayload()) + '\n' + content;
-      }
+      content = buildUploadContent(content);
       const loadingToast = showToast(t('webdavUploading'), 'info', 10000);
       try {
-        const fullUrl = config.url.replace(/\/$/, '') + '/' + config.filename;
-        const headers = {};
-        if (config.username) headers['Authorization'] = 'Basic ' + btoa(`${config.username}:${config.password}`);
+        const { fullUrl, headers } = getWebDAVRequest(config);
         await gmRequest('PUT', fullUrl, { headers, data: content });
         loadingToast.dismiss();
         showToast(t('uploadSuccess'), 'success');
@@ -4006,16 +3996,8 @@
 
     // webdav下载
     document.getElementById('webdav-download').onclick = async () => {
-      const url = urlInput.value.trim();
-      if (!url) {
-        showToast(t('webdavUrlEmpty'), 'error');
-        return;
-      }
-      if (!url.toLowerCase().startsWith('https://')) {
-        showToast(t('webdavHttpsRequired'), 'error');
-        return;
-      }
-      const config = saveWebDAVConfig();
+      const config = getValidatedWebDAVConfig();
+      if (!config) return;
       const loadingToast = showToast(t('webdavDownloading'), 'info', 10000);
       try {
         await performWebDAVDownload(config, true);
@@ -4032,21 +4014,15 @@
       closePanel();
     };
 
-    const closeHandler = (e) => {
-      if (!panel.contains(e.target)) closePanel();
-    };
-    setTimeout(() => document.addEventListener('click', closeHandler), 200);
   }
 
   async function performWebDAVDownload(config, showAlerts = true) {
-    const fullUrl = config.url.replace(/\/$/, '') + '/' + config.filename;
-    const headers = {};
-    if (config.username) headers['Authorization'] = 'Basic ' + btoa(`${config.username}:${config.password}`);
+    const { fullUrl, headers } = getWebDAVRequest(config);
     const resp = await gmRequest('GET', fullUrl, { headers });
     const content = resp.responseText;
     const parsedHeader = parseSyncHeader(content);
     if (parsedHeader.config && GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)) {
-      const { subscriptions, bubbleState, bubbleSize, ...settings } = parsedHeader.config;
+      const { syncedAt, subscriptions, bubbleState, bubbleSize, ...settings } = parsedHeader.config;
       Object.assign(currentConfig, settings);
       GM_setValue(CONFIG_KEY, currentConfig);
       if (subscriptions) saveSubscriptions(subscriptions);
@@ -4058,8 +4034,7 @@
       updateLineNumbers();
     } else {
       currentConfig.rules = newRules;
-      GM_setValue(CONFIG_KEY, currentConfig);
-      GM_setValue(LOCAL_LAST_MODIFIED_KEY, Date.now());
+      persistConfig();
       forceReprocessAll();
     }
     GM_setValue(WEBDAV_LAST_SYNC_KEY, Date.now());
@@ -4067,9 +4042,7 @@
 
   // 去重合并同步
   async function performAutoWebDAVSync(config) {
-    const fullUrl = config.url.replace(/\/$/, '') + '/' + config.filename;
-    const headers = {};
-    if (config.username) headers['Authorization'] = 'Basic ' + btoa(`${config.username}:${config.password}`);
+    const { fullUrl, headers } = getWebDAVRequest(config);
 
     const resp = await gmRequest('GET', fullUrl, { headers, allow404: true });
 
@@ -4083,8 +4056,12 @@
         cloudConfig = parsedHeader.config;
       }
       cloudRules = parsedHeader.restLines.map(r => r.trim()).filter(r => r);
+      let headerTime = 0;
+      if (parsedHeader.config && typeof parsedHeader.config.syncedAt === 'number') {
+        headerTime = parsedHeader.config.syncedAt;
+      }
       const lastModMatch = resp.responseHeaders.match(/last-modified:\s*(.*)/i);
-      if (lastModMatch) cloudTime = Date.parse(lastModMatch[1]);
+      cloudTime = headerTime || (lastModMatch ? Date.parse(lastModMatch[1]) : 0);
       if (isNaN(cloudTime)) cloudTime = 0;
     }
 
@@ -4094,22 +4071,18 @@
 
     if (localTime > cloudTime) {
       console.log('[自动 WebDAV] 本地规则较新，合并后上传...');
-      let uploadData = mergedRules.join('\n');
-      if (GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)) {
-        uploadData = '# ScriptConfig:' + JSON.stringify(buildSyncPayload()) + '\n' + uploadData;
-      }
+      const uploadData = buildUploadContent(mergedRules.join('\n'));
       await gmRequest('PUT', fullUrl, { headers, data: uploadData });
     }
 
     if (cloudConfig && GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)) {
-      const { subscriptions, bubbleState, bubbleSize, ...settings } = cloudConfig;
+      const { syncedAt, subscriptions, bubbleState, bubbleSize, ...settings } = cloudConfig;
       Object.assign(currentConfig, settings);
       if (subscriptions) saveSubscriptions(subscriptions);
     }
 
     currentConfig.rules = mergedRules;
-    GM_setValue(CONFIG_KEY, currentConfig);
-    GM_setValue(LOCAL_LAST_MODIFIED_KEY, Date.now());
+    persistConfig();
     forceReprocessAll();
     GM_setValue(WEBDAV_LAST_SYNC_KEY, Date.now());
   }
@@ -4187,7 +4160,7 @@
     const on = isOn();
     GM_registerMenuCommand((on ? markerOn : markerOff) + t(labelKey) + (on ? `: ${t(onText)}` : `: ${t(offText)}`), () => {
       apply();
-      GM_setValue(CONFIG_KEY, currentConfig);
+      persistConfig();
       location.reload();
     });
   }
@@ -4209,7 +4182,7 @@
     const langDisplay = currentConfig.language === 'zh-CN' ? t('menuLang') : t('menuLangEn');
     GM_registerMenuCommand((currentConfig.language === 'zh-CN' ? '🟢 ' : '🔵 ') + langDisplay, () => {
       currentConfig.language = currentConfig.language === 'zh-CN' ? 'en' : 'zh-CN';
-      GM_setValue(CONFIG_KEY, currentConfig);
+      persistConfig();
       location.reload();
     });
     GM_registerMenuCommand(t('menuHighlightColor'), () => showHighlightColorPanel());
