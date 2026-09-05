@@ -1,8 +1,7 @@
-# Search Engine Result Hider
+## Search Engine Result Hider
 ## A tool to hide unwanted search results
-### [Github](https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js) | [Greasy Fork](https://greasyfork.org/zh-CN/scripts/552394) Install
+### <img src="https://github.com/user-attachments/assets/92954a5d-7157-40ed-9309-b9d75bf2bd32" width="30" height="30" align="center"> [Github](https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js) | [Greasy Fork](https://greasyfork.org/zh-CN/scripts/552394) Install
 [中文](README.md) | [English](README.en.md)  
-
 Block unwanted search results with complex rule matching on browsers that only support user scripts.  
 Supports uBlacklist compatible basic rules, URL matching, regex matching, title matching, whitelist matching, highlighting target results, and matching result snippet text.  
 Currently supported search engines: Bing, Google, DuckDuckGo, Yandex, Brave, Yahoo  
