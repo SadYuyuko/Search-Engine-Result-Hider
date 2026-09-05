@@ -775,7 +775,7 @@
     };
   }
 
-  // 域名检检查
+  // 域名检查
   function matchWildcardDomainPattern(pattern) {
     const wildcardMatch = pattern.match(/^\*:\/\/\*\.([^\/\*]+)\/\*$/);
     if (wildcardMatch) return { domain: wildcardMatch[1].toLowerCase(), domainType: 'wildcard' };
