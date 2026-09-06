@@ -24,17 +24,21 @@
  　 ┗ 🟢点击展开面板  
 　  ┗ 🔵点击显示被屏蔽结果，长按悬浮球打开配置面板，被屏蔽结果的屏蔽按钮再次点击则取消屏蔽
   
-**关于Webdav：**  
-1. 自动同步每小时去重合并同步一次，手动上传/下载则为覆盖同步。目前仅在单设备上测试过，理论上可以和ublacklist同步同一配置文件，但不保证不会出现文件错误替换逻辑问题，请提前备份文件  
-2. Webdav同步依赖跨域请求权限，且地址只支持https，最好使用单独应用密码而非主密码  
-3. 地址请填写完整文件夹路径，如坚果云`https://dav.jianguoyun.com/dav/your_folder/`  
-4. 同步配置在刷新后生效  
-  
-**注意：**  
-1. 订阅同步频率为每天一次，支持最多3条订阅且只支持.txt远程链接，例如`https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/rules.txt`，应用优先级在本地规则之后。由于脚本可分配性能有限，规则总数建议不超过2w条避免手机爆炸🤳💥  
-2. 脚本扩展有限不支持`##`DOM语法规则，通过订阅导入会自动清除  
-3. 在脚本中添加域名规则时可不使用`*://*.`前缀直接写域名，但对于需要同时在ublacklist使用的规则必须加上  
-<br>
+**关于Webdav：**
+
+1. 自动同步每小时去重合并同步一次，手动上传/下载则为覆盖同步
+
+2. 同步依赖跨域请求权限，地址只支持https和完整路径，如坚果云`https://dav.jianguoyun.com/dav/your_folder/`
+
+3. 同步配置在刷新后生效
+
+**注意：**
+
+1. 订阅同步频率为每天一次，支持最多3条订阅且只支持.txt远程链接，例如`https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/rules.txt`，应用优先级在本地规则之后。由于脚本可分配性能有限，规则总数建议不超过2w条避免手机爆炸🤳💥
+
+2. 脚本扩展有限不支持`##`DOM语法规则，通过订阅导入会自动清除
+
+2. 在脚本中添加域名规则时可不使用`*://*.`前缀直接写域名，但对于需要同时在ublacklist使用的规则必须加上
   
 ### 基础规则：  
 **URL匹配：**  
@@ -73,12 +77,14 @@
 `@if (site = "google.com.hk") { *://*.example.com/* }` - 仅在Google HK中屏蔽`example.com`  
 `@if(Google) { *://*.example.com/* @if(title *= "示例") @if(site = "google.com") }` - 仅在Google中，屏蔽`example.com`的搜索结果中标题含有`示例`的结果  
   
-**摘要匹配：**  
-`text/.*示例.*/` – 匹配结果的网页描述内容(snippet)中包含`示例`的搜索结果，此规则不会匹配标题  
-`text/.*示例abc.*/i` – 同上，加i忽略大小写  
-<br>  
+**摘要匹配：**
 
-### 截图：  
+`text/.*示例.*/` – 匹配结果的网页描述内容(snippet)中包含`示例`的搜索结果，此规则不会匹配标题
+
+`text/.*示例abc.*/i` – 同上，加i忽略大小写
+
+### 截图：
+
 <img width="450" height="288" alt="01" src="https://github.com/user-attachments/assets/8523f109-84d1-4eba-b8d5-678b0a824340" />
 <br>
 <img width="300" height="288" alt="02" src="https://github.com/user-attachments/assets/e486984a-2d00-4639-94d1-cf37474cd860" />
