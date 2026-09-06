@@ -1,10 +1,13 @@
 ## Search Engine Result Hider
+
 ## A tool to hide unwanted search results
+
 ### <img src="https://github.com/user-attachments/assets/92954a5d-7157-40ed-9309-b9d75bf2bd32" width="30" height="30" align="center"> [Github](https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js) | [Greasy Fork](https://greasyfork.org/zh-CN/scripts/552394) Install
+
 [中文](README.md) | [English](README.en.md)  
 Block unwanted search results with complex rule matching on browsers that only support user scripts.  
 Supports uBlacklist compatible basic rules, URL matching, regex matching, title matching, whitelist matching, highlighting target results, and matching result snippet text.  
-Currently supported search engines: Bing, Google, DuckDuckGo, Yandex, Brave, Yahoo  
+Currently supported search engines: Bing, Google, DuckDuckGo, Yandex, Brave, Yahoo
 
 **Features:**  
 - One-click domain blocking via a block button
@@ -20,21 +23,19 @@ Currently supported search engines: Bing, Google, DuckDuckGo, Yandex, Brave, Yah
 ┣ Toggle error detection on/off  
 ┣ Toggle floating bubble visibility  
 ┣ Toggle panel centering: centered by default; when disabled, the panel appears in one of four corners based on the floating bubble's position  
-  ┗ Toggle floating bubble function:  
- 　 ┗ 🟢 Click to open the panel  
-　  ┗ 🔵 Click to toggle visibility of blocked results; long-press toopen the configuration panel. Clicking the block button on a blocked result unblocks it.  
+┗ Toggle floating bubble function:  
+　┗ 🟢 Click to open the panel  
+　┗ 🔵 Click to toggle visibility of blocked results; long-press toopen the configuration panel. Clicking the block button on a blocked result unblocks it.  
 
 **About WebDAV:**  
-1. Auto-sync runs once per hour, performing deduplication and merging. Manual upload/download performs an overwrite sync. Currently tested only in single-device setups. In theory, it can sync the same configuration file as uBlacklist, but no guarantees are made regarding file overwrite logic conflicts. Always back up your files first.  
-2. WebDAV sync requires cross-origin request permissions; only HTTPS addresses are supported. It is strongly recommended to use an app-specific password rather than your main account password.  
-3. Provide the full folder path in the address field, e.g., for Nutstore: `https://dav.jianguoyun.com/dav/your_folder/`  
-4. Sync configuration takes effect after refreshing the page.  
+1. Auto-sync runs once per hour, performing deduplication and merging. Manual upload/download performs an overwrite sync.  
+2. WebDAV sync requires cross-origin request permissions; only HTTPS addresses and full folder path are supported, e.g., for Nutstore: `https://dav.jianguoyun.com/dav/your_folder/`.  
+3. Sync configuration takes effect after refreshing the page.
 
 **Notes:**  
 1. Subscriptions update once per day. Only remote `.txt` file links are supported, with a maximum of 3 subscriptions. Subscription rules are applied after local rules. Due to the limited performance budget of user scripts, the total number of rules should not exceed 20,000 to avoid performance issues on mobile devices.  
 2. `##` DOM syntax rules are not supported. Such rules will be automatically removed when imported via subscription.  
-3. When adding domain name rules in the script, you can write the domain directly without the `*://*.` prefix, but rules used in uBlacklist must include the full prefix.  
-<br>
+3. When adding domain name rules in the script, you can write the domain directly without the `*://*.` prefix, but rules used in uBlacklist must include the full prefix.
 
 ### Basic Rules:  
 
@@ -77,9 +78,9 @@ Note: Only 5 highlight colors are supported, numbered `@1` through `@5`. Open th
 **Snippet Matching:**  
 `text/.*example.*/` – matches results whose snippet/description contains `example`. This rule does not match titles.  
 `text/.*example.*/i` – same as above, case-insensitive.  
-<br>
 
-### Screenshots:  
+### Screenshots:
+
 <img width="460" height="285" alt="01" src="https://github.com/user-attachments/assets/8523f109-84d1-4eba-b8d5-678b0a824340" />  
 <br>
 <img width="214" height="206" alt="02" src="https://github.com/user-attachments/assets/e486984a-2d00-4639-94d1-cf37474cd860" />
