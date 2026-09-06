@@ -40,44 +40,63 @@ Currently supported search engines: Bing, Google, DuckDuckGo, Yandex, Brave, Yah
 ### Basic Rules:  
 
 **URL Matching:**  
-`*://www.example.com/*` – matches `example.com`  
-`*://*.example.com/*` – matches `example.com` and all its subdomains  
-`*://*.example.com/path/*` – matches a specific path under `example.com`  
-`*://*.example.*` – matches `example.com` across all top-level domains  
+
+| Rule | Description |
+| --- | --- |
+| `*://www.example.com/*` | matches `example.com` |
+| `*://*.example.com/*` | matches `example.com` and all its subdomains |
+| `*://*.example.com/path/*` | matches a specific path under `example.com` |
+| `*://*.example.*` | matches `example.com` across all top-level domains |
 
 **Title Matching:**  
-`title/.*example.*/` – matches results whose title contains `example`  
-`title/^example.*/` – matches results whose title starts with `example`  
-`title/.*example(A|B).*/` – matches results whose title contains `exampleA` or `exampleB`  
-`title/.*example(A|B).*/i` – same as above, but case-insensitive (also matches `examplea` and `exampleb`)  
-`title/.*exampleAbC.*/i` – case-insensitive; matches `exampleAbC`, `exampleABC`, etc.  
-`title/^(?=.*keyword1)(?=.*(?:keyword2)).*/i` – matches results containing both `keyword1` and `keyword2`, regardless of order  
-`title/^(?=.*keyword1)(?=.*(?:keyword2|keyword3)).*/i` – same as above, but matches `keyword1` + `keyword2` or `keyword1` + `keyword3`  
+
+| Rule | Description |
+| --- | --- |
+| `title/.*example.*/` | matches results whose title contains `example` |
+| `title/^example.*/` | matches results whose title starts with `example` |
+| `title/.*example(A\|B).*/` | matches results whose title contains `exampleA` or `exampleB` |
+| `title/.*example(A\|B).*/i` | same as above, but case-insensitive (also matches `examplea` and `exampleb`) |
+| `title/.*exampleAbC.*/i` | case-insensitive; matches `exampleAbC`, `exampleABC`, etc. |
+| `title/^(?=.*keyword1)(?=.*(?:keyword2)).*/i` | matches results containing both `keyword1` and `keyword2`, regardless of order |
+| `title/^(?=.*keyword1)(?=.*(?:keyword2\|keyword3)).*/i` | same as above, but matches `keyword1` + `keyword2` or `keyword1` + `keyword3` |
 
 **Whitelist Matching:**  
-`@*://*.com/*` – allow all pages whose domain ends with `.com`  
-`@*://example.com/*` – allow the main site `example.com`  
-`@*://*.example.com/*` – allow `example.com` and all its subdomains  
-`@*://example.com/abc/*` – allow only the specific path `/abc` on `example.com`  
-`@*://*.example.com/abc/*` – allow only the specific path `/abc` on subdomains of `example.com`  
+
+| Rule | Description |
+| --- | --- |
+| `@*://*.com/*` | allow all pages whose domain ends with `.com` |
+| `@*://example.com/*` | allow the main site `example.com` |
+| `@*://*.example.com/*` | allow `example.com` and all its subdomains |
+| `@*://example.com/abc/*` | allow only the specific path `/abc` on `example.com` |
+| `@*://*.example.com/abc/*` | allow only the specific path `/abc` on subdomains of `example.com` |
 
 **Highlighting Rules:**  
-`@1 *://*.example.com/*` – adds a colored border to results from `example.com` and its subdomains  
-`@1 title/.*example.*/` – adds a colored border to results whose title contains `example`  
+
+| Rule | Description |
+| --- | --- |
+| `@1 *://*.example.com/*` | adds a colored border to results from `example.com` and its subdomains |
+| `@1 title/.*example.*/` | adds a colored border to results whose title contains `example` |
+
 Priority: highlight > whitelist, but blacklist > highlight  
 Note: Only 5 highlight colors are supported, numbered `@1` through `@5`. Open the custom color panel via the script menu.  
 
 **Composite Rules:**  
-`*://*.example.com/* @if(title *= "keyword")` – block results from `example.com` whose title contains the `keyword`. Title rules in composite rules are case-insensitive by default  
-`*://*.example.com/* @if(title *= "keyword1" | title *= "keyword2" | title *= "keyword3")` – multi-keyword support for the above rule  
-`*://*.example.com/* @if(title =~ /keyword1|keyword2|keyword3/)` – regex form of the above rule, the rule need `i` to case-insensitive (`title =~ /.../i`)  
-`@if (Google) { *://*.example.com/* }` – block `example.com` only on Google  
-`@if (site = "google.com.hk") { *://*.example.com/* }` – block `example.com` only on Google HK  
-`@if(Google) { *://*.example.com/* @if(title *= "keyword") @if(site = "google.com") }` – block results from `example.com` whose title contains `keyword`, only on Google  
+
+| Rule | Description |
+| --- | --- |
+| `*://*.example.com/* @if(title *= "keyword")` | block results from `example.com` whose title contains the `keyword`. Title rules in composite rules are case-insensitive by default |
+| `*://*.example.com/* @if(title *= "keyword1" \| title *= "keyword2" \| title *= "keyword3")` | multi-keyword support for the above rule |
+| `*://*.example.com/* @if(title =~ /keyword1\|keyword2\|keyword3/)` | regex form of the above rule, the rule need `i` to case-insensitive (`title =~ /.../i`) |
+| `@if (Google) { *://*.example.com/* }` | block `example.com` only on Google |
+| `@if (site = "google.com.hk") { *://*.example.com/* }` | block `example.com` only on Google HK |
+| `@if(Google) { *://*.example.com/* @if(title *= "keyword") @if(site = "google.com") }` | block results from `example.com` whose title contains `keyword`, only on Google |
 
 **Snippet Matching:**  
-`text/.*example.*/` – matches results whose snippet/description contains `example`. This rule does not match titles.  
-`text/.*example.*/i` – same as above, case-insensitive.  
+
+| Rule | Description |
+| --- | --- |
+| `text/.*example.*/` | matches results whose snippet/description contains `example`. This rule does not match titles. |
+| `text/.*example.*/i` | same as above, case-insensitive. |
 
 ### Screenshots:
 
