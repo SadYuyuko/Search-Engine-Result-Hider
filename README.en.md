@@ -7,7 +7,7 @@
 [中文](README.md) | [English](README.en.md)  
 Block unwanted search results with complex rule matching on browsers that only support user scripts.  
 Supports uBlacklist compatible basic rules, URL matching, regex matching, title matching, whitelist matching, highlighting target results, and matching result snippet text.  
-Currently supported search engines: Bing, Google, DuckDuckGo, Yandex, Brave, Yahoo
+Currently supported search engines: Bing, Google, DuckDuckGo, Yandex, Brave, Yahoo.
 
 **Features:**  
 - One-click domain blocking via a block button
