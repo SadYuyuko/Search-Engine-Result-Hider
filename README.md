@@ -1,12 +1,18 @@
 ## Search Engine Result Hider
+
 ## 搜索引擎结果屏蔽器
-### <img src="https://github.com/user-attachments/assets/92954a5d-7157-40ed-9309-b9d75bf2bd32" width="30" height="30" align="center"> [Github](https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js) | [Greasy Fork](https://greasyfork.org/zh-CN/scripts/552394) 安装  
-[中文](README.md) | [English](README.en.md) | 交流群[TG](https://t.me/+qBqMTqjc4Xk5M2Jh)  
-在仅支持安装脚本的浏览器上实现复杂规则屏蔽搜索结果功能  
-支持包括ublacklist基础规则在内的URL匹配、正则匹配、标题匹配、白名单匹配、高亮目标结果以及结果摘要(snippet)匹配  
-当前支持搜索引擎：Bing、Google、DuckDuckGo、Yandex、Brave，Yahoo  
-  
-**当前功能：**  
+
+### <img src="https://github.com/user-attachments/assets/92954a5d-7157-40ed-9309-b9d75bf2bd32" width="30" height="30" align="center"> [Github](https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js) | [Greasy Fork](https://greasyfork.org/zh-CN/scripts/552394) 安装
+
+[中文](README.md) | [English](README.en.md) | 交流群[TG](https://t.me/+qBqMTqjc4Xk5M2Jh)
+
+在仅支持安装脚本的浏览器上实现复杂规则屏蔽搜索结果功能
+
+支持包括ublacklist基础规则在内的URL匹配、正则匹配、标题匹配、白名单匹配、高亮目标结果以及结果摘要(snippet)匹配
+
+当前支持搜索引擎：Bing、Google、DuckDuckGo、Yandex、Brave，Yahoo
+
+**当前功能：**
 - 一键屏蔽域名
 - 统计命中规则和调试输出
 - 导入/导出规则到TXT
@@ -23,7 +29,7 @@
   ┗ 切换悬浮球功能：  
  　 ┗ 🟢点击展开面板  
 　  ┗ 🔵点击显示被屏蔽结果，长按悬浮球打开配置面板，被屏蔽结果的屏蔽按钮再次点击则取消屏蔽
-  
+
 **关于Webdav：**
 
 1. 自动同步每小时去重合并同步一次，手动上传/下载则为覆盖同步
@@ -38,55 +44,84 @@
 
 2. 脚本扩展有限不支持`##`DOM语法规则，通过订阅导入会自动清除
 
-2. 在脚本中添加域名规则时可不使用`*://*.`前缀直接写域名，但对于需要同时在ublacklist使用的规则必须加上
-  
-### 基础规则：  
-**URL匹配：**  
-`*://www.example.com/*` – 匹配`example.com`  
-`*://*.example.com/*` – 匹配`example.com`及其所有子域名  
-`*://*.example.com/path/*` – 匹配`example.com`特定路径  
-`*://*.example.*` – 匹配`example.com`所有顶级域名  
-  
-**标题匹配：**  
-`title/.*示例.*/` – 匹配标题包含`示例`的结果  
-`title/^示例.*/` – 匹配标题以`示例`开头的搜索结果  
-`title/.*示例(A|B).*/` – 匹配标题包含`示例A`或`示例B`的结果  
-`title/.*示例(A|B).*/i` – 加i忽略大小写，匹配除上条结果外还包含`示例a`或`示例b`的结果  
-`title/.*示例AbC.*/i` – 加i忽略大小写，匹配除`示例AbC`外还包含`示例ABC`等结果  
-`title/^(?=.*示例1)(?=.*(?:示例2)).*/i` - 忽略前后顺序，匹配同时出现`示例1`和`示例2`的结果  
-`title/^(?=.*示例1)(?=.*(?:示例2|示例3)).*/i` - 同上，但匹配`示例1+示例2`或`示例1+示例3`的结果  
-  
-**白名单匹配：**  
-`@*://*.com/*` – 放行所有以`.com`结尾域名页面  
-`@*://example.com/*` – 放行`example.com`主站  
-`@*://*.example.com/*` – 放行`example.com`及其所有子域名  
-`@*://example.com/abc/*` – 只放行`example.com`特定路径  
-`@*://*.example.com/abc/*` – 只放行`example.com`子域名特定路径  
-  
-  **高亮规则：**  
-`@1 *://*.example.com/*` – 给`example.com`及其子域名的搜索结果加上颜色边框  
-`@1 title/.*示例.*/` – 给匹配到标题带有`示例`的结果加上颜色边框  
-优先级：高亮＞白名单，但黑名单＞高亮  
-注意：只支持5种颜色，即`@1`～`@5`，通过脚本菜单打开自定义颜色面板  
-  
-**复合规则：**  
-`*://*.example.com/* @if(title *= "示例")` - 屏蔽`example.com`的标题中含有`示例`的结果，复合规则的标题规则默认忽略大小写  
-`*://*.example.com/* @if(title *= "关键词1" | title *= "关键词2" | title *= "关键词3")` - 上条规则的多关键词支持  
-`*://*.example.com/* @if(title =~ /关键词1|关键词2|关键词3/)` - 上条规则的正则写法，此形式需要加i才会忽略大小写(`title =~ /.../i`)  
-`@if (Google) { *://*.example.com/* }` - 仅在Google中屏蔽该`example.com`  
-`@if (site = "google.com.hk") { *://*.example.com/* }` - 仅在Google HK中屏蔽`example.com`  
-`@if(Google) { *://*.example.com/* @if(title *= "示例") @if(site = "google.com") }` - 仅在Google中，屏蔽`example.com`的搜索结果中标题含有`示例`的结果  
-  
+3. 在脚本中添加域名规则时可不使用`*://*.`前缀直接写域名，但对于需要同时在ublacklist使用的规则必须加上
+
+
+### 基础规则：
+
+**URL匹配：**
+
+`*://www.example.com/*` – 匹配`example.com`
+
+`*://*.example.com/*` – 匹配`example.com`及其所有子域名
+
+`*://*.example.com/path/*` – 匹配`example.com`特定路径
+
+`*://*.example.*` – 匹配`example.com`所有顶级域名
+
+**标题匹配：**
+
+`title/.*示例.*/` – 匹配标题包含`示例`的结果
+
+`title/^示例.*/` – 匹配标题以`示例`开头的搜索结果
+
+`title/.*示例(A|B).*/` – 匹配标题包含`示例A`或`示例B`的结果
+
+`title/.*示例(A|B).*/i` – 加i忽略大小写，匹配除上条结果外还包含`示例a`或`示例b`的结果
+
+`title/.*示例AbC.*/i` – 加i忽略大小写，匹配除`示例AbC`外还包含`示例ABC`等结果
+
+`title/^(?=.*示例1)(?=.*(?:示例2)).*/i` - 忽略前后顺序，匹配同时出现`示例1`和`示例2`的结果
+
+`title/^(?=.*示例1)(?=.*(?:示例2|示例3)).*/i` - 同上，但匹配`示例1+示例2`或`示例1+示例3`的结果
+
+**白名单匹配：**
+
+`@*://*.com/*` – 放行所有以`.com`结尾域名页面
+
+`@*://example.com/*` – 放行`example.com`主站
+
+`@*://*.example.com/*` – 放行`example.com`及其所有子域名
+
+`@*://example.com/abc/*` – 只放行`example.com`特定路径
+
+`@*://*.example.com/abc/*` – 只放行`example.com`子域名特定路径
+
+**高亮规则：**
+
+`@1 *://*.example.com/*` – 给`example.com`及其子域名的搜索结果加上颜色边框
+
+`@1 title/.*示例.*/` – 给匹配到标题带有`示例`的结果加上颜色边框
+
+优先级：高亮＞白名单，但黑名单＞高亮
+
+注意：只支持5种颜色，即`@1`～`@5`，通过脚本菜单打开自定义颜色面板
+
+**复合规则：**
+
+`*://*.example.com/* @if(title *= "示例")` - 屏蔽`example.com`的标题中含有`示例`的结果，复合规则的标题规则默认忽略大小写
+
+`*://*.example.com/* @if(title *= "关键词1" | title *= "关键词2" | title *= "关键词3")` - 上条规则的多关键词支持
+
+`*://*.example.com/* @if(title =~ /关键词1|关键词2|关键词3/)` - 上条规则的正则写法，此形式需要加i才会忽略大小写(`title =~ /.../i`)
+
+`@if (Google) {*://*.example.com/*}` - 仅在Google中屏蔽该`example.com`
+
+`@if (site = "google.com.hk") {*://*.example.com/*}` - 仅在Google HK中屏蔽`example.com`
+
+`@if(Google) {*://*.example.com/* @if(title *= "示例") @if(site = "google.com")}` - 仅在Google中，屏蔽`example.com`的搜索结果中标题含有`示例`的结果
+
 **摘要匹配：**
 
 `text/.*示例.*/` – 匹配结果的网页描述内容(snippet)中包含`示例`的搜索结果，此规则不会匹配标题
 
 `text/.*示例abc.*/i` – 同上，加i忽略大小写
 
+
 ### 截图：
 
 <img width="450" height="288" alt="01" src="https://github.com/user-attachments/assets/8523f109-84d1-4eba-b8d5-678b0a824340" />
-<br>
+<br/>
 <img width="300" height="288" alt="02" src="https://github.com/user-attachments/assets/e486984a-2d00-4639-94d1-cf37474cd860" />
-<br>
+<br/>
 <img width="200" height="133" alt="03" src="https://github.com/user-attachments/assets/32cdce71-23b3-4ed9-9ac7-9220af80beb1" />
