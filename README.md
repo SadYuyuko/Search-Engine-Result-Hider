@@ -4,12 +4,9 @@
 
 ### <img src="https://github.com/user-attachments/assets/92954a5d-7157-40ed-9309-b9d75bf2bd32" width="30" height="30" align="center"> [Github](https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js) | [Greasy Fork](https://greasyfork.org/zh-CN/scripts/552394) 安装
 
-[中文](README.md) | [English](README.en.md) | 交流群[TG](https://t.me/+qBqMTqjc4Xk5M2Jh)
-<br/>
-在仅支持安装脚本的浏览器上实现复杂规则屏蔽搜索结果功能
-<br/>
-支持包括ublacklist基础规则在内的URL匹配、正则匹配、标题匹配、白名单匹配、高亮目标结果以及结果摘要(snippet)匹配
-<br/>
+[中文](README.md) | [English](README.en.md) | 交流群[TG](https://t.me/+qBqMTqjc4Xk5M2Jh)  
+在仅支持安装脚本的浏览器上实现复杂规则屏蔽搜索结果功能  
+支持包括ublacklist基础规则在内的URL匹配、正则匹配、标题匹配、白名单匹配、高亮目标结果以及结果摘要(snippet)匹配  
 当前支持搜索引擎：Bing、Google、DuckDuckGo、Yandex、Brave，Yahoo
 
 **当前功能：**
@@ -27,8 +24,8 @@
 ┣ 开关悬浮球显示  
 ┣ 开关面板居中：默认居中，切换后根据悬浮球位置显示在屏幕四角  
 ┗ 切换悬浮球功能：  
-  ┗ 🟢点击展开面板  
-  ┗ 🔵点击显示被屏蔽结果，长按悬浮球打开配置面板，被屏蔽结果的屏蔽按钮再次点击则取消屏蔽
+　┗ 🟢点击展开面板  
+　┗ 🔵点击显示被屏蔽结果，长按悬浮球打开配置面板，被屏蔽结果的屏蔽按钮再次点击则取消屏蔽
 
 **关于Webdav：**
 1. 自动同步每小时去重合并同步一次，手动上传/下载则为覆盖同步
@@ -81,8 +78,7 @@
 | `@1 *://*.example.com/*` | 给`example.com`及其子域名的搜索结果加上颜色边框 |
 | `@1 title/.*示例.*/` | 给匹配到标题带有`示例`的结果加上颜色边框 |
 
-优先级：高亮＞白名单，但黑名单＞高亮
-
+优先级：高亮＞白名单，但黑名单＞高亮  
 注意：只支持5种颜色，即`@1`～`@5`，通过脚本菜单打开自定义颜色面板
 
 **复合规则：**
