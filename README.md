@@ -5,11 +5,11 @@
 ### <img src="https://github.com/user-attachments/assets/92954a5d-7157-40ed-9309-b9d75bf2bd32" width="30" height="30" align="center"> [Github](https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js) | [Greasy Fork](https://greasyfork.org/zh-CN/scripts/552394) 安装
 
 [中文](README.md) | [English](README.en.md) | 交流群[TG](https://t.me/+qBqMTqjc4Xk5M2Jh)
-
+<br/>
 在仅支持安装脚本的浏览器上实现复杂规则屏蔽搜索结果功能
-
+<br/>
 支持包括ublacklist基础规则在内的URL匹配、正则匹配、标题匹配、白名单匹配、高亮目标结果以及结果摘要(snippet)匹配
-
+<br/>
 当前支持搜索引擎：Bing、Google、DuckDuckGo、Yandex、Brave，Yahoo
 
 **当前功能：**
@@ -26,24 +26,18 @@
 ┣ 开关错误检测  
 ┣ 开关悬浮球显示  
 ┣ 开关面板居中：默认居中，切换后根据悬浮球位置显示在屏幕四角  
-  ┗ 切换悬浮球功能：  
- 　 ┗ 🟢点击展开面板  
-　  ┗ 🔵点击显示被屏蔽结果，长按悬浮球打开配置面板，被屏蔽结果的屏蔽按钮再次点击则取消屏蔽
+┗ 切换悬浮球功能：  
+  ┗ 🟢点击展开面板  
+  ┗ 🔵点击显示被屏蔽结果，长按悬浮球打开配置面板，被屏蔽结果的屏蔽按钮再次点击则取消屏蔽
 
 **关于Webdav：**
-
 1. 自动同步每小时去重合并同步一次，手动上传/下载则为覆盖同步
-
 2. 同步依赖跨域请求权限，地址只支持https和完整路径，如坚果云`https://dav.jianguoyun.com/dav/your_folder/`
-
 3. 同步配置在刷新后生效
 
 **注意：**
-
 1. 订阅同步频率为每天一次，支持最多3条订阅且只支持.txt远程链接，例如`https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/rules.txt`，应用优先级在本地规则之后。由于脚本可分配性能有限，规则总数建议不超过2w条避免手机爆炸🤳💥
-
 2. 脚本扩展有限不支持`##`DOM语法规则，通过订阅导入会自动清除
-
 3. 在脚本中添加域名规则时可不使用`*://*.`前缀直接写域名，但对于需要同时在ublacklist使用的规则必须加上
 
 
