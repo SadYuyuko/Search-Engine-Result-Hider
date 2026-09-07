@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.5.4
+// @version      7.6.0
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -77,7 +77,7 @@
   // 兼容旧配置
   if (currentConfig.showBlockBtn === undefined) currentConfig.showBlockBtn = false;
   if (currentConfig.blockDomain === undefined) currentConfig.blockDomain = false;
-  if (currentConfig.blockConfirm === undefined) currentConfig.blockConfirm = false;
+  if (currentConfig.blockConfirm === undefined) currentConfig.blockConfirm = true;
   if (currentConfig.showBubble === undefined) currentConfig.showBubble = true;
   if (currentConfig.panelCentered === undefined) currentConfig.panelCentered = true;
   if (currentConfig.bubbleAction === undefined) currentConfig.bubbleAction = 'openPanel';
@@ -243,6 +243,11 @@
       urlError: 'URL规则无效',
       slashWarning: '以 / 开头但未闭合，将按URL规则处理',
       ruleDuplicate: '重复了 {count} 次',
+      emptyPrefixRule: '规则前缀后缺少内容',
+      invalidRegexFlags: '正则 flags 无效: {flags}',
+      emptyIfCondition: '@if() 条件不能为空',
+      unknownIfCondition: '未知 @if 条件: {part}',
+      invalidUrlWildcard: 'URL 通配符格式无效: {rule}',
     },
     'en': {
       enableBlock: 'Block',
@@ -338,6 +343,11 @@
       urlError: 'Invalid URL rule',
       slashWarning: 'Starts with / but has no closing slash, treated as URL rule',
       ruleDuplicate: 'duplicated {count} times',
+      emptyPrefixRule: 'Missing content after rule prefix',
+      invalidRegexFlags: 'Invalid regular expression flags: {flags}',
+      emptyIfCondition: '@if() condition cannot be empty',
+      unknownIfCondition: 'Unknown @if condition: {part}',
+      invalidUrlWildcard: 'Invalid URL wildcard format: {rule}',
     }
   };
 
@@ -376,6 +386,14 @@
       text = text.replaceAll(`{${k}}`, v);
     }
     return text;
+  }
+
+  function safeRegexTest(regex, value) {
+    if (!regex) return false;
+    regex.lastIndex = 0;
+    const matched = regex.test(String(value ?? ''));
+    regex.lastIndex = 0;
+    return matched;
   }
 
   // 规则处理
@@ -439,7 +457,8 @@
     let siteMatch = trimmed.match(/^site\s*[=:]\s*['"](.*?)['"]$/i);
     if (!siteMatch) siteMatch = trimmed.match(/^site\s*\(\s*['"](.*?)['"]\s*\)$/i);
     if (siteMatch) {
-      return { matched: true, static: currentSite.endsWith(siteMatch[1].toLowerCase()) };
+      const target = siteMatch[1].trim().toLowerCase().replace(/^\.+|\.+$/g, '');
+      return { matched: true, static: currentSite === target || currentSite.endsWith(`.${target}`) };
     }
 
     const titleMatch = trimmed.match(/^title\s*\*\=\s*['"](.*?)['"]$/i);
@@ -449,10 +468,30 @@
 
     const regexMatch = trimmed.match(/^title\s*=\~\s*\/((?:[^/\\]|\\.)*)\/([a-z]*)$/i);
     if (regexMatch) {
+      if (getInvalidRegexFlags(regexMatch[2])) return { matched: false };
       return { matched: true, dynamic: { type: 'title', op: '=~', regex: new RegExp(regexMatch[1], regexMatch[2]) } };
     }
 
     return { matched: false };
+  }
+
+  const SUPPORTED_REGEX_FLAGS = 'ims';
+
+  function getInvalidRegexFlags(flags) {
+    const invalid = [];
+    const seen = new Set();
+    for (const flag of flags.toLowerCase()) {
+      if (!SUPPORTED_REGEX_FLAGS.includes(flag) || seen.has(flag)) invalid.push(flag);
+      seen.add(flag);
+    }
+    return [...new Set(invalid)].join('');
+  }
+
+  function validateUrlWildcard(rule) {
+    if (!rule || /[<>"']/.test(rule) || /\s/.test(rule)) return false;
+    if (/^\*:\/\/\*\*+/.test(rule) || /\*{3,}/.test(rule)) return false;
+    if (rule.startsWith('*://') && !/^\*:\/\/[^/]+(?:\/.*)?$/.test(rule)) return false;
+    return true;
   }
 
   function evaluateCondition(condStr, dynamicConditionsList) {
@@ -520,21 +559,6 @@
   function stripIfConditions(ruleStr, evaluateCond) {
     let coreRule = ruleStr.trim();
     let staticPass = true;
-
-    // 处理前置@if
-    const prefixIfIdx = coreRule.search(/@if\s*\(/i);
-    if (prefixIfIdx !== -1) {
-      const parenResult = extractBalancedParens(coreRule, coreRule.indexOf('(', prefixIfIdx));
-      if (parenResult) {
-        const cond = parenResult.content.trim();
-        const afterParen = coreRule.substring(parenResult.endIndex).trim();
-        const braceMatch = afterParen.match(/^\{\s*([\s\S]*?)\s*\}$/);
-        if (braceMatch) {
-          coreRule = braceMatch[1].trim();
-          if (evaluateCond && !evaluateCond(cond)) staticPass = false;
-        }
-      }
-    }
 
     const ifRegex = /@if\s*\(/gi;
     let match;
@@ -609,6 +633,11 @@
       if (/^title\s*\*\=\s*['"][^'"]*['"]$/i.test(trimmed)) continue;
       const regexMatch = trimmed.match(/^title\s*=\~\s*\/((?:[^/\\]|\\.)*)\/([a-z]*)$/i);
       if (regexMatch) {
+        const invalidFlags = getInvalidRegexFlags(regexMatch[2]);
+        if (invalidFlags) {
+          errors.push(t('invalidRegexFlags', { flags: invalidFlags }));
+          continue;
+        }
         try {
           new RegExp(regexMatch[1], regexMatch[2]);
         } catch (e) {
@@ -616,7 +645,7 @@
         }
         continue;
       }
-      warnings.push(t('condUnknown', { part: trimmed }));
+      errors.push(t('unknownIfCondition', { part: trimmed }));
     }
     return { errors, warnings };
   }
@@ -626,6 +655,7 @@
     if (!rule || rule.trim() === '') return { valid: true, errors: [], warnings: [] };
 
     let ruleToCheck = rule.trim();
+    if (ruleToCheck.startsWith('#')) return { valid: true, errors: [], warnings: [] };
     const errors = [];
     const warnings = [];
 
@@ -636,7 +666,7 @@
         return { valid: false, errors: [t('hlColorError')], warnings };
       }
       ruleToCheck = ruleToCheck.substring(hlValMatch[0].length).trim();
-      if (!ruleToCheck) return { valid: true, errors, warnings };
+      if (!ruleToCheck) return { valid: false, errors: [t('emptyPrefixRule')], warnings };
     }
 
     // @if条件语法检查
@@ -651,6 +681,10 @@
         }
         if (unbalanced) return { valid: false, errors: [t('ifParenError')], warnings };
         for (const cond of extractIfConditions(ruleToCheck)) {
+          if (!cond.trim()) {
+            errors.push(t('emptyIfCondition'));
+            continue;
+          }
           const r = validateCondition(cond);
           errors.push(...r.errors);
           warnings.push(...r.warnings);
@@ -664,23 +698,41 @@
     // 白名单规则
     if (ruleToCheck.startsWith('@')) {
       ruleToCheck = ruleToCheck.substring(1).trim();
-      if (!ruleToCheck) return { valid: true, errors, warnings };
+      if (!ruleToCheck) return { valid: false, errors: [t('emptyPrefixRule')], warnings };
     }
 
     // 未闭合正则提示
     if (ruleToCheck.startsWith('/') && ruleToCheck.lastIndexOf('/') === 0) {
-      warnings.push(t('slashWarning'));
+      errors.push(t('regexError'));
     }
 
     try {
       if (ruleToCheck.startsWith('/') && ruleToCheck.lastIndexOf('/') > 0) {
         const { pattern, flags } = ruleToRegex(ruleToCheck);
+        const invalidFlags = getInvalidRegexFlags(flags);
+        if (invalidFlags) {
+          errors.push(t('invalidRegexFlags', { flags: invalidFlags }));
+          return { valid: false, errors, warnings };
+        }
         new RegExp(pattern, flags);
       } else if (ruleToCheck.startsWith('text/') || ruleToCheck.startsWith('title/')) {
         const prefixLen = ruleToCheck.startsWith('title/') ? 6 : 5;
         const { pattern, flags } = parsePrefixedRegexRule(ruleToCheck, prefixLen);
-        new RegExp(pattern, flags);
+        if (!pattern.trim()) {
+          errors.push(t('emptyPrefixRule'));
+          return { valid: false, errors, warnings };
+        }
+        const invalidFlags = getInvalidRegexFlags(flags);
+        if (invalidFlags) {
+          errors.push(t('invalidRegexFlags', { flags: invalidFlags }));
+          return { valid: false, errors, warnings };
+        }
+        new RegExp(pattern, flags.replace('s', ''));
       } else {
+        if (!validateUrlWildcard(ruleToCheck)) {
+          errors.push(t('invalidUrlWildcard', { rule: ruleToCheck }));
+          return { valid: false, errors, warnings };
+        }
         new RegExp(wildcardToRegex(ruleToCheck), 'i');
       }
     } catch (e) {
@@ -701,7 +753,7 @@
     const lastSlashIndex = remaining.lastIndexOf('/');
     if (lastSlashIndex !== -1 && lastSlashIndex < remaining.length - 1) {
       const possibleFlags = remaining.substring(lastSlashIndex + 1);
-      if (/^[ims]+$/i.test(possibleFlags)) {
+      if (/^[a-z]+$/i.test(possibleFlags)) {
         flags = possibleFlags.toLowerCase();
         pattern = remaining.substring(0, lastSlashIndex);
       } else {
@@ -1010,7 +1062,7 @@
       if (cond.type === 'title' && cond.op === '*=') {
         if (!title || !title.toLowerCase().includes(cond.val)) return false;
       } else if (cond.type === 'title' && cond.op === '=~') {
-        if (!title || !cond.regex.test(title)) return false;
+        if (!title || !safeRegexTest(cond.regex, title)) return false;
       }
     }
 
@@ -1024,7 +1076,7 @@
         if (cond.type === 'title' && cond.op === '*=') {
           if (title && title.toLowerCase().includes(cond.val)) { groupMatch = true; break; }
         } else if (cond.type === 'title' && cond.op === '=~') {
-          if (title && cond.regex.test(title)) { groupMatch = true; break; }
+          if (title && safeRegexTest(cond.regex, title)) { groupMatch = true; break; }
         }
       }
       if (!groupMatch) return false;
@@ -1072,17 +1124,17 @@
     }
     if (!highlightN) {
       for (let {regex, N} of compiledRules.highlightUrls) {
-        if (regex.test(url) || regex.test(domain)) { highlightN = N; break; }
+        if (safeRegexTest(regex, url) || safeRegexTest(regex, domain)) { highlightN = N; break; }
       }
     }
     if (!highlightN && title) {
       for (let {regex, N} of compiledRules.highlightTitles) {
-        if (regex.test(title)) { highlightN = N; break; }
+        if (safeRegexTest(regex, title)) { highlightN = N; break; }
       }
     }
     if (!highlightN && snippet) {
       for (let {regex, N} of compiledRules.highlightTexts) {
-        if (regex.test(snippet)) { highlightN = N; break; }
+        if (safeRegexTest(regex, snippet)) { highlightN = N; break; }
       }
     }
     if (!highlightN) {
@@ -1102,11 +1154,11 @@
       for (let item of compiledRules.highlightConditionalRules) {
         if (!checkDynamicConditions(item.conditions, title)) continue;
         if (item.type === 'url' || item.type === 'regex') {
-          if (item.regex.test(url) || item.regex.test(domain)) { highlightN = item.N; break; }
+          if (safeRegexTest(item.regex, url) || safeRegexTest(item.regex, domain)) { highlightN = item.N; break; }
         } else if (item.type === 'title' && title) {
-          if (item.regex.test(title)) { highlightN = item.N; break; }
+          if (safeRegexTest(item.regex, title)) { highlightN = item.N; break; }
         } else if (item.type === 'text' && snippet) {
-          if (item.regex.test(snippet)) { highlightN = item.N; break; }
+          if (safeRegexTest(item.regex, snippet)) { highlightN = item.N; break; }
         }
       }
     }
@@ -1122,19 +1174,19 @@
     }
     if (!whitelisted) {
       for (let i = 0; i < compiledRules.whitelistUrlPatterns.length; i++) {
-        if (compiledRules.whitelistUrlPatterns[i].test(url) || compiledRules.whitelistUrlPatterns[i].test(domain)) {
+        if (safeRegexTest(compiledRules.whitelistUrlPatterns[i], url) || safeRegexTest(compiledRules.whitelistUrlPatterns[i], domain)) {
           whitelisted = true; break;
         }
       }
     }
     if (!whitelisted && title) {
       for (let i = 0; i < compiledRules.whitelistTitlePatterns.length; i++) {
-        if (compiledRules.whitelistTitlePatterns[i].test(title)) { whitelisted = true; break; }
+        if (safeRegexTest(compiledRules.whitelistTitlePatterns[i], title)) { whitelisted = true; break; }
       }
     }
     if (!whitelisted && snippet) {
       for (let i = 0; i < compiledRules.whitelistTextPatterns.length; i++) {
-        if (compiledRules.whitelistTextPatterns[i].test(snippet)) { whitelisted = true; break; }
+        if (safeRegexTest(compiledRules.whitelistTextPatterns[i], snippet)) { whitelisted = true; break; }
       }
     }
 
@@ -1151,19 +1203,19 @@
       if (!blockedInfo) {
         for (let i = 0; i < compiledRules.urls.length; i++) {
           const item = compiledRules.urls[i];
-          if (item.regex.test(url) || item.regex.test(domain)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
+            if (safeRegexTest(item.regex, url) || safeRegexTest(item.regex, domain)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
         }
       }
       if (!blockedInfo && title) {
         for (let i = 0; i < compiledRules.titles.length; i++) {
           const item = compiledRules.titles[i];
-          if (item.regex.test(title)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
+            if (safeRegexTest(item.regex, title)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
         }
       }
       if (!blockedInfo && snippet) {
         for (let i = 0; i < compiledRules.texts.length; i++) {
           const item = compiledRules.texts[i];
-          if (item.regex.test(snippet)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
+            if (safeRegexTest(item.regex, snippet)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
         }
       }
       if (!blockedInfo) {
@@ -1184,11 +1236,11 @@
           const ruleObj = compiledRules.conditionalRules[i];
           if (!checkDynamicConditions(ruleObj.conditions, title)) continue;
           if (ruleObj.type === 'url' || ruleObj.type === 'regex') {
-            if (ruleObj.regex.test(url) || ruleObj.regex.test(domain)) { blockedInfo = {rule: ruleObj.originalRule, source: ruleObj.source}; break; }
+            if (safeRegexTest(ruleObj.regex, url) || safeRegexTest(ruleObj.regex, domain)) { blockedInfo = {rule: ruleObj.originalRule, source: ruleObj.source}; break; }
           } else if (ruleObj.type === 'title' && title) {
-            if (ruleObj.regex.test(title)) { blockedInfo = {rule: ruleObj.originalRule, source: ruleObj.source}; break; }
+            if (safeRegexTest(ruleObj.regex, title)) { blockedInfo = {rule: ruleObj.originalRule, source: ruleObj.source}; break; }
           } else if (ruleObj.type === 'text' && snippet) {
-            if (ruleObj.regex.test(snippet)) { blockedInfo = {rule: ruleObj.originalRule, source: ruleObj.source}; break; }
+            if (safeRegexTest(ruleObj.regex, snippet)) { blockedInfo = {rule: ruleObj.originalRule, source: ruleObj.source}; break; }
           }
         }
       }
@@ -2771,10 +2823,15 @@
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
+  function setInputValue(id, value) {
+    const input = document.getElementById(id);
+    if (input) input.value = value == null ? '' : String(value);
+  }
+
   // 配置持久化
-  function persistConfig() {
+  function persistConfig(updateModifiedTime = true) {
     GM_setValue(CONFIG_KEY, currentConfig);
-    GM_setValue(LOCAL_LAST_MODIFIED_KEY, Date.now());
+    if (updateModifiedTime) GM_setValue(LOCAL_LAST_MODIFIED_KEY, Date.now());
   }
 
   function syncRulesTextarea() {
@@ -3329,10 +3386,11 @@
 
   // 高亮面板
     function showHighlightColorPanel() {
-      const existing = document.getElementById('searchfilter-hlcolor-panel');
-      if (existing) {
-        existing.remove();
-        return;
+    const existing = document.getElementById('searchfilter-hlcolor-panel');
+    if (existing) {
+      existing.dispatchEvent(new CustomEvent('searchfilter-color-close'));
+      existing.remove();
+      return;
       }
 
     function hsvToRgb(h, s, v) {
@@ -3484,8 +3542,10 @@
     }
 
     svCanvas.addEventListener('mousedown', (e) => { svDragging = true; onSVMove(e.clientX, e.clientY); });
-    document.addEventListener('mousemove', (e) => { if (svDragging) onSVMove(e.clientX, e.clientY); });
-    document.addEventListener('mouseup', () => { svDragging = false; });
+    const onSVMouseMove = (e) => { if (svDragging) onSVMove(e.clientX, e.clientY); };
+    const onSVMouseUp = () => { svDragging = false; };
+    document.addEventListener('mousemove', onSVMouseMove);
+    document.addEventListener('mouseup', onSVMouseUp);
 
     const hueCanvas = document.getElementById('hlcolor-hue-canvas');
     let hueDragging = false;
@@ -3499,8 +3559,10 @@
     }
 
     hueCanvas.addEventListener('mousedown', (e) => { hueDragging = true; onHueMove(e.clientY); });
-    document.addEventListener('mousemove', (e) => { if (hueDragging) onHueMove(e.clientY); });
-    document.addEventListener('mouseup', () => { hueDragging = false; });
+    const onHueMouseMove = (e) => { if (hueDragging) onHueMove(e.clientY); };
+    const onHueMouseUp = () => { hueDragging = false; };
+    document.addEventListener('mousemove', onHueMouseMove);
+    document.addEventListener('mouseup', onHueMouseUp);
 
     function updatePreview(i) {
       const input = document.getElementById(`hlcolor-input-${i}`);
@@ -3556,9 +3618,17 @@
     };
 
     const closePanel = bindOutsideClickClose(panel);
+    const cleanupColorListeners = () => {
+      document.removeEventListener('mousemove', onSVMouseMove);
+      document.removeEventListener('mouseup', onSVMouseUp);
+      document.removeEventListener('mousemove', onHueMouseMove);
+      document.removeEventListener('mouseup', onHueMouseUp);
+    };
+    panel.addEventListener('searchfilter-color-close', cleanupColorListeners, { once: true });
 
     document.getElementById('hlcolor-cancel').onclick = (e) => {
       e.stopPropagation();
+      cleanupColorListeners();
       closePanel();
     };
   }
@@ -3720,7 +3790,7 @@
     subscriptions.forEach((sub, index) => {
       rowsHtml += `<div class="subscription-row" data-index="${index}">
                 <div class="subscription-input-row">
-                    <input type="text" class="subscription-url" placeholder="https://example.com/rules.txt" value="${sub.url || ''}">
+                    <input type="text" class="subscription-url" placeholder="https://example.com/rules.txt">
                     <button class="delete-subscription-btn" data-index="${index}">❌</button>
                 </div>
                 <div class="subscription-status-message"></div>
@@ -3744,6 +3814,9 @@
         `;
 
     const container = document.getElementById('subscription-rows-container');
+    container.querySelectorAll('.subscription-url').forEach((input, index) => {
+      input.value = subscriptions[index]?.url || '';
+    });
     const addBtn = document.getElementById('add-subscription');
     const autoUpdateSwitch = document.getElementById('subscription-auto-update');
     if (autoUpdateSwitch) {
@@ -3906,16 +3979,16 @@
             </label>
         </div>
     </div>
-    <div class="webdav-row"><label>${t('webdavUrl')}</label><input id="webdav-url" type="text" placeholder="https://example.com/dav/files/" value="${webdavConfig.url}"></div>
-    <div class="webdav-row"><label>${t('webdavUser')}</label><input id="webdav-username" type="text" value="${webdavConfig.username}"></div>
+    <div class="webdav-row"><label>${t('webdavUrl')}</label><input id="webdav-url" type="text" placeholder="https://example.com/dav/files/"></div>
+    <div class="webdav-row"><label>${t('webdavUser')}</label><input id="webdav-username" type="text"></div>
     <div class="webdav-row">
         <label>${t('webdavPass')}</label>
         <div style="position: relative; display: flex; align-items: center;">
-            <input id="webdav-password" type="password" value="${webdavConfig.password}" style="padding-right: 35px !important;">
+            <input id="webdav-password" type="password" style="padding-right: 35px !important;">
             <button id="webdav-toggle-password" type="button" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; font-size: 16px; line-height: 1; color: #718096; display: flex; align-items: center; justify-content: center; z-index: 1;">🐵</button>
         </div>
     </div>
-    <div class="webdav-row"><label>${t('filename')}</label><input id="webdav-filename" type="text" placeholder="rules.txt" value="${webdavConfig.filename}"></div>
+    <div class="webdav-row"><label>${t('filename')}</label><input id="webdav-filename" type="text" placeholder="rules.txt"></div>
     <div class="webdav-btn-group">
         <button id="webdav-upload" class="searchfilter-button searchfilter-button-success">${t('upload')}</button>
         <button id="webdav-download" class="searchfilter-button searchfilter-button-primary">${t('download')}</button>
@@ -3928,6 +4001,10 @@
     const usernameInput = document.getElementById('webdav-username');
     const passwordInput = document.getElementById('webdav-password');
     const filenameInput = document.getElementById('webdav-filename');
+    urlInput.value = webdavConfig.url || '';
+    usernameInput.value = webdavConfig.username || '';
+    passwordInput.value = webdavConfig.password || '';
+    filenameInput.value = webdavConfig.filename || 'rules.txt';
 
     // 密码显隐
     const togglePasswordBtn = document.getElementById('webdav-toggle-password');
@@ -4082,7 +4159,7 @@
     }
 
     currentConfig.rules = mergedRules;
-    persistConfig();
+    persistConfig(false);
     forceReprocessAll();
     GM_setValue(WEBDAV_LAST_SYNC_KEY, Date.now());
   }
@@ -4136,6 +4213,7 @@
     const content = textarea.value;
     if (!content.trim()) {
       alert(t('noRulesExport'));
+      preventPanelClose = false;
       return;
     }
     const now = new Date();
