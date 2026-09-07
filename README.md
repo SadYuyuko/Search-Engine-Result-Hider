@@ -37,6 +37,73 @@
 2. 脚本扩展有限不支持`##`DOM语法规则，通过订阅导入会自动清除
 3. 在脚本中添加域名规则时可不使用`*://*.`前缀直接写域名，但对于需要同时在ublacklist使用的规则必须加上
 
+### 规则语法说明（以脚本实际行为为准）
+
+| 项目 | 说明 |
+| --- | --- |
+| 基本格式 | 每行一条规则；空行忽略；以 `#` 开头的整行是注释 |
+| 匹配范围 | 搜索结果 URL/域名、标题或摘要，不是打开后的网页完整正文 |
+| URL 通配符 | 支持 `*`、`?`；裸域名如 `example.com` 会按域名规则处理 |
+| 跨工具使用 | 与 uBlacklist 共用时建议始终写完整的 `*://` 形式 |
+
+**URL 通配符规则**
+
+| 规则 | 说明 |
+| --- | --- |
+| `example.com` | 脚本内按域名规则处理 |
+| `*://example.com/*` | 匹配主域名 URL |
+| `*://*.example.com/*` | 匹配主域名及子域名 |
+| `*://*.example.com/path/*` | 匹配指定路径 |
+
+脚本中的裸域名规则可以省略 `*://*.`；如果规则还要交给 uBlacklist 使用，建议始终写完整的 `*://` 形式。
+
+**正则规则**
+
+脚本支持 JavaScript 正则表达式，正则边界使用 `/.../`：
+
+| 类型 | 格式 | 匹配内容 |
+| --- | --- | --- |
+| URL 正则 | `/正则表达式/flags` | 结果 URL 或域名 |
+| 标题正则 | `title/正则表达式/flags` | 结果标题 |
+| 摘要正则 | `text/正则表达式/flags` | 结果摘要/snippet |
+| 条件标题正则 | `规则 @if(title =~ /正则表达式/flags)` | 标题条件 |
+
+| 示例 | 说明 |
+| --- | --- |
+| `title/.*example.*/i` | 标题不区分大小写匹配 |
+| `text/.*advertisement.*/i` | 摘要不区分大小写匹配 |
+| `i`、`m`、`s` | `title/`、`text/` 支持的 flags |
+| `g`、`y` | 不建议依赖其迭代状态 |
+
+普通 URL 正则使用浏览器支持的 JavaScript `RegExp` flags。`title/` 和 `text/` 规则支持 `i`、`m`、`s`；其中 `s` 会转换为跨行匹配。推荐使用 `i` 进行不区分大小写匹配：
+
+不要在过滤规则中依赖 `g` 或 `y` 的迭代状态；规则只判断是否匹配，不执行全局提取。
+
+**白名单和高亮前缀**
+
+| 规则 | 说明 |
+| --- | --- |
+| `@*://*.example.com/*` | 白名单 |
+| `@1 *://*.example.com/*` | 一级高亮 |
+| `@5 title/.*official.*/i` | 五级标题高亮 |
+| `@`、`@1` | 没有规则内容，不会产生有效匹配 |
+
+单独的 `@` 或 `@1` 没有实际规则内容，不会产生有效匹配。高亮级别为 `@1` 到 `@5`。
+
+**条件规则**
+
+| 条件规则 | 说明 |
+| --- | --- |
+| `规则 @if(google)` | 搜索引擎条件 |
+| `规则 @if(site="google.com.hk")` | 搜索页面站点条件 |
+| `规则 @if(title *= "keyword")` | 标题包含条件 |
+| `规则 @if(title =~ /keyword/i)` | 标题正则条件 |
+| `规则 @if(google|bing)` | OR 条件 |
+| `规则 @if(title *= "foo" | title *= "bar")` | 多个标题 OR 条件 |
+| `规则 @if(title *= "keyword") @if(site="google.com")` | 多个后置条件 |
+| `&&`、`!`、URL/语言/地区条件 | 当前不支持 |
+| `##`、`@@` | Adblock 规则，不是本脚本格式 |
+
 ### 基础规则：
 
 **URL匹配：**
@@ -87,9 +154,9 @@
 | `*://*.example.com/* @if(title *= "示例")` | 屏蔽`example.com`的标题中含有`示例`的结果，复合规则的标题规则默认忽略大小写 |
 | `*://*.example.com/* @if(title *= "关键词1" \| title *= "关键词2" \| title *= "关键词3")` | 上条规则的多关键词支持 |
 | `*://*.example.com/* @if(title =~ /关键词1\|关键词2\|关键词3/)` | 上条规则的正则写法，此形式需要加i才会忽略大小写(`title =~ /.../i`) |
-| `@if (Google) {*://*.example.com/*}` | 仅在Google中屏蔽该`example.com` |
-| `@if (site = "google.com.hk") {*://*.example.com/*}` | 仅在Google HK中屏蔽`example.com` |
-| `@if(Google) {*://*.example.com/* @if(title *= "示例") @if(site = "google.com")}` | 仅在Google中，屏蔽`example.com`的搜索结果中标题含有`示例`的结果 |
+| `*://*.example.com/* @if(Google)` | 仅在Google中屏蔽该`example.com` |
+| `*://*.example.com/* @if(site = "google.com.hk")` | 仅在Google HK中屏蔽`example.com` |
+| `*://*.example.com/* @if(Google) @if(title *= "示例") @if(site = "google.com")` | 仅在Google中，屏蔽`example.com`的搜索结果中标题含有`示例`的结果 |
 
 **摘要匹配：**
 

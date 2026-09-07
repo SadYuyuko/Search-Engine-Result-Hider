@@ -37,6 +37,73 @@ Currently supported search engines: Bing, Google, DuckDuckGo, Yandex, Brave, Yah
 2. `##` DOM syntax rules are not supported. Such rules will be automatically removed when imported via subscription.  
 3. When adding domain name rules in the script, you can write the domain directly without the `*://*.` prefix, but rules used in uBlacklist must include the full prefix.
 
+### Rule Syntax (Based on the Current Script)
+
+| Item | Description |
+| --- | --- |
+| Basic format | One rule per line; empty lines are ignored; lines beginning with `#` are comments |
+| Match scope | Result URL/domain, title, or snippet; not the full page body |
+| URL wildcards | Supports `*` and `?`; bare domains such as `example.com` are treated as domain rules |
+| Cross-tool use | Use the full `*://` form when sharing rules with uBlacklist |
+
+**URL Wildcard Rules**
+
+| Rule | Description |
+| --- | --- |
+| `example.com` | Treated as a domain rule by this script |
+| `*://example.com/*` | Matches URLs on the main domain |
+| `*://*.example.com/*` | Matches the main domain and subdomains |
+| `*://*.example.com/path/*` | Matches a specific path |
+
+Inside this script, a bare domain may omit the `*://*.` prefix. Use the full `*://` form when sharing the rule with uBlacklist.
+
+**Regular Expression Rules**
+
+Supported regex rule types:
+
+| Type | Format | Matches |
+| --- | --- | --- |
+| URL regex | `/pattern/flags` | Result URL or domain |
+| Title regex | `title/pattern/flags` | Result title |
+| Snippet regex | `text/pattern/flags` | Result snippet |
+| Conditional title regex | `rule @if(title =~ /pattern/flags)` | Title condition |
+
+| Example | Description |
+| --- | --- |
+| `title/.*example.*/i` | Case-insensitive title match |
+| `text/.*advertisement.*/i` | Case-insensitive snippet match |
+| `i`, `m`, `s` | Flags supported by `title/` and `text/` |
+| `g`, `y` | Do not rely on their iteration state |
+
+Plain URL regex rules use JavaScript `RegExp` flags supported by the browser. `title/` and `text/` rules support `i`, `m`, and `s`; `s` is converted to a cross-line match. Use `i` for case-insensitive matching:
+
+Do not rely on `g` or `y` iteration state in filtering rules. Rules only test whether a match exists; they do not extract all matches.
+
+**Whitelist and Highlight Prefixes**
+
+| Rule | Description |
+| --- | --- |
+| `@*://*.example.com/*` | Whitelist |
+| `@1 *://*.example.com/*` | Level-1 highlight |
+| `@5 title/.*official.*/i` | Level-5 title highlight |
+| `@`, `@1` | No rule body; cannot match anything |
+
+An isolated `@` or `@1` has no rule body and cannot match anything. Highlight levels are `@1` through `@5`.
+
+**Conditional Rules**
+
+| Condition rule | Description |
+| --- | --- |
+| `rule @if(google)` | Search-engine condition |
+| `rule @if(site="google.com.hk")` | Search-page site condition |
+| `rule @if(title *= "keyword")` | Title substring condition |
+| `rule @if(title =~ /keyword/i)` | Title regex condition |
+| `rule @if(google|bing)` | OR condition |
+| `rule @if(title *= "foo" | title *= "bar")` | Multiple title OR conditions |
+| `rule @if(title *= "keyword") @if(site="google.com")` | Multiple postfix conditions |
+| `&&`, `!`, URL/language/region conditions | Not supported |
+| `##`, `@@` | Adblock syntax, not supported by this script |
+
 ### Basic Rules:  
 
 **URL Matching:**  
@@ -87,9 +154,9 @@ Note: Only 5 highlight colors are supported, numbered `@1` through `@5`. Open th
 | `*://*.example.com/* @if(title *= "keyword")` | block results from `example.com` whose title contains the `keyword`. Title rules in composite rules are case-insensitive by default |
 | `*://*.example.com/* @if(title *= "keyword1" \| title *= "keyword2" \| title *= "keyword3")` | multi-keyword support for the above rule |
 | `*://*.example.com/* @if(title =~ /keyword1\|keyword2\|keyword3/)` | regex form of the above rule, the rule need `i` to case-insensitive (`title =~ /.../i`) |
-| `@if (Google) { *://*.example.com/* }` | block `example.com` only on Google |
-| `@if (site = "google.com.hk") { *://*.example.com/* }` | block `example.com` only on Google HK |
-| `@if(Google) { *://*.example.com/* @if(title *= "keyword") @if(site = "google.com") }` | block results from `example.com` whose title contains `keyword`, only on Google |
+| `*://*.example.com/* @if(Google)` | block `example.com` only on Google |
+| `*://*.example.com/* @if(site = "google.com.hk")` | block `example.com` only on Google HK |
+| `*://*.example.com/* @if(Google) @if(title *= "keyword") @if(site = "google.com")` | block results from `example.com` whose title contains `keyword`, only on Google |
 
 **Snippet Matching:**  
 
