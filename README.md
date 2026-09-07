@@ -35,7 +35,6 @@
 **注意：**
 1. 订阅同步频率为每天一次，支持最多3条订阅且只支持.txt远程链接，例如`https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/rules.txt`，应用优先级在本地规则之后。由于脚本可分配性能有限，规则总数建议不超过2w条避免手机爆炸🤳💥
 2. 脚本扩展有限不支持`##`DOM语法规则，通过订阅导入会自动清除
-3. 在脚本中添加域名规则时可不使用`*://*.`前缀直接写域名，但对于需要同时在ublacklist使用的规则必须加上
 
 ### 基础规则：
 
@@ -48,7 +47,7 @@
 | `*://*.example.com/path/*` | 匹配`example.com`特定路径 |
 | `*://*.example.*` | 匹配`example.com`所有顶级域名 |
 
-脚本中的裸域名规则可以省略 `*://*.`；如果规则还要交给 uBlacklist 使用，建议始终写完整的 `*://` 形式。
+在脚本中添加域名规则时可不使用`*://*.`前缀直接写域名(`example.com`)，但对于需要同时在ublacklist使用的规则必须加上
 
 **URL匹配：**
 
@@ -85,11 +84,11 @@
 
 | 规则 | 说明 |
 | --- | --- |
-| `@1 *://*.example.com/*` | 给`example.com`及其子域名的搜索结果加上颜色边框 |
-| `@1 title/.*示例.*/` | 给匹配到标题带有`示例`的结果加上颜色边框 |
+| `@N *://*.example.com/*` | 给`example.com`及其子域名的搜索结果加上颜色边框 |
+| `@N title/.*示例.*/` | 给匹配到标题带有`示例`的结果加上颜色边框 |
 
 优先级：高亮＞白名单，但黑名单＞高亮  
-注意：只支持5种颜色，即`@1`～`@5`，通过脚本菜单打开自定义颜色面板
+注意：`@N` 只支持5种颜色，即`@1`～`@5`，通过脚本菜单打开自定义颜色面板
 
 **复合规则：**
 
@@ -99,8 +98,8 @@
 | `*://*.example.com/* @if(title *= "关键词1" \| title *= "关键词2" \| title *= "关键词3")` | 上条规则的多关键词支持 |
 | `*://*.example.com/* @if(title =~ /关键词1\|关键词2\|关键词3/)` | 上条规则的正则写法，此形式需要加i才会忽略大小写(`title =~ /.../i`) |
 | `*://*.example.com/* @if(Google)` | 仅在Google中屏蔽该`example.com` |
+| `*://*.example.com/* @if(Google) @if(title *= "示例")` | 仅在Google中，屏蔽`example.com`的搜索结果中标题含有`示例`的结果 |
 | `*://*.example.com/* @if(site = "google.com.hk")` | 仅在Google HK中屏蔽`example.com` |
-| `*://*.example.com/* @if(Google) @if(title *= "示例") @if(site = "google.com")` | 仅在Google中，屏蔽`example.com`的搜索结果中标题含有`示例`的结果 |
 
 **摘要匹配：**
 
