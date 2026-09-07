@@ -37,7 +37,7 @@ Currently supported search engines: Bing, Google, DuckDuckGo, Yandex, Brave, Yah
 2. `##` DOM syntax rules are not supported. Such rules will be automatically removed when imported via subscription.  
 3. When adding domain name rules in the script, you can write the domain directly without the `*://*.` prefix, but rules used in uBlacklist must include the full prefix.
 
-### Rule Syntax (Based on the Current Script)
+### Basic Rules:
 
 | Item | Description |
 | --- | --- |
@@ -104,7 +104,7 @@ An isolated `@` or `@1` has no rule body and cannot match anything. Highlight le
 | `&&`, `!`, URL/language/region conditions | Not supported |
 | `##`, `@@` | Adblock syntax, not supported by this script |
 
-### Basic Rules:  
+**URL Matching:**  
 
 **URL Matching:**  
 
