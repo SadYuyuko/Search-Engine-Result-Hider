@@ -49,15 +49,6 @@
 
 在脚本中添加域名规则时可不使用`*://*.`前缀直接写域名(`example.com`)，但对于需要同时在ublacklist使用的规则必须加上
 
-**URL匹配：**
-
-| 规则 | 说明 |
-| --- | --- |
-| `*://www.example.com/*` | 匹配`example.com` |
-| `*://*.example.com/*` | 匹配`example.com`及其所有子域名 |
-| `*://*.example.com/path/*` | 匹配`example.com`特定路径 |
-| `*://*.example.*` | 匹配`example.com`所有顶级域名 |
-
 **标题匹配：**
 
 | 规则 | 说明 |
