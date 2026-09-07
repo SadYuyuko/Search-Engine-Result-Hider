@@ -35,7 +35,6 @@ Currently supported search engines: Bing, Google, DuckDuckGo, Yandex, Brave, Yah
 **Notes:**  
 1. Subscriptions update once per day. Only remote `.txt` file links are supported, with a maximum of 3 subscriptions. Subscription rules are applied after local rules. Due to the limited performance budget of user scripts, the total number of rules should not exceed 20,000 to avoid performance issues on mobile devices.  
 2. `##` DOM syntax rules are not supported. Such rules will be automatically removed when imported via subscription.  
-3. When adding domain name rules in the script, you can write the domain directly without the `*://*.` prefix, but rules used in uBlacklist must include the full prefix.
 
 ### Basic Rules:
 
@@ -48,7 +47,7 @@ Currently supported search engines: Bing, Google, DuckDuckGo, Yandex, Brave, Yah
 | `*://*.example.com/path/*` | matches a specific path under `example.com` |
 | `*://*.example.*` | matches `example.com` across all top-level domains |
 
-When adding domain name rules in the script, you can write the domain directly without the `*://*.` prefix (e.g., `example.com`), but rules used in uBlacklist must include the full prefix.
+When adding domain name rules in the script, you can write the domain directly without the `*://*.` prefix (e.g. `example.com`), but rules used in uBlacklist must include the full prefix.
 
 **Title Matching:**
 
