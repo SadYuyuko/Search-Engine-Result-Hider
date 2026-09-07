@@ -95,7 +95,7 @@
 | --- | --- |
 | `*://*.example.com/* @if(title *= "示例")` | 屏蔽`example.com`的标题中含有`示例`的结果，复合规则的标题规则默认忽略大小写 |
 | `*://*.example.com/* @if(title *= "关键词1" \| title *= "关键词2")` | 上条规则的多关键词支持 |
-| `*://*.example.com/* @if(title =~ /关键词1\|关键词2\|关键词3/)` | 上条规则的正则写法，此形式需要加i才会忽略大小写(`title =~ /.../i`) |
+| `*://*.example.com/* @if(title =~ /关键词1\|关键词2/)` | 上条规则的正则写法，此形式需要加i才会忽略大小写(`title =~ /.../i`) |
 | `*://*.example.com/* @if(Google)` | 仅在Google中屏蔽该`example.com` |
 | `*://*.example.com/* @if(Google) @if(title *= "示例")` | 仅在Google中屏蔽`example.com`的搜索结果中标题含有`示例`的结果 |
 | `*://*.example.com/* @if(google\|bing)` | 在Google或Bing中都屏蔽`example.com` |
