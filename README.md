@@ -101,6 +101,8 @@
 | `*://*.example.com/* @if(google\|bing)` | 在Google或Bing中都屏蔽`example.com` |
 | `*://*.example.com/* @if(google\|bing) @if(title *= "关键词1" \| title *= "关键词2")` | 在Google或Bing中都屏蔽`example.com`的搜索结果中标题含有`关键词1`或`关键词2`的结果 |
 | `*://*.example.com/* @if(site = "google.com.hk")` | 仅在Google HK中屏蔽`example.com` |
+| `title/.*示例.*/ @if(Google)` | 仅在Google中屏蔽标题含有`示例`的结果 |
+| `title/.*示例.*/ @if(google\|bing)` | 在Google或Bing中都屏蔽标题含有`示例`的结果 |
 
 ### 截图：
 
