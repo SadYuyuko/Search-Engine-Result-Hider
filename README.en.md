@@ -101,6 +101,8 @@ Note: `@N` only supports 5 colors, numbered `@1` through `@5`. Open the custom c
 | `*://*.example.com/* @if(google\|bing)` | block `example.com` on both Google and Bing |
 | `*://*.example.com/* @if(google\|bing) @if(title *= "keyword1" \| title *= "keyword2")` | block results from `example.com` whose title contains `keyword1` or `keyword2`, on both Google and Bing |
 | `*://*.example.com/* @if(site = "google.com.hk")` | block `example.com` only on Google HK |
+| `title/.*keyword.*/ @if(Google)` | block results title contains `keyword`, only on Google |
+| `title/.*keyword.*/ @if(google\|bing)` | block results title contains `keyword` on both Google and Bing |
 
 ### Screenshots:
 
