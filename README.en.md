@@ -95,7 +95,7 @@ Note: `@N` only supports 5 colors, numbered `@1` through `@5`. Open the custom c
 | --- | --- |
 | `*://*.example.com/* @if(title *= "keyword")` | block results from `example.com` whose title contains the `keyword`. Title rules in composite rules are case-insensitive by default |
 | `*://*.example.com/* @if(title *= "keyword1" \| title *= "keyword2")` | multi-keyword support for the above rule |
-| `*://*.example.com/* @if(title =~ /keyword1\|keyword2\|keyword3/)` | regex form of the above rule, the rule need `i` to case-insensitive (`title =~ /.../i`) |
+| `*://*.example.com/* @if(title =~ /keyword1\|keyword2/)` | regex form of the above rule, the rule need `i` to case-insensitive (`title =~ /.../i`) |
 | `*://*.example.com/* @if(Google)` | block `example.com` only on Google |
 | `*://*.example.com/* @if(Google) @if(title *= "keyword")` | block results from `example.com` whose title contains `keyword`, only on Google |
 | `*://*.example.com/* @if(google\|bing)` | block `example.com` on both Google and Bing |
