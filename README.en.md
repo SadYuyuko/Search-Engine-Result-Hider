@@ -1,6 +1,6 @@
 ## Search Engine Result Hider
 
-## 搜索引擎结果屏蔽器
+## A tool to hide unwanted search results
 
 ### <img src="https://github.com/user-attachments/assets/92954a5d-7157-40ed-9309-b9d75bf2bd32" width="30" height="30" align="center"> [Github](https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js) | [Greasy Fork](https://greasyfork.org/zh-CN/scripts/552394) Install
 
@@ -27,14 +27,15 @@ Currently supported search engines: Bing, Google, DuckDuckGo, Yandex, Brave, Yah
 　┗ 🟢 Click to open the panel  
 　┗ 🔵 Click to toggle visibility of blocked results; long-press to open the configuration panel. Clicking the block button on a blocked result unblocks it.
 
-**About WebDAV:**  
-1. Auto-sync runs once per hour, performing deduplication and merging. Manual upload/download performs an overwrite sync.  
-2. WebDAV sync requires cross-origin request permissions; only HTTPS addresses and full folder path are supported, e.g., for Nutstore: `https://dav.jianguoyun.com/dav/your_folder/`.  
+**About WebDAV:**
+1. Auto-sync runs once per hour, performing deduplication and merging. Manual upload/download performs an overwrite sync.
+2. WebDAV sync requires cross-origin request permissions; only HTTPS addresses and full folder path are supported, e.g., for Nutstore: `https://dav.jianguoyun.com/dav/your_folder/`.
 3. Sync configuration takes effect after refreshing the page.
 
-**Notes:**  
-1. Subscriptions update once per day. Only remote `.txt` file links are supported, with a maximum of 3 subscriptions. Subscription rules are applied after local rules. Due to the limited performance budget of user scripts, the total number of rules should not exceed 20,000 to avoid performance issues on mobile devices.  
-2. `##` DOM syntax rules are not supported. Such rules will be automatically removed when imported via subscription.  
+**Notes:**
+1. Subscriptions update once per day. Only remote `.txt` file links are supported, with a maximum of 3 subscriptions. Subscription rules are applied after local rules. Due to the limited performance budget of user scripts, the total number of rules should not exceed 20,000 to avoid performance issues on mobile devices.
+2. `##` DOM syntax rules are not supported. Such rules will be automatically removed when imported via subscription.
+3. Common regular uses browser-supported JavaScript `RegExp` flags, supports `i`,`m`,`s`, where `s` will be converted to cross-line matching; does not support `g`,`y`, script rules only determine whether to match without performing global extraction.
 
 ### Basic Rules:
 
