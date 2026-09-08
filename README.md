@@ -72,6 +72,17 @@
 | `@*://example.com/abc/*` | 只放行`example.com`特定路径 |
 | `@*://*.example.com/abc/*` | 只放行`example.com`子域名特定路径 |
 
+**正则匹配：**
+
+| 规则 | 说明 |
+| --- | --- |
+| `/pattern/flags` | 使用正则表达式匹配URL，如`/example\.(com\|net)/i` |
+| `title/pattern/flags` | 使用正则表达式匹配标题，如`title/.*屏蔽.*/i` |
+| `text/pattern/flags` | 使用正则表达式匹配摘要内容，如`text/.*广告.*/i` |
+
+支持的flags：`i`(忽略大小写)、`m`(多行模式)、`s`(点号匹配换行，脚本内部转换为跨行匹配)  
+不支持`g`和`y`，脚本只判断是否匹配不执行全局提取
+
 **摘要匹配：**
 
 | 规则 | 说明 |
