@@ -107,7 +107,7 @@
 
 | 条件类型 | 语法 | 说明 |
 | --- | --- | --- |
-| 搜索引擎 | `$site = "google"` | 仅在指定搜索引擎中生效，可写：`google`/`bing`/`duckduckgo`(`ddg`)/`yandex`/`brave`/`yahoo`，忽略大小写，分隔符可用`=`或`:` |
+| 搜索引擎 | `$site = "google"` | 仅在指定搜索引擎中生效，可写`google`、`bing`、`duckduckgo`(`ddg`)、`yandex`、`brave`、`yahoo`，忽略大小写，分隔符可用`=`或`:` |
 | 搜索站点 | `site = "google.com.hk"` | 仅在指定搜索引擎地区站点中生效 |
 | 标题包含 | `title *= "关键词"` | 标题中包含指定字符串`关键词` |
 | 标题精确 | `title = "关键词"` | 标题精确匹配指定字符串`关键词` |
