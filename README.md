@@ -33,7 +33,7 @@
 3. 同步配置在刷新后生效
 
 **注意：**
-1. 订阅同步频率为每天一次，支持最多3条订阅且只支持.txt远程链接，例如`https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/rules.txt`，应用优先级在本地规则之后。由于脚本可分配性能有限，规则总数建议不超过2w条避免手机爆炸🤳💥
+1. 订阅同步频率为每天一次，支持最多3条订阅且只支持.txt远程链接，例如`https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Other/rules.txt`，在本地规则后追加应用。由于脚本可分配性能有限，规则总数建议不超过2w条避免手机爆炸🤳💥
 2. 脚本扩展有限不支持`##`DOM语法规则，通过订阅导入会自动清除
 
 ### 基础规则：
@@ -47,7 +47,7 @@
 | `*://*.example.com/path/*` | 匹配`example.com`特定路径 |
 | `*://*.example.*` | 匹配`example.com`所有顶级域名 |
 
-在脚本中添加域名规则时可不使用`*://*.`前缀直接写域名(`example.com`)，但对于需要同时在ublacklist使用的规则必须加上
+在脚本中添加域名规则时可不加`*://*.`前缀直接写域名(`example.com`)，但对于需要同时在ublacklist使用的规则必须加上
 
 **正则匹配：**
 
@@ -100,39 +100,36 @@
 
 **复合规则：**
 
-在规则后添加 `@if(...)` 可为规则附加条件，多个 `@if()` 之间为逻辑与关系，单个 `@if()` 内用 `|` 分隔为逻辑或关系。条件内的字符串匹配默认忽略大小写。
+在规则后添加 `@if(...)` 作为附加条件，多个 `@if` 条件同时生效，单个 `@if` 内用 `|` 分隔 `或` 条件，复合规则匹配默认忽略大小写
 
-`@if()` 支持的条件：
+`@if` 支持条件：
 
 | 条件类型 | 语法 | 说明 |
 | --- | --- | --- |
-| 搜索引擎 | `Google` / `Bing` / `DuckDuckGo` / `Yandex` / `Brave` / `Yahoo` | 仅在指定搜索引擎中生效 |
-| 站点 | `site = "google.com.hk"` | 仅在指定站点中生效 |
-| 标题包含 | `title *= "关键词"` | 标题中包含指定字符串 |
-| 标题精确 | `title = "示例 Domain"` | 标题精确匹配指定字符串 |
-| 标题前缀 | `title ^= "示例"` | 标题以指定字符串开头 |
-| 标题后缀 | `title $= "Domain"` | 标题以指定字符串结尾 |
-| 标题正则 | `title =~ /正则/` | 标题匹配正则表达式，需加`i`忽略大小写 |
-| URL包含 | `url *= "example"` | URL中包含指定字符串 |
+| 搜索引擎 | `Google` / `Bing` / `DuckDuckGo` / `Yandex` / `Brave` / `Yahoo` | 仅在指定搜索引擎中生效，名称忽略大小写 |
+| 搜索站点 | `site = "google.com.hk"` | 仅在指定搜索引擎地区站点中生效 |
+| 标题包含 | `title *= "关键词"` | 标题中包含指定字符串`关键词` |
+| 标题精确 | `title = "关键词"` | 标题精确匹配指定字符串`关键词` |
+| 标题前缀 | `title ^= "关键词"` | 标题以指定字符串`关键词`开头 |
+| 标题后缀 | `title $= "关键词"` | 标题以指定字符串`关键词`结尾 |
+| 标题正则 | `title =~ /正则/` | 标题匹配正则表达式，结尾加`i`忽略大小写 |
+| URL包含 | `url *= "example"` | URL中包含指定字符串`example` |
 
 复合规则示例：
 
 | 规则 | 说明 |
 | --- | --- |
-| `*://*.example.com/* @if(title *= "示例")` | 屏蔽`example.com`标题中含有`示例`的结果 |
-| `*://*.example.com/* @if(title = "示例文章")` | 屏蔽标题精确为`示例文章`的结果 |
-| `*://*.example.com/* @if(title ^= "【广告】")` | 屏蔽标题以`【广告】`开头的结果 |
-| `*://*.example.com/* @if(title $= " - 百度百科")` | 屏蔽标题以`- 百度百科`结尾的结果 |
-| `*://*.example.com/* @if(title *= "关键词1" \| title *= "关键词2")` | 标题含`关键词1`或`关键词2` |
-| `*://*.example.com/* @if(title =~ /关键词1\|关键词2/)` | 正则写法，需加`i`忽略大小写 |
-| `*://*.example.com/* @if(url *= "redirect")` | 屏蔽URL中含`redirect`的结果 |
-| `*://*.example.com/* @if(Google)` | 仅在Google中屏蔽 |
-| `*://*.example.com/* @if(google\|bing)` | 在Google或Bing中都屏蔽 |
-| `*://*.example.com/* @if(site = "google.com.hk")` | 仅在Google HK中屏蔽 |
-| `*://*.example.com/* @if(Google) @if(title *= "示例")` | 仅在Google中屏蔽标题含`示例`的结果 |
-| `*://*.example.com/* @if(google\|bing) @if(title *= "关键词1" \| title *= "关键词2")` | 在Google或Bing中屏蔽标题含指定关键词的结果 |
+| `*://*.example.com/* @if(title = "文章")` | 屏蔽`example.com`的标题中只为`文章`的结果 |
+| `*://*.example.com/* @if(title *= "关键词")` | 屏蔽`example.com`的标题中含有`关键词`的结果 |
+| `*://*.example.com/* @if(title *= "关键词1" \| title *= "关键词2")` | 屏蔽`example.com`的标题中含`关键词1`或`关键词2`的结果，默认忽略大小写 |
+| `*://*.example.com/* @if(title =~ /关键词1\|关键词2/)` | 上条规则的正则写法，需加`i`忽略大小写 |
+| `*://*.example.com/* @if(url *= "test")` | 屏蔽`example.com`的URL链接中含`test`的结果，如`example.com/*/test/*` |
+| `*://*.example.com/* @if(Google)` | 仅在Google中屏蔽`example.com` |
+| `*://*.example.com/* @if(google\|bing)` | 在Google或Bing中都屏蔽`example.com` |
+| `*://*.example.com/* @if(site = "google.com.hk")` | 仅在Google HK中屏蔽`example.com` |
+| `*://*.example.com/* @if(Google) @if(title *= "示例")` | 仅在Google中屏蔽标题含`示例`的`example.com`的结果 |
 | `title/.*示例.*/ @if(Google)` | 仅在Google中屏蔽标题含`示例`的结果 |
-| `title/.*示例.*/ @if(google\|bing)` | 在Google或Bing中屏蔽标题含`示例`的结果 |
+| `text/.*示例.*/ @if(google\|bing)` | 在Google或Bing中都屏蔽网页描述含`示例`的结果 |
 
 ### 截图：
 
