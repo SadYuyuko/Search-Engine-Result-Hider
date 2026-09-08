@@ -35,9 +35,18 @@ Currently supported search engines: Bing, Google, DuckDuckGo, Yandex, Brave, Yah
 **Notes:**
 1. Subscriptions update once per day. Only remote `.txt` file links are supported, with a maximum of 3 subscriptions. Subscription rules are applied after local rules. Due to the limited performance budget of user scripts, the total number of rules should not exceed 20,000 to avoid performance issues on mobile devices.
 2. `##` DOM syntax rules are not supported. Such rules will be automatically removed when imported via subscription.
-3. Common regular uses browser-supported JavaScript `RegExp` flags, supports `i`,`m`,`s`, where `s` will be converted to cross-line matching; does not support `g`,`y`, script rules only determine whether to match without performing global extraction.
 
 ### Basic Rules:
+
+**Regex Matching:**
+
+| Rule | Description |
+| --- | --- |
+| `/pattern/flags` | Use regex to match URL, e.g. `/example\.(com\|net)/i` |
+| `title/pattern/flags` | Use regex to match title, e.g. `title/.*block.*/i` |
+| `text/pattern/flags` | Use regex to match snippet, e.g. `text/.*ad.*/i` |
+
+Common regular uses browser-supported JavaScript `RegExp` flags, supports `i`,`m`,`s`, where `s` will be converted to cross-line matching; does not support `g`,`y`, script rules only determine whether to match without performing global extraction.
 
 **URL Matching:**
 
@@ -62,6 +71,13 @@ When adding domain name rules in the script, you can write the domain directly w
 | `title/^(?=.*keyword1)(?=.*(?:keyword2)).*/i` | matches results containing both `keyword1` and `keyword2`, regardless of order |
 | `title/^(?=.*keyword1)(?=.*(?:keyword2\|keyword3)).*/i` | same as above, but matches `keyword1` + `keyword2` or `keyword1` + `keyword3` |
 
+**Snippet Matching:**
+
+| Rule | Description |
+| --- | --- |
+| `text/.*example.*/` | matches results whose snippet/description contains `example`. This rule does not match titles. |
+| `text/.*example.*/i` | same as above, case-insensitive. |
+
 **Whitelist Matching:**
 
 | Rule | Description |
@@ -71,13 +87,6 @@ When adding domain name rules in the script, you can write the domain directly w
 | `@*://*.example.com/*` | allow `example.com` and all its subdomains |
 | `@*://example.com/abc/*` | allow only the specific path `/abc` on `example.com` |
 | `@*://*.example.com/abc/*` | allow only the specific path `/abc` on subdomains of `example.com` |
-
-**Snippet Matching:**
-
-| Rule | Description |
-| --- | --- |
-| `text/.*example.*/` | matches results whose snippet/description contains `example`. This rule does not match titles. |
-| `text/.*example.*/i` | same as above, case-insensitive. |
 
 **Highlighting Rules:**
 
