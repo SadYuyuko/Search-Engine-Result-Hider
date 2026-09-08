@@ -144,7 +144,7 @@
 | `title/.*示例.*/ @if($site = "google")` | 仅在Google中屏蔽标题含`示例`的结果 |
 | `text/.*示例.*/ @if($site = "google" \| $site = "bing")` | 在Google或Bing中都屏蔽网页描述含`示例`的结果 |
 
-## 截图：
+## 截图
 
 <img width="450" height="288" alt="01" src="https://github.com/user-attachments/assets/8523f109-84d1-4eba-b8d5-678b0a824340" />
 <br/>
