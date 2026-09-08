@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.6.1
+// @version      7.7.0
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -86,7 +86,6 @@
   if (currentConfig.subscriptionAutoUpdate === undefined) currentConfig.subscriptionAutoUpdate = false;
   if (currentConfig.errorDetection === undefined) currentConfig.errorDetection = true;
   let showHiddenResults = false;
-  let _orGroupCounter = 0;
 
   // 选择器
   const SELECTORS = {
@@ -247,6 +246,7 @@
       invalidRegexFlags: '正则 flags 无效: {flags}',
       emptyIfCondition: '@if() 条件不能为空',
       unknownIfCondition: '未知 @if 条件: {part}',
+      condExprError: '@if 表达式语法错误: {part}',
       invalidUrlWildcard: 'URL 通配符格式无效: {rule}',
     },
     'en': {
@@ -347,6 +347,7 @@
       invalidRegexFlags: 'Invalid regular expression flags: {flags}',
       emptyIfCondition: '@if() condition cannot be empty',
       unknownIfCondition: 'Unknown @if condition: {part}',
+      condExprError: 'Syntax error in @if expression: {part}',
       invalidUrlWildcard: 'Invalid URL wildcard format: {rule}',
     }
   };
@@ -403,56 +404,359 @@
       .filter(line => line.length > 0);
   }
 
-  function splitByPipe(str) {
-    const parts = [];
-    let current = '';
+  // 剥离行尾注释
+  function stripRuleComment(line) {
+    const n = line.length;
+    let i = 0;
+    while (i < n && /\s/.test(line[i])) i++;
+    if (line[i] === '@') {
+      i++;
+      while (i < n && /\d/.test(line[i])) i++;
+      while (i < n && /\s/.test(line[i])) i++;
+    }
+    const body = line.slice(i);
+    if (/^\/(?:[^/\\]|\\.)*\//.test(body)) { i += 1; }
+    else if (body.startsWith('title/')) { i += 6; }
+    else if (body.startsWith('text/')) { i += 5; }
+    let inRE = /^\/(?:[^/\\]|\\.)*\//.test(body) || body.startsWith('title/') || body.startsWith('text/');
+    let inReClass = false;
+    let inSQ = false;
+    let inDQ = false;
+    let ifDepth = 0;
+    let atIf = false;
+    for (; i < n; i++) {
+      const ch = line[i];
+      if (inSQ) {
+        if (ch === '\\') i++;
+        else if (ch === "'") inSQ = false;
+        continue;
+      }
+      if (inDQ) {
+        if (ch === '\\') i++;
+        else if (ch === '"') inDQ = false;
+        continue;
+      }
+      if (inRE) {
+        if (ch === '\\') { i++; continue; }
+        if (inReClass) {
+          if (ch === ']') inReClass = false;
+          continue;
+        }
+        if (ch === '[') { inReClass = true; continue; }
+        if (ch === '/') inRE = false;
+        continue;
+      }
+      if (atIf) {
+        if (ch === '(') { ifDepth = 1; atIf = false; continue; }
+        if (!/\s/.test(ch)) atIf = false;
+        continue;
+      }
+      if (ch === "'") { inSQ = true; continue; }
+      if (ch === '"') { inDQ = true; continue; }
+      if (ch === '@' && line.substr(i, 3).toLowerCase() === '@if') { atIf = true; i += 2; continue; }
+      if (ch === '(' && ifDepth > 0) { ifDepth++; continue; }
+      if (ch === ')' && ifDepth > 0) { ifDepth--; continue; }
+      if (ch === '#') {
+        const prev = line[i - 1];
+        if (prev === undefined || /\s/.test(prev)) {
+          let end = i;
+          while (end > 0 && /\s/.test(line[end - 1])) end--;
+          return line.slice(0, end);
+        }
+      }
+    }
+    return line;
+  }
+
+  // 条件表达式
+  function tokenizeCondExpr(str) {
+    const tokens = [];
+    let leaf = '';
+    let i = 0;
+    const n = str.length;
     let inSQ = false;
     let inDQ = false;
     let inRE = false;
-    let depth = 0;
+    let inReClass = false;
+    let leafParens = 0;
 
-    for (let i = 0; i < str.length; i++) {
+    const flushLeaf = () => {
+      const s = leaf.trim();
+      if (s) tokens.push(s);
+      leaf = '';
+    };
+    const pushChar = (ch) => { leaf += ch; };
+    const canStartRegex = () => {
+      const s = leaf.trim();
+      return s === '' || /(?:=~|~)$/.test(s) || /^(url|title|host|path|scheme)$/i.test(s);
+    };
+
+    while (i < n) {
       const ch = str[i];
 
-      if (ch === '\\' && i + 1 < str.length) {
-        current += ch + str[++i];
+      if (inSQ) {
+        if (ch === '\\') { pushChar(ch); if (i + 1 < n) pushChar(str[i + 1]); i += 2; continue; }
+        pushChar(ch);
+        if (ch === "'") inSQ = false;
+        i++;
         continue;
       }
-
-      if (!inDQ && !inRE && ch === "'") { inSQ = !inSQ; current += ch; continue; }
-      if (!inSQ && !inRE && ch === '"') { inDQ = !inDQ; current += ch; continue; }
-
-      if (!inSQ && !inDQ && ch === '(') { depth++; current += ch; continue; }
-      if (!inSQ && !inDQ && ch === ')') { depth--; current += ch; continue; }
-
-      if (!inSQ && !inDQ && ch === '/' && !inRE) {
-        const trimmed = current.replace(/\s+$/, '');
-        if (!trimmed || trimmed.endsWith('=~') || trimmed.endsWith('~') || trimmed.endsWith('|') || trimmed.endsWith('(')) {
-          inRE = true; current += ch; continue;
+      if (inDQ) {
+        if (ch === '\\') { pushChar(ch); if (i + 1 < n) pushChar(str[i + 1]); i += 2; continue; }
+        pushChar(ch);
+        if (ch === '"') inDQ = false;
+        i++;
+        continue;
+      }
+      if (inRE) {
+        if (ch === '\\') { pushChar(ch); if (i + 1 < n) pushChar(str[i + 1]); i += 2; continue; }
+        if (inReClass) {
+          pushChar(ch);
+          if (ch === ']') inReClass = false;
+          i++;
+          continue;
         }
-      }
-      if (!inSQ && !inDQ && ch === '/' && inRE) {
-        inRE = false; current += ch; continue;
-      }
-
-      if (!inSQ && !inDQ && !inRE && depth === 0 && ch === '|') {
-        parts.push(current);
-        current = '';
+        if (ch === '[') { inReClass = true; pushChar(ch); i++; continue; }
+        pushChar(ch);
+        if (ch === '/') inRE = false;
+        i++;
         continue;
       }
 
-      current += ch;
+      if (ch === "'") { inSQ = true; pushChar(ch); i++; continue; }
+      if (ch === '"') { inDQ = true; pushChar(ch); i++; continue; }
+      if (ch === '\\') { pushChar(ch); if (i + 1 < n) pushChar(str[i + 1]); i += 2; continue; }
+      if (ch === '/') {
+        if (canStartRegex()) { inRE = true; pushChar(ch); i++; continue; }
+        pushChar(ch); i++; continue;
+      }
+
+      if (ch === ' ' || ch === '\t' || ch === '\r' || ch === '\n') { pushChar(ch); i++; continue; }
+
+      if (ch === '&' || ch === '|') {
+        flushLeaf();
+        tokens.push(ch);
+        i++;
+        continue;
+      }
+
+      if (ch === '!') {
+        if (leaf.trim() === '' && leafParens === 0) {
+          flushLeaf();
+          tokens.push('!');
+          i++;
+          continue;
+        }
+        pushChar(ch); i++; continue;
+      }
+
+      if (ch === '(') {
+        if (leaf.trim() === '' && leafParens === 0) {
+          flushLeaf();
+          tokens.push('(');
+          i++;
+          continue;
+        }
+        leafParens++;
+        pushChar(ch); i++;
+        continue;
+      }
+
+      if (ch === ')') {
+        if (leafParens > 0) {
+          leafParens--;
+          pushChar(ch);
+          i++;
+          continue;
+        }
+        flushLeaf();
+        tokens.push(')');
+        i++;
+        continue;
+      }
+
+      pushChar(ch);
+      i++;
     }
 
-    if (current) parts.push(current);
-    return parts;
+    flushLeaf();
+    if (inSQ || inDQ || inRE || leafParens !== 0) return { error: true, tokens };
+    return { error: false, tokens };
+  }
+
+  // 递归下降解析
+  function parseCondExprTokens(tokens, leafParser, errors) {
+    let pos = 0;
+    const peek = () => tokens[pos];
+    const next = () => tokens[pos++];
+    const syntaxError = () => {
+      errors.push({ kind: 'syntax' });
+      return { type: 'const', value: false };
+    };
+
+    function parseOr() {
+      const children = [parseAnd()];
+      while (peek() === '|') { next(); children.push(parseAnd()); }
+      return children.length === 1 ? children[0] : { type: 'or', children };
+    }
+    function parseAnd() {
+      const children = [parseNot()];
+      while (peek() === '&') { next(); children.push(parseNot()); }
+      return children.length === 1 ? children[0] : { type: 'and', children };
+    }
+    function parseNot() {
+      if (peek() === '!') { next(); return { type: 'not', child: parseNot() }; }
+      return parsePrimary();
+    }
+    function parsePrimary() {
+      const t = peek();
+      if (t === undefined) return syntaxError();
+      if (t === '(') {
+        next();
+        const inner = parseOr();
+        if (peek() !== ')') return syntaxError();
+        next();
+        return inner;
+      }
+      if (t === ')' || t === '&' || t === '|' || t === '!') { next(); return syntaxError(); }
+      next();
+      return leafParser(t);
+    }
+
+    const ast = parseOr();
+    if (peek() !== undefined) return syntaxError();
+    return ast;
+  }
+
+  // 分析@if条件
+  function analyzeCondExpr(condStr, engine, site) {
+    if (engine === undefined) {
+      engine = getSearchEngine();
+      site = window.location.hostname;
+    }
+    const errors = [];
+    const tokRes = tokenizeCondExpr(condStr);
+    if (tokRes.error || !tokRes.tokens.length) return { ast: null, errors: [{ kind: 'syntax' }] };
+    const leafParser = (text) => {
+      const trimmed = text.trim();
+      const regexLeafFlags = (() => {
+        const m = trimmed.match(/^(?:title|url|host|path|scheme)\s*(?:=\~\s*)?\/((?:[^/\\]|\\.)*)\/([a-z]*)$/i);
+        return m ? m[2] : null;
+      })();
+      if (regexLeafFlags !== null && getInvalidRegexFlags(regexLeafFlags)) {
+        errors.push({ kind: 'flags', part: regexLeafFlags });
+        return { type: 'const', value: false };
+      }
+      try {
+        const parsed = parseConditionPart(trimmed, engine, site);
+        if (!parsed.matched) {
+          errors.push({ kind: 'unknown', part: trimmed });
+          return { type: 'const', value: false };
+        }
+        if (parsed.static !== undefined) return { type: 'const', value: parsed.static };
+        return { type: 'leaf', cond: parsed.dynamic };
+      } catch (e) {
+        errors.push({ kind: 'regex', part: trimmed });
+        return { type: 'const', value: false };
+      }
+    };
+    const ast = parseCondExprTokens(tokRes.tokens, leafParser, errors);
+    return { ast, errors };
+  }
+
+  // 常量折叠
+  function foldCondExpr(node) {
+    if (node.type === 'const' || node.type === 'leaf') return node;
+    if (node.type === 'not') {
+      const child = foldCondExpr(node.child);
+      if (child.type === 'const') return { type: 'const', value: !child.value };
+      return { type: 'not', child };
+    }
+    const isAnd = node.type === 'and';
+    const kids = node.children.map(foldCondExpr);
+    if (isAnd && kids.some(k => k.type === 'const' && !k.value)) return { type: 'const', value: false };
+    if (!isAnd && kids.some(k => k.type === 'const' && k.value)) return { type: 'const', value: true };
+    const rest = kids.filter(k => k.type !== 'const');
+    if (!rest.length) return { type: 'const', value: isAnd };
+    return rest.length === 1 ? rest[0] : { type: isAnd ? 'and' : 'or', children: rest };
+  }
+
+  // 动态条件求值
+  function evalDynamicLeaf(cond, title, url) {
+    if (cond.type === 'title') {
+      if (!title) return false;
+      const lowerTitle = title.toLowerCase();
+      if (cond.op === '=') return lowerTitle === cond.val;
+      if (cond.op === '^=') return lowerTitle.startsWith(cond.val);
+      if (cond.op === '$=') return lowerTitle.endsWith(cond.val);
+      if (cond.op === '*=') return lowerTitle.includes(cond.val);
+      if (cond.op === '=~') return safeRegexTest(cond.regex, title);
+      return false;
+    }
+    if (cond.type === 'url') {
+      if (!url) return false;
+      const lowerUrl = url.toLowerCase();
+      if (cond.op === '=') return lowerUrl === cond.val;
+      if (cond.op === '^=') return lowerUrl.startsWith(cond.val);
+      if (cond.op === '$=') return lowerUrl.endsWith(cond.val);
+      if (cond.op === '*=') return lowerUrl.includes(cond.val);
+      if (cond.op === '=~') return safeRegexTest(cond.regex, url);
+      return false;
+    }
+    if (cond.type === 'host' || cond.type === 'path' || cond.type === 'scheme') {
+      if (!url) return false;
+      let u;
+      try {
+        u = new URL(url);
+      } catch (e) {
+        return false;
+      }
+      const raw = cond.type === 'host' ? u.hostname
+        : cond.type === 'path' ? (u.pathname + u.search)
+        : u.protocol.slice(0, -1);
+      const value = raw.toLowerCase();
+      if (cond.op === '=') return value === cond.val;
+      if (cond.op === '^=') return value.startsWith(cond.val);
+      if (cond.op === '$=') {
+        if (cond.type === 'host') {
+          const target = cond.val.replace(/^\.+|\.+$/g, '');
+          return value === target || value.endsWith(`.${target}`);
+        }
+        return value.endsWith(cond.val);
+      }
+      if (cond.op === '*=') return value.includes(cond.val);
+      if (cond.op === '=~') return safeRegexTest(cond.regex, raw);
+      return false;
+    }
+    return false;
+  }
+
+  // 运行求值
+  function evalCondAST(ast, title, url) {
+    if (!ast) return true;
+    if (ast.type === 'and') {
+      for (let i = 0; i < ast.children.length; i++) {
+        if (!evalCondAST(ast.children[i], title, url)) return false;
+      }
+      return true;
+    }
+    if (ast.type === 'or') {
+      for (let i = 0; i < ast.children.length; i++) {
+        if (evalCondAST(ast.children[i], title, url)) return true;
+      }
+      return false;
+    }
+    if (ast.type === 'not') return !evalCondAST(ast.child, title, url);
+    if (ast.type === 'leaf') return evalDynamicLeaf(ast.cond, title, url);
+    return !!ast.value;
   }
 
   // 解析条件片段
   function parseConditionPart(trimmed, currentEngine, currentSite) {
-    const engineAlias = trimmed.toLowerCase().replace(/^ddg$/, 'duckduckgo');
-    if (/^(google|bing|duckduckgo|ddg|yandex|brave|yahoo)$/i.test(trimmed)) {
-      return { matched: true, static: currentEngine === engineAlias };
+    const enginePropMatch = trimmed.match(/^\$site\s*[=:]\s*['"](.*?)['"]$/i);
+    if (enginePropMatch) {
+      const target = enginePropMatch[1].trim().toLowerCase().replace(/^ddg$/, 'duckduckgo');
+      return { matched: true, static: currentEngine === target };
     }
 
     let siteMatch = trimmed.match(/^site\s*[=:]\s*['"](.*?)['"]$/i);
@@ -462,41 +766,21 @@
       return { matched: true, static: currentSite === target || currentSite.endsWith(`.${target}`) };
     }
 
-    const titleExactMatch = trimmed.match(/^title\s*\=\s*['"](.*?)['"]$/i);
-    if (titleExactMatch) {
-      return { matched: true, dynamic: { type: 'title', op: '=', val: titleExactMatch[1].toLowerCase() } };
+    const strMatch = trimmed.match(/^(title|url|host|path|scheme)\s*(\^=|\$=|\*=|=)\s*['"](.*?)['"]$/i);
+    if (strMatch) {
+      return { matched: true, dynamic: { type: strMatch[1].toLowerCase(), op: strMatch[2], val: strMatch[3].toLowerCase() } };
     }
 
-    const titlePrefixMatch = trimmed.match(/^title\s*\^\=\s*['"](.*?)['"]$/i);
-    if (titlePrefixMatch) {
-      return { matched: true, dynamic: { type: 'title', op: '^=', val: titlePrefixMatch[1].toLowerCase() } };
-    }
-
-    const titleSuffixMatch = trimmed.match(/^title\s*\$\=\s*['"](.*?)['"]$/i);
-    if (titleSuffixMatch) {
-      return { matched: true, dynamic: { type: 'title', op: '$=', val: titleSuffixMatch[1].toLowerCase() } };
-    }
-
-    const titleMatch = trimmed.match(/^title\s*\*\=\s*['"](.*?)['"]$/i);
-    if (titleMatch) {
-      return { matched: true, dynamic: { type: 'title', op: '*=', val: titleMatch[1].toLowerCase() } };
-    }
-
-    const regexMatch = trimmed.match(/^title\s*=\~\s*\/((?:[^/\\]|\\.)*)\/([a-z]*)$/i);
-    if (regexMatch) {
-      if (getInvalidRegexFlags(regexMatch[2])) return { matched: false };
-      return { matched: true, dynamic: { type: 'title', op: '=~', regex: new RegExp(regexMatch[1], regexMatch[2]) } };
-    }
-
-    const urlMatch = trimmed.match(/^url\s*\*\=\s*['"](.*?)['"]$/i);
-    if (urlMatch) {
-      return { matched: true, dynamic: { type: 'url', op: '*=', val: urlMatch[1].toLowerCase() } };
+    const reMatch = trimmed.match(/^(title|url|host|path|scheme)\s*(?:=\~\s*)?\/((?:[^/\\]|\\.)*)\/([a-z]*)$/i);
+    if (reMatch) {
+      if (getInvalidRegexFlags(reMatch[3])) return { matched: false };
+      return { matched: true, dynamic: { type: reMatch[1].toLowerCase(), op: '=~', regex: new RegExp(reMatch[2], reMatch[3]) } };
     }
 
     return { matched: false };
   }
 
-  const SUPPORTED_REGEX_FLAGS = 'ims';
+  const SUPPORTED_REGEX_FLAGS = 'imsu';
 
   function getInvalidRegexFlags(flags) {
     const invalid = [];
@@ -516,46 +800,12 @@
   }
 
   function evaluateCondition(condStr, dynamicConditionsList) {
-    const currentEngine = getSearchEngine();
-    const currentSite = window.location.hostname;
-    const parts = splitByPipe(condStr);
-
-    if (parts.length === 1) {
-      const parsed = parseConditionPart(parts[0].trim(), currentEngine, currentSite);
-      if (!parsed.matched) return false;
-      if (parsed.static !== undefined) return parsed.static;
-      dynamicConditionsList.push(parsed.dynamic);
-      return true;
-    }
-
-    const orGroup = ++_orGroupCounter;
-    let anyStaticPass = false;
-    const pendingDynamic = [];
-
-    for (const part of parts) {
-      const trimmed = part.trim();
-      if (!trimmed) continue;
-
-      const parsed = parseConditionPart(trimmed, currentEngine, currentSite);
-      if (!parsed.matched) continue;
-      if (parsed.static !== undefined) {
-        if (parsed.static) anyStaticPass = true;
-        continue;
-      }
-      pendingDynamic.push(parsed.dynamic);
-    }
-
-    if (anyStaticPass) return true;
-
-    if (pendingDynamic.length > 0) {
-      for (const cond of pendingDynamic) {
-        cond.orGroup = orGroup;
-        dynamicConditionsList.push(cond);
-      }
-      return true;
-    }
-
-    return false;
+    const { ast, errors } = analyzeCondExpr(condStr);
+    if (errors.length || !ast) return false;
+    const folded = foldCondExpr(ast);
+    if (folded.type === 'const') return folded.value;
+    dynamicConditionsList.push(folded);
+    return true;
   }
 
   function extractBalancedParens(str, startIndex) {
@@ -645,32 +895,18 @@
   function validateCondition(condStr) {
     const errors = [];
     const warnings = [];
-    for (const part of splitByPipe(condStr)) {
-      const trimmed = part.trim();
-      if (!trimmed) continue;
-      if (/^(google|bing|duckduckgo|ddg|yandex|brave|yahoo)$/i.test(trimmed)) continue;
-      if (/^site\s*[=:]\s*['"][^'"]*['"]$/i.test(trimmed)) continue;
-      if (/^site\s*\(\s*['"][^'"]*['"]\s*\)$/i.test(trimmed)) continue;
-      if (/^title\s*\=\s*['"][^'"]*['"]$/i.test(trimmed)) continue;
-      if (/^title\s*\^\=\s*['"][^'"]*['"]$/i.test(trimmed)) continue;
-      if (/^title\s*\$\=\s*['"][^'"]*['"]$/i.test(trimmed)) continue;
-      if (/^title\s*\*\=\s*['"][^'"]*['"]$/i.test(trimmed)) continue;
-      if (/^url\s*\*\=\s*['"][^'"]*['"]$/i.test(trimmed)) continue;
-      const regexMatch = trimmed.match(/^title\s*=\~\s*\/((?:[^/\\]|\\.)*)\/([a-z]*)$/i);
-      if (regexMatch) {
-        const invalidFlags = getInvalidRegexFlags(regexMatch[2]);
-        if (invalidFlags) {
-          errors.push(t('invalidRegexFlags', { flags: invalidFlags }));
-          continue;
-        }
-        try {
-          new RegExp(regexMatch[1], regexMatch[2]);
-        } catch (e) {
-          errors.push(t('condRegexError', { part: trimmed }));
-        }
-        continue;
+    const { errors: rawErrors } = analyzeCondExpr(condStr);
+    for (const e of rawErrors) {
+      if (e.kind === 'unknown') {
+        errors.push(t('unknownIfCondition', { part: e.part }));
+      } else if (e.kind === 'regex') {
+        errors.push(t('condRegexError', { part: e.part }));
+      } else if (e.kind === 'flags') {
+        errors.push(t('invalidRegexFlags', { flags: e.part }));
+      } else {
+        const display = condStr.length > 60 ? condStr.slice(0, 60) + '…' : condStr;
+        errors.push(t('condExprError', { part: display }));
       }
-      errors.push(t('unknownIfCondition', { part: trimmed }));
     }
     return { errors, warnings };
   }
@@ -681,6 +917,8 @@
 
     let ruleToCheck = rule.trim();
     if (ruleToCheck.startsWith('#')) return { valid: true, errors: [], warnings: [] };
+    ruleToCheck = stripRuleComment(ruleToCheck);
+    if (!ruleToCheck) return { valid: true, errors: [], warnings: [] };
     const errors = [];
     const warnings = [];
 
@@ -917,7 +1155,7 @@
 
     const subRuleSets = subscriptions.map((sub, idx) => ({
       idx,
-      set: (sub.enabled && sub.rules && sub.rules.length) ? new Set(sub.rules) : null
+      set: (sub.enabled && sub.rules && sub.rules.length) ? new Set(sub.rules.map(r => stripRuleComment(r.trim()))) : null
     }));
 
     function getRuleSource(rule) {
@@ -928,13 +1166,15 @@
     }
 
     allRules.forEach(rule => {
+      rule = stripRuleComment(rule.trim());
+      if (!rule) return;
 
       // @N高亮规则
-      const hlMatch = rule.trim().match(/^@(\d+)/);
+      const hlMatch = rule.match(/^@(\d+)/);
       if (hlMatch) {
         const N = parseInt(hlMatch[1]);
         if (N < 1 || N > 5) return;
-        let hlRule = rule.trim().substring(hlMatch[0].length).trim();
+        let hlRule = rule.substring(hlMatch[0].length).trim();
         if (!hlRule) return;
         let parsed;
         try {
@@ -1070,59 +1310,12 @@
     return validationCache.get(rule);
   }
 
+  // 条件运行求值
   function checkDynamicConditions(conditions, title, url) {
-    const groups = new Map();
-    const ungrouped = [];
-
-    for (const cond of conditions) {
-      if (cond.orGroup !== undefined) {
-        if (!groups.has(cond.orGroup)) groups.set(cond.orGroup, []);
-        groups.get(cond.orGroup).push(cond);
-      } else {
-        ungrouped.push(cond);
-      }
+    if (!conditions || !conditions.length) return true;
+    for (let i = 0; i < conditions.length; i++) {
+      if (!evalCondAST(conditions[i], title, url)) return false;
     }
-
-    for (const cond of ungrouped) {
-      if (cond.type === 'title' && cond.op === '=') {
-        if (!title || title.toLowerCase() !== cond.val) return false;
-      } else if (cond.type === 'title' && cond.op === '^=') {
-        if (!title || !title.toLowerCase().startsWith(cond.val)) return false;
-      } else if (cond.type === 'title' && cond.op === '$=') {
-        if (!title || !title.toLowerCase().endsWith(cond.val)) return false;
-      } else if (cond.type === 'title' && cond.op === '*=') {
-        if (!title || !title.toLowerCase().includes(cond.val)) return false;
-      } else if (cond.type === 'title' && cond.op === '=~') {
-        if (!title || !safeRegexTest(cond.regex, title)) return false;
-      } else if (cond.type === 'url' && cond.op === '*=') {
-        if (!url || !url.toLowerCase().includes(cond.val)) return false;
-      }
-    }
-
-    const groupsArr = [];
-    groups.forEach(v => groupsArr.push(v));
-    for (let gi = 0; gi < groupsArr.length; gi++) {
-      const conds = groupsArr[gi];
-      let groupMatch = false;
-      for (let ci = 0; ci < conds.length; ci++) {
-        const cond = conds[ci];
-        if (cond.type === 'title' && cond.op === '=') {
-          if (title && title.toLowerCase() === cond.val) { groupMatch = true; break; }
-        } else if (cond.type === 'title' && cond.op === '^=') {
-          if (title && title.toLowerCase().startsWith(cond.val)) { groupMatch = true; break; }
-        } else if (cond.type === 'title' && cond.op === '$=') {
-          if (title && title.toLowerCase().endsWith(cond.val)) { groupMatch = true; break; }
-        } else if (cond.type === 'title' && cond.op === '*=') {
-          if (title && title.toLowerCase().includes(cond.val)) { groupMatch = true; break; }
-        } else if (cond.type === 'title' && cond.op === '=~') {
-          if (title && safeRegexTest(cond.regex, title)) { groupMatch = true; break; }
-        } else if (cond.type === 'url' && cond.op === '*=') {
-          if (url && url.toLowerCase().includes(cond.val)) { groupMatch = true; break; }
-        }
-      }
-      if (!groupMatch) return false;
-    }
-
     return true;
   }
 
@@ -1420,9 +1613,12 @@
         let ruleRemoved = false;
         const matchedRule = result.dataset.matchedRule;
 
-        if (matchedRule && currentConfig.rules.includes(matchedRule)) {
-          currentConfig.rules = currentConfig.rules.filter(rule => rule !== matchedRule);
-          ruleRemoved = true;
+        if (matchedRule) {
+          const hitIndex = currentConfig.rules.findIndex(rule => stripRuleComment(rule.trim()) === matchedRule);
+          if (hitIndex !== -1) {
+            currentConfig.rules.splice(hitIndex, 1);
+            ruleRemoved = true;
+          }
         }
 
         if (!ruleRemoved) {
@@ -1439,7 +1635,7 @@
           ];
 
           const newRules = currentConfig.rules.filter(rule => {
-            const matched = possibleRules.includes(rule);
+            const matched = possibleRules.includes(stripRuleComment(rule.trim()));
             if (matched) ruleRemoved = true;
             return !matched;
           });
@@ -1479,7 +1675,7 @@
           }))) return;
       }
 
-      if (!currentConfig.rules.includes(newRule)) {
+      if (!currentConfig.rules.some(rule => stripRuleComment(rule.trim()) === newRule)) {
         currentConfig.rules.push(newRule);
         persistConfig();
         syncRulesTextarea();
@@ -2965,7 +3161,10 @@
     const rulesText = textarea ? textarea.value : currentConfig.rules.join('\n');
     const rawLines = rulesText.split('\n');
     const localRules = filterValidRuleLines(rawLines);
-    const activeRules = localRules.filter(rule => !rule.startsWith('#'));
+    const activeRules = localRules
+      .filter(rule => !rule.startsWith('#'))
+      .map(rule => stripRuleComment(rule))
+      .filter(rule => rule.length > 0);
 
     // 静态语法
     const ruleErrors = {};
@@ -3771,11 +3970,32 @@
       : content;
   }
 
+  // 解析订阅
+  function parseRulesetContent(content) {
+    let lines = content.split('\n');
+    let meta = {};
+    if (lines.length > 0 && lines[0].trim() === '---') {
+      const endIndex = lines.findIndex((l, i) => i > 0 && l.trim() === '---');
+      if (endIndex !== -1) {
+        const head = lines.slice(1, endIndex).join('\n');
+        const nameMatch = head.match(/^name\s*:\s*(.+?)\s*$/m);
+        if (nameMatch) {
+          const raw = nameMatch[1].trim();
+          const quoted = (raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"));
+          meta.name = quoted ? raw.slice(1, -1) : raw;
+        }
+        lines = lines.slice(endIndex + 1);
+      }
+    }
+    return { lines, meta };
+  }
+
   async function performSubscriptionForUrl(url, showAlerts = true) {
     const resp = await gmRequest('GET', url);
     const content = resp.responseText;
 
-    const lines = content.split('\n').map(line => line.trim());
+    const { lines: contentLines, meta } = parseRulesetContent(content);
+    const lines = contentLines.map(line => line.trim());
     const validRules = [];
 
     for (let line of lines) {
@@ -3785,8 +4005,9 @@
       if (line.includes('##') || line.startsWith('#@#') || line.startsWith('@@')) continue;
       if (line.startsWith('#')) continue;
 
-      if (validateRule(line)) {
-        validRules.push(line);
+      const cleanLine = stripRuleComment(line);
+      if (cleanLine && validateRule(cleanLine)) {
+        validRules.push(cleanLine);
       } else if (currentConfig.debug) {
         console.warn('[订阅] 无效规则已跳过:', line);
       }
@@ -3800,6 +4021,7 @@
       lastUpdate: Date.now(),
       rules: validRules
     };
+    if (meta.name) subData.name = meta.name;
 
     if (existingIndex >= 0) subs[existingIndex] = subData;
     else subs.push(subData);
@@ -3917,7 +4139,8 @@
             url,
             enabled: true,
             lastUpdate: existingSub ? existingSub.lastUpdate : 0,
-            rules: existingSub ? existingSub.rules : []
+            rules: existingSub ? existingSub.rules : [],
+            name: existingSub ? existingSub.name : undefined
           });
         }
       });
@@ -4185,7 +4408,7 @@
 
     const localTime = GM_getValue(LOCAL_LAST_MODIFIED_KEY, 0);
     const localRules = currentConfig.rules || [];
-    const mergedRules = [...new Set([...localRules, ...cloudRules])];
+    const mergedRules = [...new Map([...localRules, ...cloudRules].map(r => [stripRuleComment(r), r])).values()];
 
     if (localTime > cloudTime) {
       console.log('[自动 WebDAV] 本地规则较新，合并后上传...');
