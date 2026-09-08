@@ -119,10 +119,9 @@
 
 | 规则 | 说明 |
 | --- | --- |
-| `*://*.example.com/* @if(title = "文章")` | 屏蔽`example.com`的标题中只为`文章`的结果 |
-| `*://*.example.com/* @if(title *= "关键词")` | 屏蔽`example.com`的标题中含有`关键词`的结果 |
+| `*://*.example.com/* @if(title *= "关键词")` | 屏蔽`example.com`的标题中含有`关键词`的结果，默认忽略大小写 |
 | `*://*.example.com/* @if(title *= "关键词1" \| title *= "关键词2")` | 屏蔽`example.com`的标题中含`关键词1`或`关键词2`的结果，默认忽略大小写 |
-| `*://*.example.com/* @if(title =~ /关键词1\|关键词2/)` | 上条规则的正则写法，需加`i`忽略大小写 |
+| `*://*.example.com/* @if(title =~ /关键词1\|关键词2/)` | 上条规则的正则写法，结尾需加`i`忽略大小写 |
 | `*://*.example.com/* @if(url *= "test")` | 屏蔽`example.com`的URL链接中含`test`的结果，如`example.com/*/test/*` |
 | `*://*.example.com/* @if(Google)` | 仅在Google中屏蔽`example.com` |
 | `*://*.example.com/* @if(google\|bing)` | 在Google或Bing中都屏蔽`example.com` |
