@@ -106,7 +106,7 @@
 
 | 条件类型 | 语法 | 说明 |
 | --- | --- | --- |
-| 搜索引擎 | `Google` / `Bing` / `DuckDuckGo` / `Yandex` / `Brave` / `Yahoo` | 仅在指定搜索引擎中生效，名称忽略大小写 |
+| 搜索引擎 | `Google` / `Bing` / `DDG` / `Yandex` / `Brave` / `Yahoo` | 仅在指定搜索引擎中生效，名称忽略大小写，`DDG`等效`DuckDuckGo` |
 | 搜索站点 | `site = "google.com.hk"` | 仅在指定搜索引擎地区站点中生效 |
 | 标题包含 | `title *= "关键词"` | 标题中包含指定字符串`关键词` |
 | 标题精确 | `title = "关键词"` | 标题精确匹配指定字符串`关键词` |
