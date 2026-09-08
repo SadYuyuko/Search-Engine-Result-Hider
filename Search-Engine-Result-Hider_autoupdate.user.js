@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.6.0
+// @version      7.6.1
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -450,8 +450,9 @@
 
   // 解析条件片段
   function parseConditionPart(trimmed, currentEngine, currentSite) {
-    if (/^(google|bing|duckduckgo|yandex|brave|yahoo)$/i.test(trimmed)) {
-      return { matched: true, static: currentEngine === trimmed.toLowerCase() };
+    const engineAlias = trimmed.toLowerCase().replace(/^ddg$/, 'duckduckgo');
+    if (/^(google|bing|duckduckgo|ddg|yandex|brave|yahoo)$/i.test(trimmed)) {
+      return { matched: true, static: currentEngine === engineAlias };
     }
 
     let siteMatch = trimmed.match(/^site\s*[=:]\s*['"](.*?)['"]$/i);
@@ -459,6 +460,21 @@
     if (siteMatch) {
       const target = siteMatch[1].trim().toLowerCase().replace(/^\.+|\.+$/g, '');
       return { matched: true, static: currentSite === target || currentSite.endsWith(`.${target}`) };
+    }
+
+    const titleExactMatch = trimmed.match(/^title\s*\=\s*['"](.*?)['"]$/i);
+    if (titleExactMatch) {
+      return { matched: true, dynamic: { type: 'title', op: '=', val: titleExactMatch[1].toLowerCase() } };
+    }
+
+    const titlePrefixMatch = trimmed.match(/^title\s*\^\=\s*['"](.*?)['"]$/i);
+    if (titlePrefixMatch) {
+      return { matched: true, dynamic: { type: 'title', op: '^=', val: titlePrefixMatch[1].toLowerCase() } };
+    }
+
+    const titleSuffixMatch = trimmed.match(/^title\s*\$\=\s*['"](.*?)['"]$/i);
+    if (titleSuffixMatch) {
+      return { matched: true, dynamic: { type: 'title', op: '$=', val: titleSuffixMatch[1].toLowerCase() } };
     }
 
     const titleMatch = trimmed.match(/^title\s*\*\=\s*['"](.*?)['"]$/i);
@@ -470,6 +486,11 @@
     if (regexMatch) {
       if (getInvalidRegexFlags(regexMatch[2])) return { matched: false };
       return { matched: true, dynamic: { type: 'title', op: '=~', regex: new RegExp(regexMatch[1], regexMatch[2]) } };
+    }
+
+    const urlMatch = trimmed.match(/^url\s*\*\=\s*['"](.*?)['"]$/i);
+    if (urlMatch) {
+      return { matched: true, dynamic: { type: 'url', op: '*=', val: urlMatch[1].toLowerCase() } };
     }
 
     return { matched: false };
@@ -627,10 +648,14 @@
     for (const part of splitByPipe(condStr)) {
       const trimmed = part.trim();
       if (!trimmed) continue;
-      if (/^(google|bing|duckduckgo|yandex|brave|yahoo)$/i.test(trimmed)) continue;
+      if (/^(google|bing|duckduckgo|ddg|yandex|brave|yahoo)$/i.test(trimmed)) continue;
       if (/^site\s*[=:]\s*['"][^'"]*['"]$/i.test(trimmed)) continue;
       if (/^site\s*\(\s*['"][^'"]*['"]\s*\)$/i.test(trimmed)) continue;
+      if (/^title\s*\=\s*['"][^'"]*['"]$/i.test(trimmed)) continue;
+      if (/^title\s*\^\=\s*['"][^'"]*['"]$/i.test(trimmed)) continue;
+      if (/^title\s*\$\=\s*['"][^'"]*['"]$/i.test(trimmed)) continue;
       if (/^title\s*\*\=\s*['"][^'"]*['"]$/i.test(trimmed)) continue;
+      if (/^url\s*\*\=\s*['"][^'"]*['"]$/i.test(trimmed)) continue;
       const regexMatch = trimmed.match(/^title\s*=\~\s*\/((?:[^/\\]|\\.)*)\/([a-z]*)$/i);
       if (regexMatch) {
         const invalidFlags = getInvalidRegexFlags(regexMatch[2]);
@@ -1045,7 +1070,7 @@
     return validationCache.get(rule);
   }
 
-  function checkDynamicConditions(conditions, title) {
+  function checkDynamicConditions(conditions, title, url) {
     const groups = new Map();
     const ungrouped = [];
 
@@ -1059,10 +1084,18 @@
     }
 
     for (const cond of ungrouped) {
-      if (cond.type === 'title' && cond.op === '*=') {
+      if (cond.type === 'title' && cond.op === '=') {
+        if (!title || title.toLowerCase() !== cond.val) return false;
+      } else if (cond.type === 'title' && cond.op === '^=') {
+        if (!title || !title.toLowerCase().startsWith(cond.val)) return false;
+      } else if (cond.type === 'title' && cond.op === '$=') {
+        if (!title || !title.toLowerCase().endsWith(cond.val)) return false;
+      } else if (cond.type === 'title' && cond.op === '*=') {
         if (!title || !title.toLowerCase().includes(cond.val)) return false;
       } else if (cond.type === 'title' && cond.op === '=~') {
         if (!title || !safeRegexTest(cond.regex, title)) return false;
+      } else if (cond.type === 'url' && cond.op === '*=') {
+        if (!url || !url.toLowerCase().includes(cond.val)) return false;
       }
     }
 
@@ -1073,10 +1106,18 @@
       let groupMatch = false;
       for (let ci = 0; ci < conds.length; ci++) {
         const cond = conds[ci];
-        if (cond.type === 'title' && cond.op === '*=') {
+        if (cond.type === 'title' && cond.op === '=') {
+          if (title && title.toLowerCase() === cond.val) { groupMatch = true; break; }
+        } else if (cond.type === 'title' && cond.op === '^=') {
+          if (title && title.toLowerCase().startsWith(cond.val)) { groupMatch = true; break; }
+        } else if (cond.type === 'title' && cond.op === '$=') {
+          if (title && title.toLowerCase().endsWith(cond.val)) { groupMatch = true; break; }
+        } else if (cond.type === 'title' && cond.op === '*=') {
           if (title && title.toLowerCase().includes(cond.val)) { groupMatch = true; break; }
         } else if (cond.type === 'title' && cond.op === '=~') {
           if (title && safeRegexTest(cond.regex, title)) { groupMatch = true; break; }
+        } else if (cond.type === 'url' && cond.op === '*=') {
+          if (url && url.toLowerCase().includes(cond.val)) { groupMatch = true; break; }
         }
       }
       if (!groupMatch) return false;
@@ -1142,7 +1183,7 @@
         const rules = compiledRules.highlightConditionalDomains.get(level);
         if (rules) {
           for (const item of rules) {
-            if (matchDomainEntryType(item.domainType, level, lowerDomain) && checkDynamicConditions(item.conditions, title)) {
+            if (matchDomainEntryType(item.domainType, level, lowerDomain) && checkDynamicConditions(item.conditions, title, url)) {
               highlightN = item.N; break;
             }
           }
@@ -1152,7 +1193,7 @@
     }
     if (!highlightN) {
       for (let item of compiledRules.highlightConditionalRules) {
-        if (!checkDynamicConditions(item.conditions, title)) continue;
+        if (!checkDynamicConditions(item.conditions, title, url)) continue;
         if (item.type === 'url' || item.type === 'regex') {
           if (safeRegexTest(item.regex, url) || safeRegexTest(item.regex, domain)) { highlightN = item.N; break; }
         } else if (item.type === 'title' && title) {
@@ -1223,7 +1264,7 @@
           const rules = compiledRules.conditionalDomains.get(level);
           if (rules) {
             for (const ruleObj of rules) {
-              if (matchDomainEntryType(ruleObj.domainType, level, lowerDomain) && checkDynamicConditions(ruleObj.conditions, title)) {
+              if (matchDomainEntryType(ruleObj.domainType, level, lowerDomain) && checkDynamicConditions(ruleObj.conditions, title, url)) {
                 blockedInfo = {rule: ruleObj.originalRule, source: ruleObj.source}; break;
               }
             }
@@ -1234,7 +1275,7 @@
       if (!blockedInfo) {
         for (let i = 0; i < compiledRules.conditionalRules.length; i++) {
           const ruleObj = compiledRules.conditionalRules[i];
-          if (!checkDynamicConditions(ruleObj.conditions, title)) continue;
+          if (!checkDynamicConditions(ruleObj.conditions, title, url)) continue;
           if (ruleObj.type === 'url' || ruleObj.type === 'regex') {
             if (safeRegexTest(ruleObj.regex, url) || safeRegexTest(ruleObj.regex, domain)) { blockedInfo = {rule: ruleObj.originalRule, source: ruleObj.source}; break; }
           } else if (ruleObj.type === 'title' && title) {
