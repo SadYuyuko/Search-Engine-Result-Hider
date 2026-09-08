@@ -4,7 +4,7 @@
 
 ### <img src="https://github.com/user-attachments/assets/92954a5d-7157-40ed-9309-b9d75bf2bd32" width="30" height="30" align="center"> [Github](https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js) | [Greasy Fork](https://greasyfork.org/zh-CN/scripts/552394) 安装
 
-[中文](README.md) | [English](README.en.md) | 交流群[TG](https://t.me/+qBqMTqjc4Xk5M2Jh)  
+[中文](README.md) | [English](README.en.md) | 交流群 [TG](https://t.me/+qBqMTqjc4Xk5M2Jh)  
 在仅支持安装脚本的浏览器上实现复杂规则屏蔽搜索结果功能  
 支持包括ublacklist基础规则在内的URL匹配、正则匹配、标题匹配、白名单匹配、高亮目标结果以及结果摘要(snippet)匹配  
 当前支持搜索引擎：Bing、Google、DuckDuckGo、Yandex、Brave，Yahoo
@@ -38,16 +38,6 @@
 
 ### 基础规则：
 
-**正则匹配：**
-
-| 规则 | 说明 |
-| --- | --- |
-| `/pattern/flags` | 使用正则表达式匹配URL，如`/example\.(com\|net)/i` |
-| `title/pattern/flags` | 使用正则表达式匹配标题，如`title/.*屏蔽.*/i` |
-| `text/pattern/flags` | 使用正则表达式匹配摘要内容，如`text/.*广告.*/i` |
-
-普通正则使用浏览器支持的 JavaScript `RegExp` flags，支持`i`、`m`、`s`，其中 `s` 会转换为跨行匹配；不支持`g`、`y`，脚本规则只判断是否匹配不执行全局提取
-
 **URL匹配：**
 
 | 规则 | 说明 |
@@ -58,6 +48,16 @@
 | `*://*.example.*` | 匹配`example.com`所有顶级域名 |
 
 在脚本中添加域名规则时可不使用`*://*.`前缀直接写域名(`example.com`)，但对于需要同时在ublacklist使用的规则必须加上
+
+**正则匹配：**
+
+| 规则 | 说明 |
+| --- | --- |
+| `/pattern/flags` | 使用正则表达式匹配URL，如`/example\.(com\|net)/i` |
+| `title/pattern/flags` | 使用正则表达式匹配标题，如`title/.*屏蔽.*/i` |
+| `text/pattern/flags` | 使用正则表达式匹配摘要内容，如`text/.*广告.*/i` |
+
+普通正则使用浏览器支持的 JavaScript `RegExp` flags，支持`i`、`m`、`s`，其中 `s` 会转换为跨行匹配；不支持`g`、`y`，脚本规则只判断是否匹配不执行全局提取
 
 **标题匹配：**
 
@@ -100,18 +100,39 @@
 
 **复合规则：**
 
+在规则后添加 `@if(...)` 可为规则附加条件，多个 `@if()` 之间为逻辑与关系，单个 `@if()` 内用 `|` 分隔为逻辑或关系。条件内的字符串匹配默认忽略大小写。
+
+`@if()` 支持的条件：
+
+| 条件类型 | 语法 | 说明 |
+| --- | --- | --- |
+| 搜索引擎 | `Google` / `Bing` / `DuckDuckGo` / `Yandex` / `Brave` / `Yahoo` | 仅在指定搜索引擎中生效 |
+| 站点 | `site = "google.com.hk"` | 仅在指定站点中生效 |
+| 标题包含 | `title *= "关键词"` | 标题中包含指定字符串 |
+| 标题精确 | `title = "示例 Domain"` | 标题精确匹配指定字符串 |
+| 标题前缀 | `title ^= "示例"` | 标题以指定字符串开头 |
+| 标题后缀 | `title $= "Domain"` | 标题以指定字符串结尾 |
+| 标题正则 | `title =~ /正则/` | 标题匹配正则表达式，需加`i`忽略大小写 |
+| URL包含 | `url *= "example"` | URL中包含指定字符串 |
+
+复合规则示例：
+
 | 规则 | 说明 |
 | --- | --- |
-| `*://*.example.com/* @if(title *= "示例")` | 屏蔽`example.com`的标题中含有`示例`的结果，复合规则的标题规则默认忽略大小写 |
-| `*://*.example.com/* @if(title *= "关键词1" \| title *= "关键词2")` | 上条规则的多关键词支持 |
-| `*://*.example.com/* @if(title =~ /关键词1\|关键词2/)` | 上条规则的正则写法，此形式需要加i才会忽略大小写(`title =~ /.../i`) |
-| `*://*.example.com/* @if(Google)` | 仅在Google中屏蔽该`example.com` |
-| `*://*.example.com/* @if(Google) @if(title *= "示例")` | 仅在Google中屏蔽`example.com`的搜索结果中标题含有`示例`的结果 |
-| `*://*.example.com/* @if(google\|bing)` | 在Google或Bing中都屏蔽`example.com` |
-| `*://*.example.com/* @if(google\|bing) @if(title *= "关键词1" \| title *= "关键词2")` | 在Google或Bing中都屏蔽`example.com`的搜索结果中标题含有`关键词1`或`关键词2`的结果 |
-| `*://*.example.com/* @if(site = "google.com.hk")` | 仅在Google HK中屏蔽`example.com` |
-| `title/.*示例.*/ @if(Google)` | 仅在Google中屏蔽标题含有`示例`的结果 |
-| `title/.*示例.*/ @if(google\|bing)` | 在Google或Bing中都屏蔽标题含有`示例`的结果 |
+| `*://*.example.com/* @if(title *= "示例")` | 屏蔽`example.com`标题中含有`示例`的结果 |
+| `*://*.example.com/* @if(title = "示例文章")` | 屏蔽标题精确为`示例文章`的结果 |
+| `*://*.example.com/* @if(title ^= "【广告】")` | 屏蔽标题以`【广告】`开头的结果 |
+| `*://*.example.com/* @if(title $= " - 百度百科")` | 屏蔽标题以`- 百度百科`结尾的结果 |
+| `*://*.example.com/* @if(title *= "关键词1" \| title *= "关键词2")` | 标题含`关键词1`或`关键词2` |
+| `*://*.example.com/* @if(title =~ /关键词1\|关键词2/)` | 正则写法，需加`i`忽略大小写 |
+| `*://*.example.com/* @if(url *= "redirect")` | 屏蔽URL中含`redirect`的结果 |
+| `*://*.example.com/* @if(Google)` | 仅在Google中屏蔽 |
+| `*://*.example.com/* @if(google\|bing)` | 在Google或Bing中都屏蔽 |
+| `*://*.example.com/* @if(site = "google.com.hk")` | 仅在Google HK中屏蔽 |
+| `*://*.example.com/* @if(Google) @if(title *= "示例")` | 仅在Google中屏蔽标题含`示例`的结果 |
+| `*://*.example.com/* @if(google\|bing) @if(title *= "关键词1" \| title *= "关键词2")` | 在Google或Bing中屏蔽标题含指定关键词的结果 |
+| `title/.*示例.*/ @if(Google)` | 仅在Google中屏蔽标题含`示例`的结果 |
+| `title/.*示例.*/ @if(google\|bing)` | 在Google或Bing中屏蔽标题含`示例`的结果 |
 
 ### 截图：
 
