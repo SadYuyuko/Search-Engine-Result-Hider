@@ -35,9 +35,18 @@
 **注意：**
 1. 订阅同步频率为每天一次，支持最多3条订阅且只支持.txt远程链接，例如`https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/rules.txt`，应用优先级在本地规则之后。由于脚本可分配性能有限，规则总数建议不超过2w条避免手机爆炸🤳💥
 2. 脚本扩展有限不支持`##`DOM语法规则，通过订阅导入会自动清除
-3. 普通正则使用浏览器支持的 JavaScript `RegExp` flags，支持`i`、`m`、`s`，其中 `s` 会转换为跨行匹配；不支持`g`、`y`，脚本规则只判断是否匹配不执行全局提取
 
 ### 基础规则：
+
+**正则匹配：**
+
+| 规则 | 说明 |
+| --- | --- |
+| `/pattern/flags` | 使用正则表达式匹配URL，如`/example\.(com\|net)/i` |
+| `title/pattern/flags` | 使用正则表达式匹配标题，如`title/.*屏蔽.*/i` |
+| `text/pattern/flags` | 使用正则表达式匹配摘要内容，如`text/.*广告.*/i` |
+
+普通正则使用浏览器支持的 JavaScript `RegExp` flags，支持`i`、`m`、`s`，其中 `s` 会转换为跨行匹配；不支持`g`、`y`，脚本规则只判断是否匹配不执行全局提取
 
 **URL匹配：**
 
@@ -71,17 +80,6 @@
 | `@*://*.example.com/*` | 放行`example.com`及其所有子域名 |
 | `@*://example.com/abc/*` | 只放行`example.com`特定路径 |
 | `@*://*.example.com/abc/*` | 只放行`example.com`子域名特定路径 |
-
-**正则匹配：**
-
-| 规则 | 说明 |
-| --- | --- |
-| `/pattern/flags` | 使用正则表达式匹配URL，如`/example\.(com\|net)/i` |
-| `title/pattern/flags` | 使用正则表达式匹配标题，如`title/.*屏蔽.*/i` |
-| `text/pattern/flags` | 使用正则表达式匹配摘要内容，如`text/.*广告.*/i` |
-
-支持的flags：`i`(忽略大小写)、`m`(多行模式)、`s`(点号匹配换行，脚本内部转换为跨行匹配)  
-不支持`g`和`y`，脚本只判断是否匹配不执行全局提取
 
 **摘要匹配：**
 
