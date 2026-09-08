@@ -33,10 +33,12 @@
 3. 同步配置在刷新后生效
 
 **注意：**
-1. 订阅同步频率为每天一次，支持最多3条订阅且只支持.txt远程链接，例如`https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Other/rules.txt`，在本地规则后追加应用。由于脚本可分配性能有限，规则总数建议不超过2w条避免手机爆炸🤳💥
+1. 订阅同步频率为每天一次，支持最多3条订阅且只支持.txt远程链接，例如`https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Other/rules.txt`，在本地规则后追加应用。订阅文件开头可带 YAML frontmatter(如 `---\nname: 规则集名\n---`)，导入时自动剥离并读取元数据。由于脚本可分配性能有限，规则总数建议不超过2w条避免手机爆炸🤳💥
 2. 脚本扩展有限不支持`##`DOM语法规则，通过订阅导入会自动清除
 
 ### 基础规则：
+
+规则支持注释：以 `#` 开头的整行为注释；规则末尾也可添加注释（`#` 前需有空格），如 `*://*.example.com/* # 屏蔽示例站`。引号内或正则表达式中的 `#` 不会被当作注释。
 
 **URL匹配：**
 
@@ -57,7 +59,7 @@
 | `title/pattern/flags` | 使用正则表达式匹配标题，如`title/.*屏蔽.*/i` |
 | `text/pattern/flags` | 使用正则表达式匹配摘要内容，如`text/.*广告.*/i` |
 
-普通正则使用浏览器支持的 JavaScript `RegExp` flags，支持`i`、`m`、`s`，其中 `s` 会转换为跨行匹配；不支持`g`、`y`，脚本规则只判断是否匹配不执行全局提取
+普通正则使用浏览器支持的 JavaScript `RegExp` flags，支持`i`、`m`、`s`、`u`，其中 `s` 会转换为跨行匹配；不支持`g`、`y`，脚本规则只判断是否匹配不执行全局提取
 
 **标题匹配：**
 
@@ -100,20 +102,33 @@
 
 **复合规则：**
 
-在规则后添加 `@if(...)` 作为附加条件，多个 `@if` 条件同时生效，单个 `@if` 内用 `|` 分隔 `或` 条件，复合规则匹配默认忽略大小写
+在规则后添加 `@if(...)` 作为附加条件，多个 `@if` 条件同时生效(逻辑与)。单个 `@if` 内支持逻辑运算：`|` 或、`&` 与、`!` 非，可用 `( )` 括号嵌套分组，优先级 `!` > `&` > `|`。复合规则匹配默认忽略大小写
+
+注意：`!` 取反的是条件本身。当结果缺少标题等被比较内容时，该条件视为不成立，取反后即为成立，如 `!(title *= "关键词")` 会命中无标题的结果
 
 `@if` 支持条件：
 
 | 条件类型 | 语法 | 说明 |
 | --- | --- | --- |
-| 搜索引擎 | `Google` / `Bing` / `DDG` / `Yandex` / `Brave` / `Yahoo` | 仅在指定搜索引擎中生效，名称忽略大小写 |
+| 搜索引擎 | `$site = "google"` | 仅在指定搜索引擎中生效；值：`google`/`bing`/`duckduckgo`(`ddg`)/`yandex`/`brave`/`yahoo`，忽略大小写，分隔符可用`=`或`:` |
 | 搜索站点 | `site = "google.com.hk"` | 仅在指定搜索引擎地区站点中生效 |
 | 标题包含 | `title *= "关键词"` | 标题中包含指定字符串`关键词` |
 | 标题精确 | `title = "关键词"` | 标题精确匹配指定字符串`关键词` |
 | 标题前缀 | `title ^= "关键词"` | 标题以指定字符串`关键词`开头 |
 | 标题后缀 | `title $= "关键词"` | 标题以指定字符串`关键词`结尾 |
-| 标题正则 | `title =~ /正则/` | 标题匹配正则表达式，结尾加`i`忽略大小写 |
+| 标题正则 | `title =~ /正则/`(或简写 `title/正则/`) | 标题匹配正则表达式，`=~` 可省略，结尾加`i`忽略大小写 |
+| URL精确 | `url = "https://example.com/"` | URL与指定字符串完全一致 |
+| URL前缀 | `url ^= "https://mp.weixin.qq.com"` | URL以指定字符串开头 |
+| URL后缀 | `url $= ".pdf"` | URL以指定字符串结尾 |
 | URL包含 | `url *= "example"` | URL中包含指定字符串`example` |
+| URL正则 | `url =~ /正则/`(或简写 `url/正则/`) | URL匹配正则表达式，`=~` 可省略，结尾加`i`忽略大小写 |
+| URL主机 | `host $= ".example.com"` | 结果URL的主机名(hostname)匹配；`$=`兼容裸域，即`host $= ".example.com"`同时命中`example.com`与`www.example.com` |
+| URL路径 | `path *= "/download/"` | 结果URL的路径+查询串(pathname+search)匹配 |
+| URL协议 | `scheme = "https"` | 结果URL的协议匹配，如`https`/`http` |
+| 逻辑运算 | `\|` 或、`&` 与、`!` 非 | 组合任意条件，如 `title *= "a" & !(url *= "ads")` |
+| 括号分组 | `( )` | 嵌套组合子条件，如 `(title *= "a" \| title *= "b") & !($site = "google")` |
+
+`title`/`url`/`host`/`path`/`scheme` 均支持 `=`、`^=`、`$=`、`*=`、`=~`(及省略`=~`的简写如 `host/正则/`)，比较默认忽略大小写，`=~` 大小写由正则 flags 决定。兼容 uBlacklist 规则中的大小写修饰符 `i`(如 `title $= "Domain" i`)：脚本默认即忽略大小写，`i` 会被识别并忽略，写法等价于不带 `i`，可直接导入 uBlacklist 规则。
 
 复合规则示例：
 
@@ -123,12 +138,23 @@
 | `*://*.example.com/* @if(title *= "关键词1" \| title *= "关键词2")` | 屏蔽`example.com`的标题中含`关键词1`或`关键词2`的结果，默认忽略大小写 |
 | `*://*.example.com/* @if(title =~ /关键词1\|关键词2/)` | 上条规则的正则写法，结尾需加`i`忽略大小写 |
 | `*://*.example.com/* @if(url *= "test")` | 屏蔽`example.com`的URL链接中含`test`的结果，如`example.com/*/test/*` |
-| `*://*.example.com/* @if(Google)` | 仅在Google中屏蔽`example.com` |
-| `*://*.example.com/* @if(google\|bing)` | 在Google或Bing中都屏蔽`example.com` |
+| `*://*.example.com/* @if(url = "https://example.com/")` | 屏蔽URL与该字符串完全一致的`example.com`结果 |
+| `*://*.example.com/* @if(url ^= "https://mp.weixin.qq.com")` | 屏蔽URL为微信公众号文章链接的`example.com`结果 |
+| `*://*.example.com/* @if(url $= ".pdf")` | 屏蔽URL以`.pdf`结尾的结果 |
+| `*://*.example.com/* @if(url/\/article\/\d+/ \| title *= "广告")` | 屏蔽URL匹配`/article/数字`或标题含`广告`的结果(`url/.../`为省略`=~`的正则简写) |
+| `*://*.example.com/* @if(host $= ".example.com" & path *= "/download/")` | 屏蔽URL主机为`example.com`(含子域)且路径含`/download/`的结果 |
+| `*://*.example.com/* @if(host $= ".mp.weixin.qq.com" \| path $= ".pdf")` | 屏蔽URL主机为微信公众号或路径以`.pdf`结尾的结果 |
+| `*://*.example.com/* @if(scheme = "https" & !(path ^= "/amp/"))` | 屏蔽https下路径不以`/amp/`开头的`example.com`结果 |
+| `*://*.example.com/* @if($site = "google")` | 仅在Google中屏蔽`example.com` |
+| `*://*.example.com/* @if($site = "google" \| $site = "bing")` | 在Google或Bing中都屏蔽`example.com` |
 | `*://*.example.com/* @if(site = "google.com.hk")` | 仅在Google HK中屏蔽`example.com` |
-| `*://*.example.com/* @if(Google) @if(title *= "示例")` | 仅在Google中屏蔽标题含`示例`的`example.com`的结果 |
-| `title/.*示例.*/ @if(Google)` | 仅在Google中屏蔽标题含`示例`的结果 |
-| `text/.*示例.*/ @if(google\|bing)` | 在Google或Bing中都屏蔽网页描述含`示例`的结果 |
+| `*://*.example.com/* @if($site = "google") @if(title *= "示例")` | 仅在Google中屏蔽标题含`示例`的`example.com`的结果 |
+| `title/.*示例.*/ @if($site = "google")` | 仅在Google中屏蔽标题含`示例`的结果 |
+| `text/.*示例.*/ @if($site = "google" \| $site = "bing")` | 在Google或Bing中都屏蔽网页描述含`示例`的结果 |
+| `*://*.example.com/* @if(title *= "关键词1" & title *= "关键词2")` | 屏蔽`example.com`的标题同时含`关键词1`与`关键词2`的结果 |
+| `*://*.example.com/* @if(title *= "关键词" & !(url *= "test"))` | 屏蔽标题含`关键词`且URL中不含`test`的结果 |
+| `*://*.example.com/* @if(!($site = "google" \| $site = "bing"))` | 在除Google、Bing以外的搜索引擎(如DDG、Yandex)屏蔽`example.com` |
+| `*://*.example.com/* @if(title *= "a" \| title *= "b") @if(!(url *= "c"))` | 标题含`a`或`b`且URL不含`c`(多`@if`之间为与，`!`作用于括号组) |
 
 ### 截图：
 
