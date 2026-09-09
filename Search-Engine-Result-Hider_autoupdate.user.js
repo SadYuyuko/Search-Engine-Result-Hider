@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.7.1
+// @version      7.7.2
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -18,12 +18,12 @@
 // @match        *://*.google.com/*
 // @match        *://*.yandex.com/*
 // @match        *://*.duckduckgo.com/*
-// @include      /^https?:\/\/([\w-]+\.)?brave\.com\/.*$/
-// @include      /^https?:\/\/([\w-]+\.)?(?:duckduckgo\.com|ddg\.gg)\/.*$/
-// @include      /^https?:\/\/([\w-]+\.)?bing\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)\/.*$/
-// @include      /^https?:\/\/([\w-]+\.)?yahoo\.(?:co\.jp|com|[a-z]{2}(?:\.[a-z]{2})?)\/.*$/
-// @include      /^https?:\/\/([\w-]+\.)?google\.(?:com|[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})\/.*$/
-// @include      /^https?:\/\/(?:(?:[\w-]+\.)?yandex\.(?:com|[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4})|(?:[\w-]+\.)?ya\.ru)\/.*$/
+// @include      /^https?:\/\/(?:[\w-]+\.)*brave\.com\/.*$/
+// @include      /^https?:\/\/(?:[\w-]+\.)*(?:duckduckgo\.com|ddg\.gg)\/.*$/
+// @include      /^https?:\/\/(?:[\w-]+\.)*bing\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)\/.*$/
+// @include      /^https?:\/\/(?:[\w-]+\.)*yahoo\.(?:co\.jp|com|[a-z]{2}(?:\.[a-z]{2})?)\/.*$/
+// @include      /^https?:\/\/(?:[\w-]+\.)*google\.(?:com|[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})\/.*$/
+// @include      /^https?:\/\/(?:(?:[\w-]+\.)*yandex\.(?:com|[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})|(?:[\w-]+\.)*ya\.ru)\/.*$/
 // @connect      dav.jianguoyun.com
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -31,8 +31,6 @@
 // @grant        GM_xmlhttpRequest
 // @grant        GM_registerMenuCommand
 // @run-at       document-idle
-// @downloadURL  https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js
-// @updateURL    https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js
 // ==/UserScript==
 
 (function() {
@@ -91,36 +89,42 @@
   // 选择器
   const SELECTORS = {
     bing: {
+      match: /(?:^|\.)bing\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)$/,
       containers: 'li.b_algo, div.b_algo',
       titles: ['h2 a', 'a h2', '.b_title'],
       snippets: ['.b_caption p', '.b_snippet', '.b_paractl p', '.b_lineclamp2'],
       links: 'a[href]',
     },
     google: {
+      match: /(?:^|\.)google\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})$/,
       containers: 'div.g, div.MjjYud',
       titles: ['h3', 'div[role="heading"]', '.LC20lb', '.DKV0Md', '.sXLaOe', '.c9DxTc', 'a h3'],
       snippets: ['.st', '.VwiC3b', '.s3v9rd', '.IsZvec', '.lyLwlc', '.yXK7lf'],
       links: 'a[href]',
     },
     duckduckgo: {
+      match: /(?:^|\.)(?:duckduckgo\.com|ddg\.gg)$/,
       containers: '[data-testid="result"], .result, .web-result, .tile, .tile--ad',
       titles: ['a[data-testid="result-title-a"]', '.result__title', '.tile__title', '.tile--title__title', 'h2 a', 'a h2'],
       snippets: ['[data-testid="result-snippet"]', '[data-result="snippet"]', '.result__snippet'],
       links: ['a[data-testid="result-extras-url-link"]', 'a[data-testid="result-title-a"]', '.result__url', '.tile--title__domain', 'a[href]'],
     },
     yandex: {
+      match: /(?:^|\.)(?:ya\.ru|yandex\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,}))$/,
       containers: 'div.Organic',
       titles: ['.OrganicTitle'],
       snippets: ['.OrganicText'],
       links: ['.OrganicTitle a', '.Path-Item a', 'a.Link', 'a[href]'],
     },
     brave: {
+      match: /(?:^|\.)brave\.com$/,
       containers: '.snippet[data-type="web"], .snippet[data-type="news"], .snippet[data-type="videos"], .image-wrapper',
       titles: ['.title', '.snippet-title', '.img-title'],
       snippets: ['.generic-snippet .content', '.generic-snippet', '.line-clamp-dynamic', '.snippet-description', '.description'],
       links: ['a[href]'],
     },
     yahoo: {
+      match: /(?:^|\.)yahoo\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)$/,
       containers: '.sw-Card.Algo, li.b_algo, div.b_algo, #web .algo, .algo-sr, .richAlgo',
       titles: ['h3', '.s-title', 'h2 a', 'a h2', '.b_title', '.title'],
       snippets: ['.sw-Card__description', '.sw-Card__snippet', '.sw-Text__body', 'p', '.b_caption p', '.b_snippet', '.b_paractl p'],
@@ -132,15 +136,17 @@
   };
 
   // 引擎检测
+  let _engineCacheHost = '';
+  let _engineCacheResult = '';
   function getSearchEngine() {
     const hostname = window.location.hostname;
-    if (/(?:^|\.)bing\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)$/.test(hostname)) return 'bing';
-    if (/(?:^|\.)google\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})$/.test(hostname)) return 'google';
-    if (/(?:^|\.)(?:duckduckgo\.com|ddg\.gg)$/.test(hostname)) return 'duckduckgo';
-    if (/(?:^|\.)(?:ya\.ru|yandex\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,}))$/.test(hostname)) return 'yandex';
-    if (/(?:^|\.)brave\.com$/.test(hostname)) return 'brave';
-    if (/(?:^|\.)yahoo\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)$/i.test(hostname)) return 'yahoo';
-    return 'other';
+    if (_engineCacheHost === hostname) return _engineCacheResult;
+    _engineCacheHost = hostname;
+    for (const name of Object.keys(SELECTORS)) {
+      const def = SELECTORS[name];
+      if (def && def.match && def.match.test(hostname)) return (_engineCacheResult = name);
+    }
+    return (_engineCacheResult = 'other');
   }
 
   function getContainerSelector(engine) {
@@ -754,20 +760,20 @@
 
   // 解析条件片段
   function parseConditionPart(trimmed, currentEngine, currentSite) {
-    const enginePropMatch = trimmed.match(/^\$site\s*[=:]\s*['"](.*?)['"]$/i);
+    const enginePropMatch = trimmed.match(/^\$site\s*[=:]\s*['"](.*?)['"]\s*i?\s*$/i);
     if (enginePropMatch) {
       const target = enginePropMatch[1].trim().toLowerCase().replace(/^ddg$/, 'duckduckgo');
       return { matched: true, static: currentEngine === target };
     }
 
-    let siteMatch = trimmed.match(/^site\s*[=:]\s*['"](.*?)['"]$/i);
-    if (!siteMatch) siteMatch = trimmed.match(/^site\s*\(\s*['"](.*?)['"]\s*\)$/i);
+    let siteMatch = trimmed.match(/^site\s*[=:]\s*['"](.*?)['"]\s*i?\s*$/i);
+    if (!siteMatch) siteMatch = trimmed.match(/^site\s*\(\s*['"](.*?)['"]\s*\)\s*i?\s*$/i);
     if (siteMatch) {
       const target = siteMatch[1].trim().toLowerCase().replace(/^\.+|\.+$/g, '');
       return { matched: true, static: currentSite === target || currentSite.endsWith(`.${target}`) };
     }
 
-    const strMatch = trimmed.match(/^(title|url|host|path|scheme)\s*(\^=|\$=|\*=|=)\s*['"](.*?)['"]$/i);
+    const strMatch = trimmed.match(/^(title|url|host|path|scheme)\s*(\^=|\$=|\*=|=)\s*['"](.*?)['"]\s*i?\s*$/i);
     if (strMatch) {
       return { matched: true, dynamic: { type: strMatch[1].toLowerCase(), op: strMatch[2], val: strMatch[3].toLowerCase() } };
     }
@@ -1141,6 +1147,8 @@
       whitelistUrlPatterns: [],
       whitelistTitlePatterns: [],
       whitelistTextPatterns: [],
+      whitelistConditionalDomains: new Map(),
+      whitelistConditionalRules: [],
       conditionalRules: [],
       conditionalDomains: new Map(),
       highlightDomains: new Map(),
@@ -1238,20 +1246,30 @@
       if (coreRule.startsWith('@')) {
         const simpleDomain = extractSimpleWhitelistDomain(coreRule);
         if (simpleDomain) {
-          if (!compiledRules.whitelistDomains.has(simpleDomain.domain))
-            compiledRules.whitelistDomains.set(simpleDomain.domain, []);
-          compiledRules.whitelistDomains.get(simpleDomain.domain).push(simpleDomain.type);
+          if (!hasDynamic) {
+            if (!compiledRules.whitelistDomains.has(simpleDomain.domain))
+              compiledRules.whitelistDomains.set(simpleDomain.domain, []);
+            compiledRules.whitelistDomains.get(simpleDomain.domain).push({type: simpleDomain.type, source});
+          } else {
+            if (!compiledRules.whitelistConditionalDomains.has(simpleDomain.domain))
+              compiledRules.whitelistConditionalDomains.set(simpleDomain.domain, []);
+            compiledRules.whitelistConditionalDomains.get(simpleDomain.domain).push({type: simpleDomain.type, conditions: parsed.dynamicConditions, source});
+          }
         } else {
           const whitelistRule = coreRule.substring(1).trim();
           if (!whitelistRule) return;
           try {
             const compiled = compileRuleRegex(whitelistRule);
-            if (compiled.type === 'title') {
-              compiledRules.whitelistTitlePatterns.push(compiled.regex);
-            } else if (compiled.type === 'text') {
-              compiledRules.whitelistTextPatterns.push(compiled.regex);
+            if (!hasDynamic) {
+              if (compiled.type === 'title') {
+                compiledRules.whitelistTitlePatterns.push({regex: compiled.regex, source});
+              } else if (compiled.type === 'text') {
+                compiledRules.whitelistTextPatterns.push({regex: compiled.regex, source});
+              } else {
+                compiledRules.whitelistUrlPatterns.push({regex: compiled.regex, source});
+              }
             } else {
-              compiledRules.whitelistUrlPatterns.push(compiled.regex);
+              compiledRules.whitelistConditionalRules.push({type: compiled.type, regex: compiled.regex, conditions: parsed.dynamicConditions, source});
             }
           } catch (e) {
             if (currentConfig.debug) console.warn('白名单规则预编译失败:', rule, e);
@@ -1401,27 +1419,58 @@
     for (const level of subdomainLevels) {
       const types = compiledRules.whitelistDomains.get(level);
       if (types) {
-        for (const matchType of types) {
-          if (matchDomainEntryType(matchType, level, lowerDomain)) { whitelisted = true; break; }
+        for (const entry of types) {
+          if (entry.source === t('localRule') && matchDomainEntryType(entry.type, level, lowerDomain)) { whitelisted = true; break; }
         }
         if (whitelisted) break;
       }
     }
     if (!whitelisted) {
       for (let i = 0; i < compiledRules.whitelistUrlPatterns.length; i++) {
-        if (safeRegexTest(compiledRules.whitelistUrlPatterns[i], url) || safeRegexTest(compiledRules.whitelistUrlPatterns[i], domain)) {
+        const entry = compiledRules.whitelistUrlPatterns[i];
+        if (entry.source !== t('localRule')) continue;
+        if (safeRegexTest(entry.regex, url) || safeRegexTest(entry.regex, domain)) {
           whitelisted = true; break;
         }
       }
     }
     if (!whitelisted && title) {
       for (let i = 0; i < compiledRules.whitelistTitlePatterns.length; i++) {
-        if (safeRegexTest(compiledRules.whitelistTitlePatterns[i], title)) { whitelisted = true; break; }
+        const entry = compiledRules.whitelistTitlePatterns[i];
+        if (entry.source !== t('localRule')) continue;
+        if (safeRegexTest(entry.regex, title)) { whitelisted = true; break; }
       }
     }
     if (!whitelisted && snippet) {
       for (let i = 0; i < compiledRules.whitelistTextPatterns.length; i++) {
-        if (safeRegexTest(compiledRules.whitelistTextPatterns[i], snippet)) { whitelisted = true; break; }
+        const entry = compiledRules.whitelistTextPatterns[i];
+        if (entry.source !== t('localRule')) continue;
+        if (safeRegexTest(entry.regex, snippet)) { whitelisted = true; break; }
+      }
+    }
+    if (!whitelisted) {
+      for (const level of subdomainLevels) {
+        const wlRules = compiledRules.whitelistConditionalDomains.get(level);
+        if (wlRules) {
+          for (const item of wlRules) {
+            if (item.source === t('localRule') && matchDomainEntryType(item.type, level, lowerDomain) && checkDynamicConditions(item.conditions, title, url)) { whitelisted = true; break; }
+          }
+          if (whitelisted) break;
+        }
+      }
+    }
+    if (!whitelisted) {
+      for (let i = 0; i < compiledRules.whitelistConditionalRules.length; i++) {
+        const item = compiledRules.whitelistConditionalRules[i];
+        if (item.source !== t('localRule')) continue;
+        if (!checkDynamicConditions(item.conditions, title, url)) continue;
+        if (item.type === 'url' || item.type === 'regex') {
+          if (safeRegexTest(item.regex, url) || safeRegexTest(item.regex, domain)) { whitelisted = true; break; }
+        } else if (item.type === 'title' && title) {
+          if (safeRegexTest(item.regex, title)) { whitelisted = true; break; }
+        } else if (item.type === 'text' && snippet) {
+          if (safeRegexTest(item.regex, snippet)) { whitelisted = true; break; }
+        }
       }
     }
 
@@ -1430,6 +1479,7 @@
         const entries = compiledRules.domains.get(level);
         if (entries) {
           for (const dm of entries) {
+            if (dm.source !== t('localRule')) continue;
             if (matchDomainEntryType(dm.type, level, lowerDomain)) { blockedInfo = {rule: dm.originalRule, source: dm.source}; break; }
           }
           if (blockedInfo) break;
@@ -1438,19 +1488,140 @@
       if (!blockedInfo) {
         for (let i = 0; i < compiledRules.urls.length; i++) {
           const item = compiledRules.urls[i];
-            if (safeRegexTest(item.regex, url) || safeRegexTest(item.regex, domain)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
+          if (item.source !== t('localRule')) continue;
+          if (safeRegexTest(item.regex, url) || safeRegexTest(item.regex, domain)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
         }
       }
       if (!blockedInfo && title) {
         for (let i = 0; i < compiledRules.titles.length; i++) {
           const item = compiledRules.titles[i];
-            if (safeRegexTest(item.regex, title)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
+          if (item.source !== t('localRule')) continue;
+          if (safeRegexTest(item.regex, title)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
         }
       }
       if (!blockedInfo && snippet) {
         for (let i = 0; i < compiledRules.texts.length; i++) {
           const item = compiledRules.texts[i];
+          if (item.source !== t('localRule')) continue;
+          if (safeRegexTest(item.regex, snippet)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
+        }
+      }
+      if (!blockedInfo) {
+        for (const level of subdomainLevels) {
+          const rules = compiledRules.conditionalDomains.get(level);
+          if (rules) {
+            for (const item of rules) {
+              if (item.source !== t('localRule')) continue;
+              if (matchDomainEntryType(item.domainType, level, lowerDomain) && checkDynamicConditions(item.conditions, title, url)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
+            }
+            if (blockedInfo) break;
+          }
+        }
+      }
+      if (!blockedInfo) {
+        for (let i = 0; i < compiledRules.conditionalRules.length; i++) {
+          const item = compiledRules.conditionalRules[i];
+          if (item.source !== t('localRule')) continue;
+          if (!checkDynamicConditions(item.conditions, title, url)) continue;
+          if (item.type === 'url' || item.type === 'regex') {
+            if (safeRegexTest(item.regex, url) || safeRegexTest(item.regex, domain)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
+          } else if (item.type === 'title' && title) {
+            if (safeRegexTest(item.regex, title)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
+          } else if (item.type === 'text' && snippet) {
             if (safeRegexTest(item.regex, snippet)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
+          }
+        }
+      }
+    }
+
+    if (!whitelisted) {
+      for (const level of subdomainLevels) {
+        const types = compiledRules.whitelistDomains.get(level);
+        if (types) {
+          for (const entry of types) {
+            if (entry.source !== t('localRule') && matchDomainEntryType(entry.type, level, lowerDomain)) { whitelisted = true; break; }
+          }
+          if (whitelisted) break;
+        }
+      }
+    }
+    if (!whitelisted) {
+      for (let i = 0; i < compiledRules.whitelistUrlPatterns.length; i++) {
+        const entry = compiledRules.whitelistUrlPatterns[i];
+        if (entry.source === t('localRule')) continue;
+        if (safeRegexTest(entry.regex, url) || safeRegexTest(entry.regex, domain)) { whitelisted = true; break; }
+      }
+    }
+    if (!whitelisted && title) {
+      for (let i = 0; i < compiledRules.whitelistTitlePatterns.length; i++) {
+        const entry = compiledRules.whitelistTitlePatterns[i];
+        if (entry.source === t('localRule')) continue;
+        if (safeRegexTest(entry.regex, title)) { whitelisted = true; break; }
+      }
+    }
+    if (!whitelisted && snippet) {
+      for (let i = 0; i < compiledRules.whitelistTextPatterns.length; i++) {
+        const entry = compiledRules.whitelistTextPatterns[i];
+        if (entry.source === t('localRule')) continue;
+        if (safeRegexTest(entry.regex, snippet)) { whitelisted = true; break; }
+      }
+    }
+    if (!whitelisted) {
+      for (const level of subdomainLevels) {
+        const wlRules = compiledRules.whitelistConditionalDomains.get(level);
+        if (wlRules) {
+          for (const item of wlRules) {
+            if (item.source !== t('localRule') && matchDomainEntryType(item.type, level, lowerDomain) && checkDynamicConditions(item.conditions, title, url)) { whitelisted = true; break; }
+          }
+          if (whitelisted) break;
+        }
+      }
+    }
+    if (!whitelisted) {
+      for (let i = 0; i < compiledRules.whitelistConditionalRules.length; i++) {
+        const item = compiledRules.whitelistConditionalRules[i];
+        if (item.source === t('localRule')) continue;
+        if (!checkDynamicConditions(item.conditions, title, url)) continue;
+        if (item.type === 'url' || item.type === 'regex') {
+          if (safeRegexTest(item.regex, url) || safeRegexTest(item.regex, domain)) { whitelisted = true; break; }
+        } else if (item.type === 'title' && title) {
+          if (safeRegexTest(item.regex, title)) { whitelisted = true; break; }
+        } else if (item.type === 'text' && snippet) {
+          if (safeRegexTest(item.regex, snippet)) { whitelisted = true; break; }
+        }
+      }
+    }
+
+    if (!whitelisted && !blockedInfo) {
+      for (const level of subdomainLevels) {
+        const entries = compiledRules.domains.get(level);
+        if (entries) {
+          for (const dm of entries) {
+            if (dm.source === t('localRule')) continue;
+            if (matchDomainEntryType(dm.type, level, lowerDomain)) { blockedInfo = {rule: dm.originalRule, source: dm.source}; break; }
+          }
+          if (blockedInfo) break;
+        }
+      }
+      if (!blockedInfo) {
+        for (let i = 0; i < compiledRules.urls.length; i++) {
+          const item = compiledRules.urls[i];
+          if (item.source === t('localRule')) continue;
+          if (safeRegexTest(item.regex, url) || safeRegexTest(item.regex, domain)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
+        }
+      }
+      if (!blockedInfo && title) {
+        for (let i = 0; i < compiledRules.titles.length; i++) {
+          const item = compiledRules.titles[i];
+          if (item.source === t('localRule')) continue;
+          if (safeRegexTest(item.regex, title)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
+        }
+      }
+      if (!blockedInfo && snippet) {
+        for (let i = 0; i < compiledRules.texts.length; i++) {
+          const item = compiledRules.texts[i];
+          if (item.source === t('localRule')) continue;
+          if (safeRegexTest(item.regex, snippet)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
         }
       }
       if (!blockedInfo) {
@@ -1458,6 +1629,7 @@
           const rules = compiledRules.conditionalDomains.get(level);
           if (rules) {
             for (const ruleObj of rules) {
+              if (ruleObj.source === t('localRule')) continue;
               if (matchDomainEntryType(ruleObj.domainType, level, lowerDomain) && checkDynamicConditions(ruleObj.conditions, title, url)) {
                 blockedInfo = {rule: ruleObj.originalRule, source: ruleObj.source}; break;
               }
@@ -1469,6 +1641,7 @@
       if (!blockedInfo) {
         for (let i = 0; i < compiledRules.conditionalRules.length; i++) {
           const ruleObj = compiledRules.conditionalRules[i];
+          if (ruleObj.source === t('localRule')) continue;
           if (!checkDynamicConditions(ruleObj.conditions, title, url)) continue;
           if (ruleObj.type === 'url' || ruleObj.type === 'regex') {
             if (safeRegexTest(ruleObj.regex, url) || safeRegexTest(ruleObj.regex, domain)) { blockedInfo = {rule: ruleObj.originalRule, source: ruleObj.source}; break; }
@@ -1609,45 +1782,32 @@
       e.preventDefault();
       e.stopPropagation();
 
-      // 移除规则
+      // 取消屏蔽:新增白名单规则,不删除源规则
       if (isBlocked) {
-        let ruleRemoved = false;
-        const matchedRule = result.dataset.matchedRule;
+        let whitelistRule = '';
+        const ipParts = domain.split('.');
+        const isIP = ipParts.length === 4 && ipParts.every(p => {
+          const n = parseInt(p, 10);
+          return n >= 0 && n <= 255 && String(n) === p;
+        });
 
-        if (matchedRule) {
-          const hitIndex = currentConfig.rules.findIndex(rule => stripRuleComment(rule.trim()) === matchedRule);
-          if (hitIndex !== -1) {
-            currentConfig.rules.splice(hitIndex, 1);
-            ruleRemoved = true;
+        if (isIP) {
+          whitelistRule = `@*://${domain}/*`;
+        } else {
+          const baseDomain = domain.startsWith('www.') ? domain.substring(4) : domain;
+          if (currentConfig.blockDomain) {
+            whitelistRule = `@*://*.${baseDomain}/*`;
+          } else {
+            whitelistRule = `@*://${domain}/*`;
           }
         }
 
-        if (!ruleRemoved) {
-          let baseDomain = domain.replace(/^www\./, '');
-          const possibleRules = [
-            `*://${domain}/*`,
-            `*://www.${baseDomain}/*`,
-            `*://*.${baseDomain}/*`,
-            `${domain}/*`,
-            `www.${baseDomain}/*`,
-            `*.${baseDomain}/*`,
-            domain,
-            baseDomain
-          ];
-
-          const newRules = currentConfig.rules.filter(rule => {
-            const matched = possibleRules.includes(stripRuleComment(rule.trim()));
-            if (matched) ruleRemoved = true;
-            return !matched;
-          });
-          currentConfig.rules = newRules;
+        if (!currentConfig.rules.some(rule => stripRuleComment(rule.trim()) === whitelistRule)) {
+          currentConfig.rules.push(whitelistRule);
         }
-
-        if (ruleRemoved) {
-          persistConfig();
-          syncRulesTextarea();
-          forceReprocessAll();
-        }
+        persistConfig();
+        syncRulesTextarea();
+        forceReprocessAll();
         return;
       }
 
@@ -4232,12 +4392,21 @@
     document.getElementById('subscription-import').onclick = async () => {
       const rows = Array.from(container.querySelectorAll('.subscription-row'));
       if (!persistCurrentSubscriptions()) return;
-      showToast(t('saved'), 'success');
+      showToast(t('importing'), 'info');
       for (const row of rows) {
         const input = row.querySelector('.subscription-url');
         const url = input.value.trim();
-        if (!url || !/^https?:\/\//i.test(url)) continue;
         const msgDiv = row.querySelector('.subscription-status-message');
+        if (!url) {
+          msgDiv.textContent = t('subLinkEmpty');
+          msgDiv.className = 'subscription-status-message error';
+          continue;
+        }
+        if (!/^https?:\/\//i.test(url)) {
+          msgDiv.textContent = t('subLinkInvalid');
+          msgDiv.className = 'subscription-status-message error';
+          continue;
+        }
         try {
           const result = await performSubscriptionForUrl(url, false);
           msgDiv.textContent = t('subImportSuccess', {
