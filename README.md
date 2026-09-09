@@ -33,7 +33,7 @@
 ### 1.4 关于订阅：
 1. 订阅同步频率为每天一次，只支持`.txt`或`.yaml`远程链接，例如`https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Other/rules.txt`
 2. 订阅规则在本地规则后追加应用，优先级本地 > 订阅。由于脚本可分配性能有限，规则总数建议不超过3w条避免手机爆炸🤳💥
-3. 脚本扩展有限不支持`##`DOM和`$category`等语法规则，通过订阅导入会自动清除
+3. 脚本扩展有限不支持`##`DOM等语法规则，通过订阅导入会自动清除
 
 ## 规则说明
 
@@ -101,6 +101,7 @@
 
 **注意：**
  - 在规则后添加 `@if(...)` 作为附加条件，多个 `@if` 条件同时生效(逻辑与`&`，可转换为单个`@if`)，复合规则匹配默认忽略大小写
+ - 条件表达式也可单独使用不需要套 `@if(...)`，如 `host $= ".example.com"`、`path *= "/download/"`，对所有搜索结果生效
  - 单个 `@if` 内支持逻辑运算：`|` 或、`&` 与、`!` 非，可用 `( )` 括号嵌套分组，优先级 `!` > `&` > `|`
  - `!` 取反的是条件本身。当结果缺少标题等被比较内容时，该条件视为不成立，取反后即为成立，如 `!(title *= "关键词")` 会命中无标题的结果
 
@@ -109,6 +110,7 @@
 | 条件类型 | 语法 | 说明 |
 | --- | --- | --- |
 | 搜索引擎 | `$site = "google"` | 仅在指定搜索引擎中生效，可写`google`、`bing`、`duckduckgo`(`ddg`)、`yandex`、`brave`、`yahoo`，忽略大小写，分隔符可用`=`或`:` |
+| 搜索类型 | `$category = "images"` | 仅在指定搜索类型中生效，可写`web`、`images`、`videos`、`news`，由当前页 URL 推断，网页搜索默认为`web` |
 | 搜索站点 | `site = "google.com.hk"` | 仅在指定搜索引擎地区站点中生效 |
 | 标题包含 | `title *= "关键词"` | 标题中包含指定字符串`关键词` |
 | 标题精确 | `title = "关键词"` | 标题精确匹配指定字符串`关键词` |
@@ -136,14 +138,17 @@
 | `*://*.example.com/* @if(title *= "关键词1" \| title *= "关键词2")` | 屏蔽`example.com`的标题中含`关键词1`或`关键词2`的结果 |
 | `*://*.example.com/* @if(title =~ /关键词1\|关键词2/)` | 上条规则的正则写法，结尾需加`i`才会忽略大小写 |
 | `*://*.example.com/* @if(url *= "test")` | 屏蔽`example.com`的URL中含`test`的结果，如`example.com/*/test/*` |
-| `*://*.example.com/* @if(url $= ".pdf")` | 屏蔽`example.com`的URL中以`.pdf`结尾的结果 |
 | `*://*.example.com/* @if(title *= "关键词" & !(url *= "test"))` | 屏蔽`example.com`的标题含`关键词`且URL中不含`test`的结果 |
 | `*://*.example.com/* @if(site = "google.com.hk")` | 仅在Google HK中屏蔽`example.com` |
 | `*://*.example.com/* @if($site = "google")` | 仅在Google中屏蔽`example.com` |
+| `*://*.amazon.com/* @if($category = "images")` | 仅在图片搜索中屏蔽`amazon.com` |
 | `*://*.example.com/* @if($site = "google") @if(title *= "示例")` | 仅在Google中屏蔽标题含`示例`的`example.com`的结果 |
 | `*://*.example.com/* @if(title *= "a" \| title *= "b") @if(!(url *= "c"))` | 屏蔽标题含`a`或`b`且URL不含`c`的`example.com`的结果 |
 | `title/.*示例.*/ @if($site = "google")` | 仅在Google中屏蔽标题含`示例`的结果 |
 | `text/.*示例.*/ @if($site = "google" \| $site = "bing")` | 在Google或Bing中都屏蔽网页描述含`示例`的结果 |
+| `path *= "/download/"` | 屏蔽路径含`/download/`的结果 |
+| `host $= ".example.com" & path *= "/download/"` | 屏蔽`example.com`下路径含`/download/`的结果 |
+| `@1 path $= ".pdf"` | 高亮路径以`.pdf`结尾的结果 |
 
 ## 截图
 
