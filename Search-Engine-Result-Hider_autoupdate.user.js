@@ -1592,6 +1592,7 @@
       }
     }
 
+    if (!whitelisted && !blockedInfo) {
       for (const level of subdomainLevels) {
         const entries = compiledRules.domains.get(level);
         if (entries) {
