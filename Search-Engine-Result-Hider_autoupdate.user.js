@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.7.0
+// @version      7.7.1
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -53,6 +53,7 @@
   const WEBDAV_AUTO_SYNC_KEY = 'searchfilter_webdav_auto_sync';
   const WEBDAV_SYNC_CONFIG_KEY = 'searchfilter_webdav_sync_config';
   const HL_STATS_REGEX = /^@\d+/;
+  const MAX_SUBSCRIPTIONS = 100;
 
   // 默认配置
   let currentConfig = GM_getValue(CONFIG_KEY, {
@@ -211,7 +212,7 @@
       subLinkEmpty: '链接为空',
       subImportSuccess: '导入成功，已导入 {count} 条规则',
       subImportFailed: '导入失败，请检查链接或网络状态',
-      maxSubscriptions: '最多只能添加3条订阅',
+      maxSubscriptions: '最多只能添加100条订阅',
       webdavUploading: '正在上传...',
       webdavDownloading: '正在下载...',
       webdavUploadFailed: '上传失败: ',
@@ -312,7 +313,7 @@
       subLinkEmpty: 'URL is empty',
       subImportSuccess: 'Import success, {count} rules imported',
       subImportFailed: 'Import failed, check URL or network',
-      maxSubscriptions: 'Maximum 3 subscriptions allowed',
+      maxSubscriptions: 'Maximum 100 subscriptions allowed',
       webdavUploading: 'Uploading...',
       webdavDownloading: 'Downloading...',
       webdavUploadFailed: 'Upload failed: ',
@@ -2164,6 +2165,20 @@
         #extabar .searchfilter-quick-block { display: none !important; }
 
         /* 面板隔离 */
+        #searchfilter-webdav-panel,
+        #searchfilter-subscription-panel {
+            height: 332px;
+            overflow: visible;
+        }
+
+        #searchfilter-webdav-panel #searchfilter-toast-container,
+        #searchfilter-subscription-panel #searchfilter-toast-container {
+            max-width: none;
+            width: auto;
+            left: 0;
+            right: 0;
+        }
+
         #searchfilter-panel,
         #searchfilter-webdav-panel,
         #searchfilter-subscription-panel,
@@ -2387,11 +2402,40 @@
         }
 
         /* 订阅布局 */
+        .subscription-panel-header {
+            flex-shrink: 0;
+        }
+        .subscription-panel-header h3 {
+            margin: 0 !important;
+        }
+        #subscription-rows-container {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: thin;
+            padding-right: 2px;
+        }
+        #subscription-rows-container::-webkit-scrollbar { width: 6px; }
+        #subscription-rows-container::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+        #subscription-rows-container::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+        #subscription-rows-container::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
         .subscription-row {
             display: flex;
             flex-direction: column;
-            gap: 4px;
             margin-bottom: 0;
+        }
+        .subscription-meta-row {
+            display: flex;
+            align-items: center;
+            margin: 2px 0 2px 0;
+            min-height: 14px;
+        }
+        .subscription-index {
+            font-size: 12px;
+            color: #4a5568;
+            flex-shrink: 0;
+            line-height: 1.2;
         }
         .subscription-input-row {
             display: flex;
@@ -2418,8 +2462,11 @@
         .subscription-status-message {
             font-size: 11px;
             color: #4a5568;
-            margin-left: 6px;
-            min-height: 18px;
+            margin-left: 8px;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .subscription-status-message.success {
             color: #276749;
@@ -2427,9 +2474,20 @@
         .subscription-status-message.error {
             color: #c53030;
         }
-        .add-subscription-btn {
-            margin-top: 0;
-            margin-bottom: 16px;
+        .subscription-btn-group {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            margin-top: 12px;
+            flex-shrink: 0;
+        }
+        .subscription-btn-group .searchfilter-button {
+            flex: 1 !important;
+        }
+        @media (prefers-color-scheme: dark) {
+            .subscription-index {
+                color: #9ca3af;
+            }
         }
 
         /* 屏蔽结果灰底 */
@@ -3101,7 +3159,8 @@
       container.style.left = '0';
       container.style.right = '0';
       container.style.bottom = '';
-      container.style.width = '';
+      container.style.width = 'auto';
+      container.style.maxWidth = 'none';
     } else {
       if (container.parentElement !== document.body) {
         document.body.appendChild(container);
@@ -3242,7 +3301,7 @@
     }
 
     // 匹配规则
-    const sourceOrder = [`${t('subscription')}1`, `${t('subscription')}2`, `${t('subscription')}3`, t('localRule')];
+    const sourceOrder = getSubscriptions().map((_, i) => `${t('subscription')}${i + 1}`).concat(t('localRule'));
     let hasMatches = false;
 
     sourceOrder.forEach(source => {
@@ -4024,8 +4083,8 @@
     if (meta.name) subData.name = meta.name;
 
     if (existingIndex >= 0) subs[existingIndex] = subData;
-    else subs.push(subData);
-    saveSubscriptions(subs);
+    else if (subs.length < MAX_SUBSCRIPTIONS) subs.push(subData);
+    saveSubscriptions(subs.slice(0, MAX_SUBSCRIPTIONS));
 
     if (showAlerts) alert(t('subscriptionSuccess', {
       count: validRules.length
@@ -4044,24 +4103,20 @@
       return;
     }
 
-    // 订阅面板样式
     const panel = createPanel('searchfilter-subscription-panel', '320px', '20px');
 
     let subscriptions = getSubscriptions();
 
-    let rowsHtml = '';
-    subscriptions.forEach((sub, index) => {
-      rowsHtml += `<div class="subscription-row" data-index="${index}">
-                <div class="subscription-input-row">
-                    <input type="text" class="subscription-url" placeholder="https://example.com/rules.txt">
-                    <button class="delete-subscription-btn" data-index="${index}">❌</button>
-                </div>
-                <div class="subscription-status-message"></div>
-            </div>`;
-    });
+    function createSubscriptionRow(url = '') {
+      const row = document.createElement('div');
+      row.className = 'subscription-row';
+      row.innerHTML = `<div class="subscription-meta-row"><span class="subscription-index"></span><div class="subscription-status-message"></div></div><div class="subscription-input-row"><input type="text" class="subscription-url" placeholder="https://example.com/rules.txt"><button class="delete-subscription-btn">❌</button></div>`;
+      row.querySelector('.subscription-url').value = url;
+      return row;
+    }
 
     panel.innerHTML = `
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <div class="subscription-panel-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0;">
                 <h3 style="margin:0;font-size:16px;color:#2d3748;line-height:1;">${t('panelTitle')}</h3>
                 <label style="display:flex !important;align-items:center;font-size:12px;color:#4a5568;cursor:pointer;margin:0;white-space:nowrap;line-height:1;">
                     <span class="searchfilter-switch">
@@ -4071,16 +4126,20 @@
                     <span style="line-height:1;">${t('autoUpdate')}</span>
                 </label>
             </div>
-            <div id="subscription-rows-container">${rowsHtml}</div>
-            <div class="add-subscription-btn"><button id="add-subscription" class="searchfilter-button searchfilter-button-secondary" style="width:100%;" ${subscriptions.length >= 3 ? 'disabled' : ''}>${t('addSubscription')}</button></div>
-            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:0px;"><button id="subscription-save" class="searchfilter-button searchfilter-button-primary" style="flex:1;">${t('save')}</button><button id="subscription-import" class="searchfilter-button searchfilter-button-primary" style="flex:1;">${t('import')}</button><button id="subscription-cancel" class="searchfilter-button searchfilter-button-secondary" style="flex:1;">${t('cancel')}</button></div>
+            <div id="subscription-rows-container"></div>
+            <div class="subscription-btn-group">
+                <button id="subscription-import" class="searchfilter-button searchfilter-button-primary">${t('import')}</button>
+                <button id="subscription-add" class="searchfilter-button searchfilter-button-success">+</button>
+                <button id="subscription-cancel" class="searchfilter-button searchfilter-button-secondary">${t('cancel')}</button>
+            </div>
         `;
 
     const container = document.getElementById('subscription-rows-container');
-    container.querySelectorAll('.subscription-url').forEach((input, index) => {
-      input.value = subscriptions[index]?.url || '';
+    subscriptions.forEach(sub => {
+      container.appendChild(createSubscriptionRow(sub.url || ''));
     });
-    const addBtn = document.getElementById('add-subscription');
+
+    const addBtn = document.getElementById('subscription-add');
     const autoUpdateSwitch = document.getElementById('subscription-auto-update');
     if (autoUpdateSwitch) {
       autoUpdateSwitch.addEventListener('change', function() {
@@ -4089,92 +4148,96 @@
       });
     }
 
-    function updateAddButtonState() {
-      addBtn.disabled = container.querySelectorAll('.subscription-row').length >= 3;
+    function reindexRows() {
+      container.querySelectorAll('.subscription-row').forEach((row, index) => {
+        row.querySelector('.subscription-index').textContent = `${t('subscription')}${index + 1}`;
+      });
     }
 
-    addBtn.onclick = () => {
-      if (container.querySelectorAll('.subscription-row').length >= 3) {
-        showToast(t('maxSubscriptions'), 'error');
-        return;
-      }
-      const newRow = document.createElement('div');
-      newRow.className = 'subscription-row';
-      newRow.innerHTML = `<div class="subscription-input-row"><input type="text" class="subscription-url" placeholder="https://example.com/rules.txt" value=""><button class="delete-subscription-btn">❌</button></div><div class="subscription-status-message"></div>`;
-      container.appendChild(newRow);
-      updateAddButtonState();
-      bindDeleteEvents();
-    };
+    function updateAddButtonState() {
+      addBtn.disabled = container.querySelectorAll('.subscription-row').length >= MAX_SUBSCRIPTIONS;
+    }
+
+    function collectSubscriptionsFromRows() {
+      const newSubs = [];
+      let hasError = false;
+      container.querySelectorAll('.subscription-row').forEach(row => {
+        const input = row.querySelector('.subscription-url');
+        const url = input.value.trim();
+        const msgDiv = row.querySelector('.subscription-status-message');
+        if (!url) {
+          msgDiv.textContent = '';
+          msgDiv.className = 'subscription-status-message';
+          return;
+        }
+        if (!/^https?:\/\//i.test(url)) {
+          msgDiv.textContent = t('subLinkInvalid');
+          msgDiv.className = 'subscription-status-message error';
+          hasError = true;
+          return;
+        }
+        const existingSub = subscriptions.find(s => s.url === url);
+        newSubs.push({
+          url,
+          enabled: true,
+          lastUpdate: existingSub ? existingSub.lastUpdate : 0,
+          rules: existingSub ? existingSub.rules : [],
+          name: existingSub ? existingSub.name : undefined
+        });
+      });
+      return { newSubs, hasError };
+    }
+
+    function persistCurrentSubscriptions() {
+      const { newSubs, hasError } = collectSubscriptionsFromRows();
+      if (hasError) return false;
+      saveSubscriptions(newSubs.filter(s => s.url).slice(0, MAX_SUBSCRIPTIONS));
+      subscriptions = getSubscriptions();
+      return true;
+    }
 
     function bindDeleteEvents() {
       container.querySelectorAll('.delete-subscription-btn').forEach(btn => {
         btn.onclick = (e) => {
           e.stopPropagation();
           btn.closest('.subscription-row').remove();
+          reindexRows();
           updateAddButtonState();
+          if (persistCurrentSubscriptions()) {
+            showToast(t('saved'), 'success');
+            forceReprocessAll();
+          }
         };
       });
     }
+
+    addBtn.onclick = () => {
+      if (container.querySelectorAll('.subscription-row').length >= MAX_SUBSCRIPTIONS) {
+        showToast(t('maxSubscriptions'), 'error');
+        return;
+      }
+      container.appendChild(createSubscriptionRow());
+      reindexRows();
+      updateAddButtonState();
+      bindDeleteEvents();
+      container.scrollTop = container.scrollHeight;
+    };
+
+    reindexRows();
+    updateAddButtonState();
     bindDeleteEvents();
 
     const closePanel = bindOutsideClickClose(panel);
 
-    document.getElementById('subscription-save').onclick = () => {
-      const rows = container.querySelectorAll('.subscription-row');
-      const newSubs = [];
-      let hasError = false;
-      rows.forEach(row => {
-        const input = row.querySelector('.subscription-url');
-        const url = input.value.trim();
-        if (url) {
-          if (!/^https?:\/\//i.test(url)) {
-            const msgDiv = row.querySelector('.subscription-status-message');
-            msgDiv.textContent = t('subLinkInvalid');
-            msgDiv.className = 'subscription-status-message error';
-            hasError = true;
-            return;
-          }
-          const existingSub = subscriptions.find(s => s.url === url);
-          newSubs.push({
-            url,
-            enabled: true,
-            lastUpdate: existingSub ? existingSub.lastUpdate : 0,
-            rules: existingSub ? existingSub.rules : [],
-            name: existingSub ? existingSub.name : undefined
-          });
-        }
-      });
-      if (hasError) return;
-      saveSubscriptions(newSubs);
-      showToast(t('saved'), 'success');
-      subscriptions = newSubs;
-      forceReprocessAll();
-    };
-
     document.getElementById('subscription-import').onclick = async () => {
-      const rows = container.querySelectorAll('.subscription-row');
-      if (rows.length === 0) {
-        showToast(t('subLinkEmpty'), 'error');
-        return;
-      }
-      const loadingToast = showToast(t('importing'), 'info', 10000);
-      let hasError = false;
-      for (let row of rows) {
+      const rows = Array.from(container.querySelectorAll('.subscription-row'));
+      if (!persistCurrentSubscriptions()) return;
+      showToast(t('saved'), 'success');
+      for (const row of rows) {
         const input = row.querySelector('.subscription-url');
         const url = input.value.trim();
+        if (!url || !/^https?:\/\//i.test(url)) continue;
         const msgDiv = row.querySelector('.subscription-status-message');
-        if (!url) {
-          msgDiv.textContent = t('subLinkEmpty');
-          msgDiv.className = 'subscription-status-message error';
-          hasError = true;
-          continue;
-        }
-        if (!/^https?:\/\//i.test(url)) {
-          msgDiv.textContent = t('subLinkInvalid');
-          msgDiv.className = 'subscription-status-message error';
-          hasError = true;
-          continue;
-        }
         try {
           const result = await performSubscriptionForUrl(url, false);
           msgDiv.textContent = t('subImportSuccess', {
@@ -4185,13 +4248,9 @@
           console.error(`导入失败 [${url}]:`, err);
           msgDiv.textContent = t('subImportFailed');
           msgDiv.className = 'subscription-status-message error';
-          hasError = true;
         }
       }
-      loadingToast.dismiss();
-      if (!hasError) {
-        showToast(t('importDone'), 'success');
-      }
+      subscriptions = getSubscriptions();
       forceReprocessAll();
     };
 
