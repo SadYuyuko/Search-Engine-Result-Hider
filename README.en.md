@@ -33,7 +33,7 @@ Currently supported search engines: Bing, Google, DuckDuckGo, Yandex, Brave, Yah
 ### 1.4 About Subscription:
 1. Subscriptions update once per day. Only remote `.txt` or `.yaml` file links are supported.
 2. Subscription rules are applied after local rules, priority local > subscriptions. Due to the limited performance budget of user scripts, the total number of rules should not exceed 30,000 to avoid performance issues on mobile devices.
-3. `##` DOM syntax and `$category` rules are not supported. Such rules will be automatically removed when imported via subscription.
+3. `##` DOM syntax is not supported. Such rules will be automatically removed when imported via subscription.
 
 ## Rule Description
 
@@ -101,6 +101,7 @@ Note: `@N` only supports 5 colors, numbered `@1` through `@5`. Open the custom c
 
 **Notes:**
  - Append `@if(...)` to a rule to add conditions. Multiple `@if()` blocks can take effect simultaneously (combined with logical AND`&`). String matching within conditions is case-insensitive by default.
+ - A condition expression can also stand alone as a full rule without wrapping `@if(...)`, e.g. `host $= ".example.com"`, `path *= "/download/"`. It applies to all search results.
  - Inside a single `@if()` you can use full logical operators: `|` OR, `&` AND, `!` NOT, with `( )` parentheses for grouping. Operator precedence: `!` > `&` > `|`. 
  - `!` negates the condition itself. When a result lacks the compared content (e.g. no title), the condition is treated as false, so its negation is true; e.g. `!(title *= "keyword")` also matches results without a title.
 
@@ -109,6 +110,7 @@ Note: `@N` only supports 5 colors, numbered `@1` through `@5`. Open the custom c
 | Condition Type | Syntax | Description |
 | --- | --- | --- |
 | Search Engine | `$site = "google"` | only apply on the specified search engine; accepts `google`/`bing`/`duckduckgo` (`ddg`)/`yandex`/`brave`/`yahoo`, case-insensitive, `=` or `:` separator |
+| Search Category | `$category = "images"` | only apply on the specified search type; accepts `web`/`images`/`videos`/`news`, inferred from the current page URL, defaults to `web` on web search |
 | Site | `site = "google.com.hk"` | only apply on the specified site |
 | Title Contains | `title *= "keyword"` | title contains the specified string |
 | Title Exact | `title = "Example Domain"` | title exactly matches the specified string |
@@ -136,14 +138,17 @@ Note: `@N` only supports 5 colors, numbered `@1` through `@5`. Open the custom c
 | `*://*.example.com/* @if(title *= "kw1" \| title *= "kw2")` | block results whose title contains `kw1` or `kw2` |
 | `*://*.example.com/* @if(title =~ /kw1\|kw2/)` | regex form, add `i` for case-insensitive |
 | `*://*.example.com/* @if(url *= "test")` | block results whose URL contains `test`, e.g. `example.com/*/test/*` |
-| `*://*.example.com/* @if(url $= ".pdf")` | block results whose URL ends with `.pdf` |
 | `*://*.example.com/* @if(title *= "keyword" & !(url *= "test"))` | block results whose title contains `keyword` and whose URL does NOT contain `test` |
 | `*://*.example.com/* @if(site = "google.com.hk")` | block `example.com` only on Google HK |
 | `*://*.example.com/* @if($site = "google")` | block `example.com` only on Google |
+| `*://*.amazon.com/* @if($category = "images")` | block `amazon.com` only on image search |
 | `*://*.example.com/* @if($site = "google") @if(title *= "example")` | block results from `example.com` whose title contains `example`, only on Google |
 | `*://*.example.com/* @if(title *= "a" \| title *= "b") @if(!(url *= "c"))` | block results whose title contains `a` or `b` AND whose URL does not contain `c` (multiple `@if` are ANDed; `!` applies to the group) |
 | `title/.*example.*/ @if($site = "google")` | block results whose title contains `example`, only on Google |
 | `text/.*example.*/ @if($site = "google" \| $site = "bing")` | block results whose snippet contains `example` on both Google and Bing |
+| `path *= "/download/"` | block results whose path contains `/download/` |
+| `host $= ".example.com" & path *= "/download/"` | block `example.com` results whose path contains `/download/` |
+| `@1 path $= ".pdf"` | highlight results whose path ends with `.pdf` |
 
 ## Screenshots
 
