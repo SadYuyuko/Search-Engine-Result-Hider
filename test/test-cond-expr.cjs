@@ -306,6 +306,11 @@ assert('C17: 嵌套@if括号', m.stripRuleComment('*://x.com/* @if((title *= "a"
 assert('C18: 引号内转义引号', m.stripRuleComment('*://x.com/* @if(title *= "a\\"b # c") # x') === '*://x.com/* @if(title *= "a\\"b # c")');
 assert('C19: 尾部注释含#', m.stripRuleComment('*://x.com/* # a # b') === '*://x.com/*');
 assert('C20: 高亮域名注释', m.stripRuleComment('@1 *://x.com/* # c') === '@1 *://x.com/*');
+assert('C21: 独立表达式行尾注释', m.stripRuleComment('host $= ".example.com" # note') === 'host $= ".example.com"');
+assert('C22: 独立表达式引号内#', m.stripRuleComment('title *= "a # b" # note') === 'title *= "a # b"');
+assert('C23: 独立表达式正则行尾注释', m.stripRuleComment('host/\\.example\\.com$/i # x') === 'host/\\.example\\.com$/i');
+assert('C24: 独立表达式白名单注释', m.stripRuleComment('@host $= ".example.com" # 放行') === '@host $= ".example.com"');
+assert('C25: 独立表达式高亮注释', m.stripRuleComment('@1 path $= ".pdf" # hl') === '@1 path $= ".pdf"');
 
 // ---- host / path / scheme 变量 ----
 r = condExpr('host $= ".example.com"', 'google');
