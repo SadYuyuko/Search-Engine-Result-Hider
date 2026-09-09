@@ -1,7 +1,9 @@
 ## <img src="https://github.com/user-attachments/assets/92954a5d-7157-40ed-9309-b9d75bf2bd32" width="30" height="30" align="center"> 搜索引擎结果屏蔽器
 
 ### 1.1 简介
-[中文](README.md) | [English](README.en.md) | 交流群 [TG](https://t.me/+qBqMTqjc4Xk5M2Jh)  
+
+[中文](README.md) | [English](README.en.md) | 交流群 [TG](https://t.me/+qBqMTqjc4Xk5M2Jh)
+
 在仅支持安装脚本的浏览器上实现复杂规则屏蔽搜索结果功能  
 支持包括ublacklist基础规则在内的URL匹配、正则匹配、标题匹配、白名单匹配、高亮目标结果以及结果摘要(snippet)匹配  
 当前支持搜索引擎：Bing、Google、DuckDuckGo、Yandex、Brave，Yahoo
@@ -11,6 +13,7 @@
 使用支持安装脚本的浏览器打开直接安装
 
 ### 1.2 当前功能：
+
 - 基础/高级语法匹配结果
 - 一键屏蔽域名
 - 统计命中规则和调试输出
@@ -30,16 +33,19 @@
 　┗ 🔵点击显示被屏蔽结果，长按悬浮球打开配置面板，被屏蔽结果的屏蔽按钮再次点击则取消屏蔽
 
 ### 1.3 关于Webdav：
+
 1. 自动同步每小时去重合并同步一次，手动上传/下载则为覆盖同步
 2. 同步依赖跨域请求权限，地址只支持https和完整路径，如坚果云`https://dav.jianguoyun.com/dav/your_folder/`
 3. 同步配置在刷新后生效
 
 ### 1.4 关于订阅：
+
 1. 订阅同步频率为每天一次，只支持`.txt`或`.yaml`远程链接，例如`https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Other/rules.txt`
 2. 订阅规则在本地规则后追加应用，由于脚本可分配性能有限，规则总数建议不超过3w条避免手机爆炸🤳💥
 3. 脚本扩展有限不支持`##`DOM等语法规则，通过订阅导入会自动清除
 
 ### 1.5 注意：
+
 1. 一键屏蔽逻辑：屏蔽`example.com`并加入规则`*://example.com/*`（开启屏蔽域名为`*://*.example.com/*`），取消屏蔽不删除源规则而是新增白名单`@*://example.com/*`（开启屏蔽域名为`@*://*.example.com/*`）
 2. 规则优先级：本地白名单 > 本地黑名单 > 订阅白名单 > 订阅黑名单
 
