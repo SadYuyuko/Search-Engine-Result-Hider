@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.7.2
+// @version      7.7.3
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -149,6 +149,25 @@
       if (def && def.match && def.match.test(hostname)) return (_engineCacheResult = name);
     }
     return (_engineCacheResult = 'other');
+  }
+
+  function getSearchCategory(loc) {
+    loc = loc || window.location;
+    if (!loc) return 'web';
+    let path = String(loc.pathname || '').toLowerCase();
+    let search = String(loc.search || '').toLowerCase();
+    const host = String(loc.hostname || '').toLowerCase();
+    if ((!path || !search) && loc.href) {
+      try {
+        const u = new URL(loc.href);
+        if (!path) path = u.pathname.toLowerCase();
+        if (!search) search = u.search.toLowerCase();
+      } catch (e) { /* ignore */ }
+    }
+    if (/^images\./.test(host) || /(?:^|\/)images(?:\/|$)/.test(path) || /[?&](?:tbm=isch|udm=2|iax?=images)(?:&|$)/.test(search)) return 'images';
+    if (/^videos?\./.test(host) || /(?:^|\/)videos?(?:\/|$)/.test(path) || /[?&](?:tbm=vid|udm=7|iax?=videos)(?:&|$)/.test(search)) return 'videos';
+    if (/^news\./.test(host) || /(?:^|\/)news(?:\/|$)/.test(path) || /[?&](?:tbm=nws|udm=12|iax?=news)(?:&|$)/.test(search)) return 'news';
+    return 'web';
   }
 
   function getContainerSelector(engine) {
@@ -638,11 +657,13 @@
   }
 
   // 分析@if条件
-  function analyzeCondExpr(condStr, engine, site) {
+  function analyzeCondExpr(condStr, engine, site, category) {
     if (engine === undefined) {
       engine = getSearchEngine();
       site = window.location.hostname;
+      if (category === undefined) category = getSearchCategory();
     }
+    if (category === undefined) category = 'web';
     const errors = [];
     const tokRes = tokenizeCondExpr(condStr);
     if (tokRes.error || !tokRes.tokens.length) return { ast: null, errors: [{ kind: 'syntax' }] };
@@ -657,7 +678,7 @@
         return { type: 'const', value: false };
       }
       try {
-        const parsed = parseConditionPart(trimmed, engine, site);
+        const parsed = parseConditionPart(trimmed, engine, site, category);
         if (!parsed.matched) {
           errors.push({ kind: 'unknown', part: trimmed });
           return { type: 'const', value: false };
@@ -761,11 +782,17 @@
   }
 
   // 解析条件片段
-  function parseConditionPart(trimmed, currentEngine, currentSite) {
+  function parseConditionPart(trimmed, currentEngine, currentSite, currentCategory) {
     const enginePropMatch = trimmed.match(/^\$site\s*[=:]\s*['"](.*?)['"]\s*i?\s*$/i);
     if (enginePropMatch) {
       const target = enginePropMatch[1].trim().toLowerCase().replace(/^ddg$/, 'duckduckgo');
       return { matched: true, static: currentEngine === target };
+    }
+
+    const categoryMatch = trimmed.match(/^\$category\s*[=:]\s*['"](.*?)['"]\s*i?\s*$/i);
+    if (categoryMatch) {
+      const target = categoryMatch[1].trim().toLowerCase();
+      return { matched: true, static: (currentCategory || 'web') === target };
     }
 
     let siteMatch = trimmed.match(/^site\s*[=:]\s*['"](.*?)['"]\s*i?\s*$/i);
@@ -878,13 +905,51 @@
     };
   }
 
+  function isCondExprCore(str) {
+    if (!str) return false;
+    return !str.startsWith('/') && !/^title\//i.test(str) && !/^text\//i.test(str) && !str.startsWith('*://');
+  }
+
+  function looksLikeCondExpr(str) {
+    if (!isCondExprCore(str)) return false;
+    return /(?:\$site|\$category|\bsite\b|\btitle\b|\burl\b|\bhost\b|\bpath\b|\bscheme\b)\s*(?:=~|\^=|\$=|\*=|=|:|\(|\/)/i.test(str)
+      || /(?:\^=|\$=|\*=|=~)/.test(str)
+      || /^\s*!/.test(str);
+  }
+
+  function absorbStandaloneExpr(coreRule, dynamicConditions) {
+    if (!looksLikeCondExpr(coreRule)) return null;
+    const { ast, errors } = analyzeCondExpr(coreRule);
+    if (errors.length || !ast) return null;
+    const folded = foldCondExpr(ast);
+    if (folded.type === 'const') return { staticPass: folded.value };
+    dynamicConditions.push(folded);
+    return { staticPass: true };
+  }
+
   function parseRuleWithConditions(ruleStr) {
     const dynamicConditions = [];
-    const { coreRule, staticPass } = stripIfConditions(ruleStr, (cond) => evaluateCondition(cond, dynamicConditions));
+    let { coreRule, staticPass } = stripIfConditions(ruleStr, (cond) => evaluateCondition(cond, dynamicConditions));
+
+    let whitelist = false;
+    if (coreRule.startsWith('@')) {
+      whitelist = true;
+      coreRule = coreRule.substring(1).trim();
+    }
+
+    const absorbed = absorbStandaloneExpr(coreRule, dynamicConditions);
+    if (absorbed) {
+      staticPass = staticPass && absorbed.staticPass;
+      coreRule = '';
+    }
+
+    const standaloneExpr = !!absorbed || (!coreRule && dynamicConditions.length > 0);
+    if (whitelist) coreRule = '@' + coreRule;
     return {
       coreRule,
       staticPass,
-      dynamicConditions
+      dynamicConditions,
+      standaloneExpr
     };
   }
 
@@ -971,6 +1036,17 @@
     if (ruleToCheck.startsWith('@')) {
       ruleToCheck = ruleToCheck.substring(1).trim();
       if (!ruleToCheck) return { valid: false, errors: [t('emptyPrefixRule')], warnings };
+    }
+
+    if (!ruleToCheck) {
+      return { valid: errors.length === 0, errors, warnings };
+    }
+
+    if (looksLikeCondExpr(ruleToCheck)) {
+      const r = validateCondition(ruleToCheck);
+      errors.push(...r.errors);
+      warnings.push(...r.warnings);
+      return { valid: errors.length === 0, errors, warnings };
     }
 
     // 未闭合正则提示
@@ -1197,6 +1273,12 @@
         if (!parsed.staticPass) return;
         let coreRule = parsed.coreRule;
 
+        if (!coreRule && (parsed.standaloneExpr || parsed.dynamicConditions.length)) {
+          compiledRules.highlightConditionalRules.push({type: 'expr', conditions: parsed.dynamicConditions, N});
+          return;
+        }
+        if (!coreRule) return;
+
         const dm = matchSimpleDomain(coreRule);
         if (dm) {
           if (!parsed.dynamicConditions.length) {
@@ -1259,7 +1341,12 @@
           }
         } else {
           const whitelistRule = coreRule.substring(1).trim();
-          if (!whitelistRule) return;
+          if (!whitelistRule) {
+            if (parsed.standaloneExpr || hasDynamic) {
+              compiledRules.whitelistConditionalRules.push({type: 'expr', conditions: parsed.dynamicConditions, source});
+            }
+            return;
+          }
           try {
             const compiled = compileRuleRegex(whitelistRule);
             if (!hasDynamic) {
@@ -1285,6 +1372,14 @@
         source: source,
         conditions: parsed.dynamicConditions
       };
+
+      if (!coreRule) {
+        if (parsed.standaloneExpr || hasDynamic) {
+          ruleObj.type = 'expr';
+          compiledRules.conditionalRules.push(ruleObj);
+        }
+        return;
+      }
 
       // 处理域名规则
       if (!coreRule.startsWith('/') && !coreRule.startsWith('text/') && !coreRule.startsWith('title/')) {
@@ -1408,6 +1503,7 @@
     if (!highlightN) {
       for (let item of compiledRules.highlightConditionalRules) {
         if (!checkDynamicConditions(item.conditions, title, url)) continue;
+        if (item.type === 'expr') { highlightN = item.N; break; }
         if (item.type === 'url' || item.type === 'regex') {
           if (safeRegexTest(item.regex, url) || safeRegexTest(item.regex, domain)) { highlightN = item.N; break; }
         } else if (item.type === 'title' && title) {
@@ -1464,6 +1560,7 @@
         const item = compiledRules.whitelistConditionalRules[i];
         if (item.source !== t('localRule')) continue;
         if (!checkDynamicConditions(item.conditions, title, url)) continue;
+        if (item.type === 'expr') { whitelisted = true; break; }
         if (item.type === 'url' || item.type === 'regex') {
           if (safeRegexTest(item.regex, url) || safeRegexTest(item.regex, domain)) { whitelisted = true; break; }
         } else if (item.type === 'title' && title) {
@@ -1523,6 +1620,7 @@
           const item = compiledRules.conditionalRules[i];
           if (item.source !== t('localRule')) continue;
           if (!checkDynamicConditions(item.conditions, title, url)) continue;
+          if (item.type === 'expr') { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
           if (item.type === 'url' || item.type === 'regex') {
             if (safeRegexTest(item.regex, url) || safeRegexTest(item.regex, domain)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
           } else if (item.type === 'title' && title) {
@@ -1582,6 +1680,7 @@
         const item = compiledRules.whitelistConditionalRules[i];
         if (item.source === t('localRule')) continue;
         if (!checkDynamicConditions(item.conditions, title, url)) continue;
+        if (item.type === 'expr') { whitelisted = true; break; }
         if (item.type === 'url' || item.type === 'regex') {
           if (safeRegexTest(item.regex, url) || safeRegexTest(item.regex, domain)) { whitelisted = true; break; }
         } else if (item.type === 'title' && title) {
@@ -1643,6 +1742,7 @@
           const ruleObj = compiledRules.conditionalRules[i];
           if (ruleObj.source === t('localRule')) continue;
           if (!checkDynamicConditions(ruleObj.conditions, title, url)) continue;
+          if (ruleObj.type === 'expr') { blockedInfo = {rule: ruleObj.originalRule, source: ruleObj.source}; break; }
           if (ruleObj.type === 'url' || ruleObj.type === 'regex') {
             if (safeRegexTest(ruleObj.regex, url) || safeRegexTest(ruleObj.regex, domain)) { blockedInfo = {rule: ruleObj.originalRule, source: ruleObj.source}; break; }
           } else if (ruleObj.type === 'title' && title) {
@@ -3481,7 +3581,7 @@
         let ruleType = t('urlRule');
         if (HL_STATS_REGEX.test(rule)) {
           ruleType = t('highlightRules');
-        } else if (/@if\s*\(/i.test(rule)) {
+        } else if (/@if\s*\(/i.test(rule) || looksLikeCondExpr(rule.replace(/^@\d+\s+/, '').replace(/^@/, ''))) {
           ruleType = t('statsCompound');
         } else if (rule.startsWith('title/')) {
           ruleType = t('titleRule');
