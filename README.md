@@ -42,7 +42,7 @@
 
 1. 订阅同步频率为每天一次，只支持`.txt`或`.yaml`远程链接，例如`https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Other/rules.txt`
 2. 订阅规则在本地规则后追加应用，由于脚本可分配性能有限，规则总数建议不超过3w条避免手机爆炸🤳💥
-3. 脚本扩展有限不支持`##`DOM等语法规则，通过订阅导入会自动清除
+3. 脚本扩展有限不支持`##`DOM元素等规则，通过订阅导入会自动过滤
 
 ### 1.5 注意：
 
