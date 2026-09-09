@@ -35,6 +35,10 @@ Currently supported search engines: Bing, Google, DuckDuckGo, Yandex, Brave, Yah
 2. Subscription rules are applied after local rules, priority local > subscriptions. Due to the limited performance budget of user scripts, the total number of rules should not exceed 30,000 to avoid performance issues on mobile devices.
 3. `##` DOM syntax is not supported. Such rules will be automatically removed when imported via subscription.
 
+### 1.5 Notes:
+1. One-click blocking logic: Block `example.com` and add the rule `*://example.com/*` (block domain name is enabled as `*://*.example.com/*`). Unblocking does not delete the source rule but instead creates a whitelist `@*://example.com/*` (domain block enabled is `@*://*.example.com/*`).
+2. Rule priority: local whitelist > local blacklist > subscription whitelist > subscription blacklist
+
 ## Rule Description
 
 ### 2.1 URL Matching:
