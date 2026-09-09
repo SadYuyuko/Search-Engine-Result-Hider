@@ -189,7 +189,7 @@ node test/test-cond-expr.cjs 2>&1 | grep "FAIL"
 
 成功输出如 `10 passed, 0 failed`
 
-### 3.2 调试模式
+### 3.3 调试模式
 
 使用[网页调试](https://greasyfork.org/zh-CN/scripts/475228)脚本或桌面端浏览器F12开发者工具 → Console标签查看输出
 
