@@ -1431,9 +1431,7 @@
       for (let i = 0; i < compiledRules.whitelistUrlPatterns.length; i++) {
         const entry = compiledRules.whitelistUrlPatterns[i];
         if (entry.source !== t('localRule')) continue;
-        if (safeRegexTest(entry.regex, url) || safeRegexTest(entry.regex, domain)) {
-          whitelisted = true; break;
-        }
+        if (safeRegexTest(entry.regex, url) || safeRegexTest(entry.regex, domain)) { whitelisted = true; break; }
       }
     }
     if (!whitelisted && title) {
@@ -1594,7 +1592,6 @@
       }
     }
 
-    if (!whitelisted && !blockedInfo) {
       for (const level of subdomainLevels) {
         const entries = compiledRules.domains.get(level);
         if (entries) {
@@ -1784,7 +1781,7 @@
       e.preventDefault();
       e.stopPropagation();
 
-      // 取消屏蔽:新增白名单规则,不删除源规则
+      // 取消屏蔽
       if (isBlocked) {
         let whitelistRule = '';
         const ipParts = domain.split('.');
