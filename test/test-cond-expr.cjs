@@ -42,8 +42,8 @@ const factory = new Function(
 );
 const m = factory();
 
-function condExpr(str, engine = 'google', siteHost = 'www.google.com') {
-  const { ast, errors } = m.analyzeCondExpr(str, engine, siteHost);
+function condExpr(str, engine = 'google', siteHost = 'www.google.com', category = 'web') {
+  const { ast, errors } = m.analyzeCondExpr(str, engine, siteHost, category);
   if (errors.length) return { errors: errors.map((e) => e.kind + (e.part ? ':' + e.part : '')) };
   const folded = m.foldCondExpr(ast);
   return folded.type === 'const' ? { const: folded.value } : { ast: folded };
@@ -449,6 +449,36 @@ r = condExpr('title *= "a" i & !(url *= "ads")', 'google');
 assert('I14: 与&!组合带i', !r.errors && ev(r, 'a t', 'https://x/') === true && ev(r, 'a t', 'https://x/ads/') === false);
 r = condExpr('url *= "example"', 'google');
 assert('I15: 无i修饰回归(默认忽略大小写)', !r.errors && ev(r, 't', 'https://EXAMPLE.com/') === true);
+
+// ---- $category 静态折叠 ----
+r = condExpr('$category = "web"', 'google', 'www.google.com', 'web');
+assert('CAT1: web页命中', r.const === true);
+r = condExpr('$category = "images"', 'google', 'www.google.com', 'web');
+assert('CAT2: web页images条件恒假', r.const === false);
+r = condExpr('$category = "images"', 'google', 'www.google.com', 'images');
+assert('CAT3: 图片页命中', r.const === true);
+r = condExpr('$category : "videos"', 'google', 'www.google.com', 'videos');
+assert('CAT4: 冒号形式', r.const === true);
+r = condExpr('$category = "NEWS" i', 'google', 'www.google.com', 'news');
+assert('CAT5: 忽略大小写+i修饰', r.const === true);
+r = condExpr('$category = "images" & title *= "x"', 'google', 'www.google.com', 'web');
+assert('CAT6: 与动态组合在web折叠恒假', r.const === false);
+r = condExpr('$category = "images" & title *= "x"', 'google', 'www.google.com', 'images');
+assert('CAT6b: 图片页剩title条件', !r.const && ev(r, 'xx', 'https://x/') === true && ev(r, 'yy', 'https://x/') === false);
+r = condExpr('$category = "web" | $category = "images"', 'google', 'www.google.com', 'web');
+assert('CAT7: 多类型或(web)', r.const === true);
+r = condExpr('$category = "images" | $category = "videos"', 'google', 'www.google.com', 'web');
+assert('CAT7b: 多类型或未命中恒假', r.const === false);
+r = condExpr('!($category = "images")', 'google', 'www.google.com', 'web');
+assert('CAT8: 取反(非图片页)', r.const === true);
+r = condExpr('$category = "foo"', 'google', 'www.google.com', 'web');
+assert('CAT9: 未知类型值->静态假(不报错)', r.const === false && !r.errors);
+r = condExpr('$category = images', 'google');
+assert('CAT10: 值未加引号->unknown', r.errors && r.errors[0].startsWith('unknown'));
+r = condExpr('$site = "google" & $category = "images"', 'google', 'www.google.com', 'images');
+assert('CAT11: $site与$category同时命中', r.const === true);
+r = condExpr('$site = "google" & $category = "images"', 'google', 'www.google.com', 'web');
+assert('CAT11b: $site命中但category不命中', r.const === false);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

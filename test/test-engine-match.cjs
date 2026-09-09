@@ -29,13 +29,15 @@ const selectorsBlock = src.slice(selectorsStart, engineComment).trim();
 const selectorsObjectText = selectorsBlock.slice(selectorsBlock.indexOf('{'), selectorsBlock.lastIndexOf('}') + 1);
 
 const fnBody = extractFn(src, 'getSearchEngine');
+const catBody = extractFn(src, 'getSearchCategory');
 const factory = new Function(
   'window',
   'SELECTORS',
   `let _engineCacheHost = '';
 let _engineCacheResult = '';
 ${fnBody}
-return { getSearchEngine };`,
+${catBody}
+return { getSearchEngine, getSearchCategory };`,
 );
 const selectors = eval(`(${selectorsObjectText})`);
 const { getSearchEngine } = factory({ location: { hostname: 'www.google.com' } }, selectors);
@@ -84,6 +86,31 @@ for (const [host, expected] of cases) {
 
 assert('SELECTORS键序为引擎检测顺序', JSON.stringify(Object.keys(selectors)) === JSON.stringify(['bing', 'google', 'duckduckgo', 'yandex', 'brave', 'yahoo', 'other']));
 assert('缓存:同hostname二次调用返回相同结果', factory({ location: { hostname: 'www.google.com' } }, selectors).getSearchEngine() === 'google');
+
+const catCases = [
+  [{ hostname: 'www.google.com', pathname: '/search', search: '?q=x' }, 'web'],
+  [{ hostname: 'www.google.com', pathname: '/search', search: '?q=x&tbm=isch' }, 'images'],
+  [{ hostname: 'www.google.com', pathname: '/search', search: '?udm=2&q=x' }, 'images'],
+  [{ hostname: 'www.google.com', pathname: '/search', search: '?tbm=vid&q=x' }, 'videos'],
+  [{ hostname: 'www.google.com', pathname: '/search', search: '?udm=7' }, 'videos'],
+  [{ hostname: 'www.google.com', pathname: '/search', search: '?tbm=nws' }, 'news'],
+  [{ hostname: 'www.google.com', pathname: '/search', search: '?udm=12' }, 'news'],
+  [{ hostname: 'www.bing.com', pathname: '/images/search', search: '?q=x' }, 'images'],
+  [{ hostname: 'www.bing.com', pathname: '/videos/search', search: '?q=x' }, 'videos'],
+  [{ hostname: 'www.bing.com', pathname: '/news/search', search: '?q=x' }, 'news'],
+  [{ hostname: 'www.bing.com', pathname: '/search', search: '?q=x' }, 'web'],
+  [{ hostname: 'duckduckgo.com', pathname: '/', search: '?q=x&ia=images' }, 'images'],
+  [{ hostname: 'duckduckgo.com', pathname: '/', search: '?iax=images' }, 'images'],
+  [{ hostname: 'duckduckgo.com', pathname: '/', search: '?ia=videos' }, 'videos'],
+  [{ hostname: 'duckduckgo.com', pathname: '/', search: '?ia=news' }, 'news'],
+  [{ hostname: 'search.brave.com', pathname: '/images', search: '?q=x' }, 'images'],
+  [{ hostname: 'images.search.yahoo.com', pathname: '/search/images', search: '?p=x' }, 'images'],
+  [{ hostname: 'www.google.com', pathname: '/', search: '' }, 'web'],
+];
+for (const [loc, expected] of catCases) {
+  const got = factory({ location: loc }, selectors).getSearchCategory(loc);
+  assert(`category ${loc.hostname}${loc.pathname}${loc.search} -> ${expected}`, got === expected);
+}
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

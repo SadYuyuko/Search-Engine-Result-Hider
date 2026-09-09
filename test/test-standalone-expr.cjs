@@ -77,8 +77,10 @@ ${langMatch}
 let compiledRules;
 let currentEngine = 'google';
 let currentSite = 'www.google.com';
+let currentCategory = 'web';
 const window = { location: { get hostname() { return currentSite; } } };
 function getSearchEngine() { return currentEngine; }
+function getSearchCategory() { return currentCategory; }
 function t(key, params = {}) {
   const texts = LANG_TEXTS['zh-CN'] || {};
   let text = texts[key] || key;
@@ -90,7 +92,7 @@ ${checkFn}
 return {
   safeRegexTest, stripRuleComment, parseRuleWithConditions, analyzeRule, looksLikeCondExpr,
   isCondExprCore, evalCondAST, checkDynamicConditions, checkRuleMatchOptimized, t,
-  setEngine: (e, s) => { currentEngine = e; if (s) currentSite = s; },
+  setEngine: (e, s, c) => { currentEngine = e; if (s) currentSite = s; if (c) currentCategory = c; },
   setCR: (cr) => { compiledRules = cr; },
 };
 `;
@@ -228,6 +230,16 @@ assert('V12: 空@if仍无效', m.analyzeRule('@if()').valid === false);
 assert('V13: title包含独立有效', m.analyzeRule('title *= "广告"').valid === true);
 assert('V14: 高亮越界仍无效', m.analyzeRule('@9 host $= ".example.com"').valid === false);
 assert('V15: 复合旧写法仍有效', m.analyzeRule('*://*.example.com/* @if(title *= "kw")').valid === true);
+assert('V16: $category规则有效', m.analyzeRule('*://*.amazon.com/* @if($category = "images")').valid === true);
+assert('V17: $category独立表达式有效', m.analyzeRule('$category = "images"').valid === true);
+
+m.setEngine('google', 'www.google.com', 'web');
+p = m.parseRuleWithConditions('*://*.amazon.com/* @if($category = "images")');
+assert('P19: web页$category=images静态丢弃', p.staticPass === false);
+m.setEngine('google', 'www.google.com', 'images');
+p = m.parseRuleWithConditions('*://*.amazon.com/* @if($category = "images")');
+assert('P20: 图片页$category通过且无动态条件', p.staticPass === true && p.coreRule === '*://*.amazon.com/*' && p.dynamicConditions.length === 0);
+m.setEngine('google', 'www.google.com', 'web');
 
 // ---- 匹配引擎 ----
 const slEx = ['www.example.com', 'example.com'];
