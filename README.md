@@ -31,7 +31,7 @@
 3. 同步配置在刷新后生效
 
 ### 1.4 注意：
-1. 订阅同步频率为每天一次，只支持`.txt`或`.yaml`远程链接，例如`https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Other/rules.txt`，在本地规则后追加应用，优先级本地＞订阅。由于脚本可分配性能有限，规则总数建议不超过3w条避免手机爆炸🤳💥
+1. 订阅同步频率为每天一次，只支持`.txt`或`.yaml`远程链接，例如`https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Other/rules.txt`，在本地规则后追加应用，优先级本地 > 订阅。由于脚本可分配性能有限，规则总数建议不超过3w条避免手机爆炸🤳💥
 2. 脚本扩展有限不支持`##`DOM和`$category`等语法规则，通过订阅导入会自动清除
 
 ## 规则说明
