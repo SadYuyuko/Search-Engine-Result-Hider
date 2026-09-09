@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const file = path.join(__dirname, '..', '7.7.1.js');
+const file = path.join(__dirname, '..', '7.7.2.js');
 const src = fs.readFileSync(file, 'utf8');
 
 function extractFn(text, fnName) {
