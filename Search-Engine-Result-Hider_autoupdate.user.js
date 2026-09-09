@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.7.3
+// @version      7.7.4
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -1911,30 +1911,30 @@
         return;
       }
 
-      // 添加规则
-      let newRule = '';
-      const ipParts = domain.split('.');
-      const isIP = ipParts.length === 4 && ipParts.every(p => {
-        const n = parseInt(p, 10);
-        return n >= 0 && n <= 255 && String(n) === p;
-      });
+       // 添加规则
+       let newRule = '';
+       const ipParts = domain.split('.');
+       const isIP = ipParts.length === 4 && ipParts.every(p => {
+         const n = parseInt(p, 10);
+         return n >= 0 && n <= 255 && String(n) === p;
+       });
 
-      if (isIP) {
-        newRule = `*://${domain}/*`;
-      } else {
-        const baseDomain = domain.startsWith('www.') ? domain.substring(4) : domain;
-        if (currentConfig.blockDomain) {
-          newRule = `*://*.${baseDomain}/*`;
-        } else {
-          newRule = `*://${domain}/*`;
-        }
-      }
+       if (isIP) {
+         newRule = `*://${domain}/*`;
+       } else {
+         const baseDomain = domain.startsWith('www.') ? domain.substring(4) : domain;
+         if (currentConfig.blockDomain) {
+           newRule = `*://*.${baseDomain}/*`;
+         } else {
+           newRule = `*://${domain}/*`;
+         }
+       }
 
-      if (currentConfig.blockConfirm) {
-        if (!confirm(t('confirmBlock', {
-            rule: newRule
-          }))) return;
-      }
+       if (currentConfig.blockConfirm) {
+         const userRule = prompt(t('confirmBlock', { rule: newRule }), newRule);
+         if (userRule === null) return;
+         newRule = userRule.trim();
+       }
 
       if (!currentConfig.rules.some(rule => stripRuleComment(rule.trim()) === newRule)) {
         currentConfig.rules.push(newRule);
