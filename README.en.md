@@ -31,7 +31,7 @@ Currently supported search engines: Bing, Google, DuckDuckGo, Yandex, Brave, Yah
 3. Sync configuration takes effect after refreshing the page.
 
 ### 1.4 Notes:
-1. Subscriptions update once per day. Only remote `.txt` or `.yaml` file links are supported. Subscription rules are applied after local rules. Due to the limited performance budget of user scripts, the total number of rules should not exceed 30,000 to avoid performance issues on mobile devices.
+1. Subscriptions update once per day. Only remote `.txt` or `.yaml` file links are supported. Subscription rules are applied after local rules, priority local > subscriptions. Due to the limited performance budget of user scripts, the total number of rules should not exceed 30,000 to avoid performance issues on mobile devices.
 2. `##` DOM syntax and `$category` rules are not supported. Such rules will be automatically removed when imported via subscription.
 
 ## Rule Description
