@@ -1,10 +1,13 @@
 ## <img src="https://github.com/user-attachments/assets/92954a5d-7157-40ed-9309-b9d75bf2bd32" width="30" height="30" align="center"> 搜索引擎结果屏蔽器
 
-### 1.1 [Github](https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js) | [Greasy Fork](https://update.greasyfork.org/scripts/552394/%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8E%E7%BB%93%E6%9E%9C%E5%B1%8F%E8%94%BD%E5%99%A8.user.js) 直接安装
+### 1.1 简介
 [中文](README.md) | [English](README.en.md) | 交流群 [TG](https://t.me/+qBqMTqjc4Xk5M2Jh)  
 在仅支持安装脚本的浏览器上实现复杂规则屏蔽搜索结果功能  
 支持包括ublacklist基础规则在内的URL匹配、正则匹配、标题匹配、白名单匹配、高亮目标结果以及结果摘要(snippet)匹配  
 当前支持搜索引擎：Bing、Google、DuckDuckGo、Yandex、Brave，Yahoo
+
+**安装：** 使用支持安装脚本的浏览器打开直接安装 
+[Github](https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js) | [Greasy Fork](https://update.greasyfork.org/scripts/552394/%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8E%E7%BB%93%E6%9E%9C%E5%B1%8F%E8%94%BD%E5%99%A8.user.js)
 
 ### 1.2 当前功能：
 - 基础/高级语法匹配结果
@@ -153,6 +156,81 @@
 | `path *= "/download/"` | 屏蔽路径含`/download/`的结果 |
 | `host $= ".example.com" & path *= "/download/"` | 屏蔽`example.com`下路径含`/download/`的结果 |
 | `@1 path $= ".pdf"` | 高亮路径以`.pdf`结尾的结果 |
+
+## 测试
+
+### 3.1 环境要求
+
+- Node.js 14+ 
+- 无需安装额外依赖
+
+### 3.2 运行测试
+
+将脚本放至test目录运行，包括条件表达式、搜索引擎匹配、引擎包含、优先级、独立表达式测试
+
+```bash
+# 运行所有测试
+node test/test-cond-expr.cjs
+node test/test-engine-match.cjs
+node test/test-include-engine.cjs
+node test/test-priority.cjs
+node test/test-standalone-expr.cjs
+
+# 运行特定测试
+node test/test-cond-expr.cjs 2>&1 | grep "FAIL"
+```
+
+成功输出如 `10 passed, 0 failed`
+
+### 3.2 调试模式
+
+使用[网页调试](https://greasyfork.org/zh-CN/scripts/475228)脚本或桌面端浏览器F12开发者工具 → Console标签查看输出
+
+输入命令查看对应输出
+
+```bash
+// 查看当前配置
+console.log('当前配置:', GM_getValue('searchfilter_blocker'));
+
+// 查看编译后的规则
+console.log('编译规则:', compiledRules);
+
+// 查看搜索引擎识别
+console.log('搜索引擎:', getSearchEngine());
+
+// 查看当前页面结果数量
+console.log('结果数量:', document.querySelectorAll('div.g').length);
+
+// 监控规则匹配性能
+console.time('规则匹配');
+checkRuleMatchOptimized(url, domain, title, snippet, subdomainLevels);
+console.timeEnd('规则匹配');
+
+// 监控DOM查询性能
+console.time('结果查询');
+document.querySelectorAll(selector);
+console.timeEnd('结果查询');
+```
+
+正常输出
+
+```bash
+// 正常启动
+[屏蔽] 引擎: google, 选择器: "div.g, div.MjjYud", 匹配数量: 15
+[屏蔽] 未处理的新结果数量: 15
+[屏蔽] 共屏蔽 3 个结果
+
+// 表示：成功识别Google引擎，找到15个结果，屏蔽了3个
+```
+
+错误输出
+
+```bash
+// 规则语法错误
+规则预编译失败: *://example.com/* Error: Invalid regex pattern
+
+// 表示：规则语法有误，需要检查规则格式
+```
 
 ## 截图
 
