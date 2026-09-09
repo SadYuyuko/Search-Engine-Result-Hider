@@ -1,10 +1,15 @@
 ## <img src="https://github.com/user-attachments/assets/92954a5d-7157-40ed-9309-b9d75bf2bd32" width="30" height="30" align="center"> Search Engine Result Hider
 
-### 1.1 [Github](https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js) | [Greasy Fork](https://update.greasyfork.org/scripts/552394/%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8E%E7%BB%93%E6%9E%9C%E5%B1%8F%E8%94%BD%E5%99%A8.user.js) Install Directly
+### 1.1 Introduction
+
 [中文](README.md) | [English](README.en.md) | Discussion [TG](https://t.me/+qBqMTqjc4Xk5M2Jh)  
-Block unwanted search results with complex rule matching on browsers that only support user scripts.  
-Supports uBlacklist compatible basic rules, URL matching, regex matching, title matching, whitelist matching, highlighting target results, and matching result snippet text.  
+Implements complex-rule blocking of search results on browsers that only support installing user scripts.  
+Supports uBlacklist basic rules, URL matching, regex matching, title matching, whitelist matching, highlighting target results, and result snippet matching.  
 Currently supported search engines: Bing, Google, DuckDuckGo, Yandex, Brave, Yahoo.
+
+Install sources [Github](https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js) | [Greasy Fork](https://update.greasyfork.org/scripts/552394/%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8E%E7%BB%93%E6%9E%9C%E5%B1%8F%E8%94%BD%E5%99%A8.user.js)
+
+Click the links in a browser that supports installing user scripts to install directly.
 
 ### 1.2 Features:
 - Basic/advanced syntax matching
@@ -31,9 +36,9 @@ Currently supported search engines: Bing, Google, DuckDuckGo, Yandex, Brave, Yah
 3. Sync configuration takes effect after refreshing the page.
 
 ### 1.4 About Subscription:
-1. Subscriptions update once per day. Only remote `.txt` or `.yaml` file links are supported.
-2. Subscription rules are applied after local rules, priority local > subscriptions. Due to the limited performance budget of user scripts, the total number of rules should not exceed 30,000 to avoid performance issues on mobile devices.
-3. `##` DOM syntax is not supported. Such rules will be automatically removed when imported via subscription.
+1. Subscriptions update once per day. Only remote `.txt` or `.yaml` file links are supported, e.g. `https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Other/rules.txt`.
+2. Subscription rules are appended after local rules (priority: local > subscriptions). Due to the limited performance the script can allocate, it is recommended that the total number of rules not exceed 30,000 to avoid performance issues on mobile devices.
+3. The script has limited extensions and does not support DOM-type syntax rules such as `##`. Such rules will be automatically removed when imported via subscription.
 
 ### 1.5 Notes:
 1. One-click blocking logic: Block `example.com` and add the rule `*://example.com/*` (block domain name is enabled as `*://*.example.com/*`). Unblocking does not delete the source rule but instead creates a whitelist `@*://example.com/*` (domain block enabled is `@*://*.example.com/*`).
@@ -60,7 +65,7 @@ When adding domain name rules in the script, you can write the domain directly w
 | `title/pattern/flags` | Use regex to match title, e.g. `title/.*block.*/i` |
 | `text/pattern/flags` | Use regex to match snippet, e.g. `text/.*ad.*/i` |
 
-Common regular uses browser-supported JavaScript `RegExp` flags, supports `i`, `m`, `s`, `u`, where `s` will be converted to cross-line matching; does not support `g`, `y`, script rules only determine whether to match without performing global extraction.
+Regular expressions use the browser-supported JavaScript `RegExp` flags `i`, `m`, `s`, `u`, where `s` is converted to dot-matches-newline matching; `g` and `y` are not supported. The script only checks whether a rule matches and does not perform global extraction.
 
 ### 2.3 Title Matching:
 
@@ -104,7 +109,7 @@ Note: `@N` only supports 5 colors, numbered `@1` through `@5`. Open the custom c
 ### 2.7 Composite Rules:
 
 **Notes:**
- - Append `@if(...)` to a rule to add conditions. Multiple `@if()` blocks can take effect simultaneously (combined with logical AND`&`). String matching within conditions is case-insensitive by default.
+ - Append `@if(...)` to a rule to add extra conditions. Multiple `@if` conditions take effect simultaneously (logical AND `&`, which can be combined into a single `@if`). Matching of composite rules is case-insensitive by default.
  - A condition expression can also stand alone as a full rule without wrapping `@if(...)`, e.g. `host $= ".example.com"`, `path *= "/download/"`. It applies to all search results.
  - Inside a single `@if()` you can use full logical operators: `|` OR, `&` AND, `!` NOT, with `( )` parentheses for grouping. Operator precedence: `!` > `&` > `|`. 
  - `!` negates the condition itself. When a result lacks the compared content (e.g. no title), the condition is treated as false, so its negation is true; e.g. `!(title *= "keyword")` also matches results without a title.
@@ -115,14 +120,14 @@ Note: `@N` only supports 5 colors, numbered `@1` through `@5`. Open the custom c
 | --- | --- | --- |
 | Search Engine | `$site = "google"` | only apply on the specified search engine; accepts `google`/`bing`/`duckduckgo` (`ddg`)/`yandex`/`brave`/`yahoo`, case-insensitive, `=` or `:` separator |
 | Search Category | `$category = "images"` | only apply on the specified search type; accepts `web`/`images`/`videos`/`news`, inferred from the current page URL, defaults to `web` on web search |
-| Site | `site = "google.com.hk"` | only apply on the specified site |
+| Site | `site = "google.com.hk"` | only apply on the specified regional site of the search engine |
 | Title Contains | `title *= "keyword"` | title contains the specified string |
 | Title Exact | `title = "Example Domain"` | title exactly matches the specified string |
 | Title Prefix | `title ^= "Example"` | title starts with the specified string |
 | Title Suffix | `title $= "Domain"` | title ends with the specified string |
 | Title Regex | `title =~ /regex/` (or shorthand `title/regex/`) | title matches regex; `=~` can be omitted, add `i` for case-insensitive |
 | URL Exact | `url = "https://example.com/"` | URL exactly matches the specified string |
-| URL Prefix | `url ^= "https://mp.weixin.qq.com"` | URL starts with the specified string |
+| URL Prefix | `url ^= "https://abc.example.com"` | URL starts with the specified string |
 | URL Suffix | `url $= ".pdf"` | URL ends with the specified string |
 | URL Contains | `url *= "example"` | URL contains the specified string |
 | URL Regex | `url =~ /regex/` (or shorthand `url/regex/`) | URL matches regex; `=~` can be omitted, add `i` for case-insensitive |
@@ -132,7 +137,7 @@ Note: `@N` only supports 5 colors, numbered `@1` through `@5`. Open the custom c
 | Logical Ops | `\|` OR, `&` AND, `!` NOT | combine any conditions |
 | Grouping | `( )` | nest sub-conditions |
 
-`title`/`url`/`host`/`path`/`scheme` all support `=`, `^=`, `$=`, `*=`, `=~` (and the shorthand without `=~`, e.g. `host/regex/`); string comparisons are case-insensitive by default, while `=~` case sensitivity follows the regex flags. Compatible with case modifier i in uBlacklist rules (e.g. title $= "Domain" i), this wording is only used to identify and compatible rules, script case-insensitivity by default.
+`title`/`url`/`host`/`path`/`scheme` all support `=`, `^=`, `$=`, `*=`, `=~` (and the shorthand without `=~`, e.g. `host/regex/`); string comparisons are case-insensitive by default, while `=~` case sensitivity follows the regex flags. Compatible with the case modifier `i` in uBlacklist rules (e.g. `title $= "Domain" i`). This syntax is only used to recognize and be compatible with such rules; the script ignores case by default.
 
 **Composite rule examples:**
 
@@ -153,6 +158,81 @@ Note: `@N` only supports 5 colors, numbered `@1` through `@5`. Open the custom c
 | `path *= "/download/"` | block results whose path contains `/download/` |
 | `host $= ".example.com" & path *= "/download/"` | block `example.com` results whose path contains `/download/` |
 | `@1 path $= ".pdf"` | highlight results whose path ends with `.pdf` |
+
+## Testing
+
+### 3.1 Requirements
+
+- Node.js 14+
+- No additional dependencies required
+
+### 3.2 Running the tests
+
+Place the script in the test directory and run it. Covers condition expressions, search engine matching, engine inclusion, priority, and standalone expression tests.
+
+```bash
+# Run all tests
+node test/test-cond-expr.cjs
+node test/test-engine-match.cjs
+node test/test-include-engine.cjs
+node test/test-priority.cjs
+node test/test-standalone-expr.cjs
+
+# Run a specific test
+node test/test-cond-expr.cjs 2>&1 | grep "FAIL"
+```
+
+A successful run outputs something like `10 passed, 0 failed`.
+
+### 3.3 Debug mode
+
+Use the [网页调试](https://greasyfork.org/zh-CN/scripts/475228) script, or the desktop browser F12 developer tools → Console tab, to view the output.
+
+Enter the following commands to see the corresponding output.
+
+```bash
+// View the current configuration
+console.log('当前配置:', GM_getValue('searchfilter_blocker'));
+
+// View the compiled rules
+console.log('编译规则:', compiledRules);
+
+// View the search engine detection
+console.log('搜索引擎:', getSearchEngine());
+
+// View the number of results on the current page
+console.log('结果数量:', document.querySelectorAll('div.g').length);
+
+// Monitor rule matching performance
+console.time('规则匹配');
+checkRuleMatchOptimized(url, domain, title, snippet, subdomainLevels);
+console.timeEnd('规则匹配');
+
+// Monitor DOM query performance
+console.time('结果查询');
+document.querySelectorAll(selector);
+console.timeEnd('结果查询');
+```
+
+Normal output
+
+```bash
+// Normal startup
+[屏蔽] 引擎: google, 选择器: "div.g, div.MjjYud", 匹配数量: 15
+[屏蔽] 未处理的新结果数量: 15
+[屏蔽] 共屏蔽 3 个结果
+
+// Indicates: the Google engine was detected, 15 results were found, and 3 were hidden
+```
+
+Error output
+
+```bash
+// Rule syntax error
+规则预编译失败: *://example.com/* Error: Invalid regex pattern
+
+// Indicates: the rule syntax is incorrect, check the rule format
+```
 
 ## Screenshots
 
