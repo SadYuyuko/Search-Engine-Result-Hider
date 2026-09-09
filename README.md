@@ -30,9 +30,10 @@
 2. 同步依赖跨域请求权限，地址只支持https和完整路径，如坚果云`https://dav.jianguoyun.com/dav/your_folder/`
 3. 同步配置在刷新后生效
 
-### 1.4 注意：
-1. 订阅同步频率为每天一次，只支持`.txt`或`.yaml`远程链接，例如`https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Other/rules.txt`，在本地规则后追加应用，优先级本地 > 订阅。由于脚本可分配性能有限，规则总数建议不超过3w条避免手机爆炸🤳💥
-2. 脚本扩展有限不支持`##`DOM和`$category`等语法规则，通过订阅导入会自动清除
+### 1.4 关于订阅：
+1. 订阅同步频率为每天一次，只支持`.txt`或`.yaml`远程链接，例如`https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Other/rules.txt`
+2. 订阅规则在本地规则后追加应用，优先级本地 > 订阅。由于脚本可分配性能有限，规则总数建议不超过3w条避免手机爆炸🤳💥
+3. 脚本扩展有限不支持`##`DOM和`$category`等语法规则，通过订阅导入会自动清除
 
 ## 规则说明
 
@@ -45,7 +46,7 @@
 | `*://*.example.com/path/*` | 匹配`example.com`特定路径 |
 | `*://*.example.*` | 匹配`example.com`所有顶级域名 |
 
-在脚本中添加域名规则时可不加`*://*.`前缀直接写域名(`example.com`)，但对于需要同时在ublacklist使用的规则必须加上
+在脚本中添加域名规则时可不加`*://*.`前缀直接写域名(如`example.com`)，但对于需要同时在ublacklist使用的规则必须加上
 
 ### 2.2 正则匹配：
 
