@@ -55,8 +55,8 @@ Click the links in a browser that supports installing user scripts to install di
 | `*://*.example.com/*` | matches `example.com` and all its subdomains |
 | `*://*.example.com/path/*` | matches a specific path under `example.com` |
 | `*://*.example.*` | matches `example.com` across all top-level domains |
+| `example.com` | Equivalent `*://*.example.com/*`, is a simple usage only in script. For rules that need to be used in ublacklist must include `*://*.` prefix |
 
-When adding domain name rules in the script, you can write the domain directly without the `*://*.` prefix (e.g. `example.com`), but rules used in uBlacklist must include the full prefix.  
 URL wildcard rules match from the beginning of the URL following match-pattern semantics; `*://` matches http/https only, host wildcards `*` do not cross path separators, and a leading `*.` also matches the bare domain.
 
 ### 2.2 Regex Matching:
