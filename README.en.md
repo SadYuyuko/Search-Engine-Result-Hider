@@ -37,7 +37,7 @@ Click the links in a browser that supports installing user scripts to install di
 
 ### 1.4 About Subscription:
 1. Subscriptions update once per day. Only remote `.txt` or `.yaml` file links are supported, e.g. `https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Other/rules.txt`.
-2. Subscription rules are appended after local rules (priority: local > subscriptions). Due to the limited performance the script can allocate, it is recommended that the total number of rules not exceed 30,000 to avoid performance issues on mobile devices.
+2. Subscription rules are appended after local rules, due to the limited performance the script can allocate, it is recommended that the total number of rules not exceed 30,000 to avoid performance issues on mobile devices.
 3. The script has limited extensions and does not support DOM-type syntax rules such as `##`. Such rules will be automatically removed when imported via subscription.
 
 ### 1.5 Notes:
@@ -55,7 +55,8 @@ Click the links in a browser that supports installing user scripts to install di
 | `*://*.example.com/path/*` | matches a specific path under `example.com` |
 | `*://*.example.*` | matches `example.com` across all top-level domains |
 
-When adding domain name rules in the script, you can write the domain directly without the `*://*.` prefix (e.g. `example.com`), but rules used in uBlacklist must include the full prefix.
+When adding domain name rules in the script, you can write the domain directly without the `*://*.` prefix (e.g. `example.com`), but rules used in uBlacklist must include the full prefix.  
+URL wildcard rules match from the beginning of the URL following match-pattern semantics; `*://` matches http/https only, host wildcards `*` do not cross path separators, and a leading `*.` also matches the bare domain.
 
 ### 2.2 Regex Matching:
 
@@ -65,7 +66,7 @@ When adding domain name rules in the script, you can write the domain directly w
 | `title/pattern/flags` | Use regex to match title, e.g. `title/.*block.*/i` |
 | `text/pattern/flags` | Use regex to match snippet, e.g. `text/.*ad.*/i` |
 
-Regular expressions use the browser-supported JavaScript `RegExp` flags `i`, `m`, `s`, `u`, where `s` is converted to dot-matches-newline matching; `g` and `y` are not supported. The script only checks whether a rule matches and does not perform global extraction.
+Regular expressions use the browser-supported JavaScript `RegExp` flags `i`, `m`, `s`, `u`, where `s` uses the native dotAll flag (dot matches newlines); `g` and `y` are not supported. The script only checks whether a rule matches and does not perform global extraction.
 
 ### 2.3 Title Matching:
 
@@ -109,17 +110,17 @@ Note: `@N` only supports 5 colors, numbered `@1` through `@5`. Open the custom c
 ### 2.7 Composite Rules:
 
 **Notes:**
- - Append `@if(...)` to a rule to add extra conditions. Multiple `@if` conditions take effect simultaneously (logical AND `&`, which can be combined into a single `@if`). Matching of composite rules is case-insensitive by default.
- - A condition expression can also stand alone as a full rule without wrapping `@if(...)`, e.g. `host $= ".example.com"`, `path *= "/download/"`. It applies to all search results.
- - Inside a single `@if()` you can use full logical operators: `|` OR, `&` AND, `!` NOT, with `( )` parentheses for grouping. Operator precedence: `!` > `&` > `|`. 
- - `!` negates the condition itself. When a result lacks the compared content (e.g. no title), the condition is treated as false, so its negation is true; e.g. `!(title *= "keyword")` also matches results without a title.
+1. Append `@if(...)` to a rule to add extra conditions. Multiple `@if` conditions take effect simultaneously (logical AND `&`, which can be combined into a single `@if`). Matching of composite rules is case-insensitive by default.
+2. A condition expression can also stand alone as a full rule without wrapping `@if(...)`, e.g. `host $= ".example.com"`, `path *= "/download/"`. It applies to all search results.
+3. Inside a single `@if()` you can use full logical operators: `|` OR, `&` AND, `!` NOT, with `( )` parentheses for grouping. Operator precedence: `!` > `&` > `|`. 
+4. `!` negates the condition itself. When a result lacks the compared content (e.g. no title), the condition is treated as false, so its negation is true; e.g. `!(title *= "keyword")` also matches results without a title.
 
 **Supported conditions in `@if()`:**
 
 | Condition Type | Syntax | Description |
 | --- | --- | --- |
 | Search Engine | `$site = "google"` | only apply on the specified search engine; accepts `google`/`bing`/`duckduckgo` (`ddg`)/`yandex`/`brave`/`yahoo`, case-insensitive, `=` or `:` separator |
-| Search Category | `$category = "images"` | only apply on the specified search type; accepts `web`/`images`/`videos`/`news`, inferred from the current page URL, defaults to `web` on web search |
+| Search Category | `$category = "web"` | only apply on the specified search type; accepts `web`/`images`/`videos`/`news`, inferred from the current page URL, defaults to `web` on web search |
 | Site | `site = "google.com.hk"` | only apply on the specified regional site of the search engine |
 | Title Contains | `title *= "keyword"` | title contains the specified string |
 | Title Exact | `title = "Example Domain"` | title exactly matches the specified string |
@@ -168,15 +169,20 @@ Note: `@N` only supports 5 colors, numbered `@1` through `@5`. Open the custom c
 
 ### 3.2 Running the tests
 
-Place the test folder and the script in the same directory to run it. Covers condition expressions, search engine matching, engine inclusion, priority, and standalone expression tests.
+Place the test folder and the script in the same directory to run; tests automatically read the `.js` script from the parent directory, covering conditional expression parsing and recognition, `@if` condition extraction and URL path conflicts, search engine detection and `@match/@include` consistency, priority, standalone expressions, wildcard escaping and regex flags, rule filtering (element/uBO network rules), import cancellation, cross-origin permissions, and rule source labeling tests.
 
 ```bash
 # Run all tests
 node test/test-cond-expr.cjs
-node test/test-engine-match.cjs
-node test/test-include-engine.cjs
+node test/test-if-cond.cjs
+node test/test-engine.cjs
 node test/test-priority.cjs
 node test/test-standalone-expr.cjs
+node test/test-regex.cjs
+node test/test-rule-filter.cjs
+node test/test-import-cancel.cjs
+node test/test-connect.cjs
+node test/test-rule-source.cjs
 
 # Run a specific test
 node test/test-cond-expr.cjs 2>&1 | grep "FAIL"
