@@ -110,7 +110,7 @@ URL通配规则按匹配模式语义从URL开头匹配，`*://`仅匹配`http/ht
 | `@N *://*.example.com/*` | 给`example.com`及其子域名的搜索结果加上颜色边框 |
 | `@N title/.*示例.*/` | 给匹配到标题带有`示例`的结果加上颜色边框 |
 
-优先级：高亮 > 白名单但黑名单 > 高亮  
+优先级：屏蔽 > 高亮；白名单结果不会被屏蔽，但仍可显示高亮  
 注意：`@N` 只支持5种颜色，即`@1`～`@5`，通过脚本菜单打开自定义颜色面板
 
 ### 2.7 复合规则：
@@ -166,6 +166,37 @@ URL通配规则按匹配模式语义从URL开头匹配，`*://`仅匹配`http/ht
 | `host $= ".example.com" & path *= "/download/"` | 屏蔽`example.com`下路径含`/download/`的结果 |
 | `@1 path $= ".pdf"` | 高亮路径以`.pdf`结尾的结果 |
 
+### 2.8 自定义引擎：
+
+通过脚本管理器菜单`🖋️自定义选择器`打开编辑面板（JS 格式，与内置 `const SELECTORS` 结构一致）
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `match` | regex | 必填，hostname 匹配正则字面量，如 `/(?:^\|\\.)searx\.example\.com$/` |
+| `containers` | string | 必填，结果容器的 CSS 选择器（不支持伪元素，如 `::after`） |
+| `links` | string \| string\[\] | 必填，链接选择器，默认 `a[href]` |
+| `titles` | string\[\] | 可选，标题选择器列表 |
+| `snippets` | string\[\] | 可选，摘要选择器列表 |
+
+**示例：**
+
+```
+example: {
+  match: /(?:^|\.)searx\.example\.com$/,
+  containers: '.result',
+  titles: ['h3'],
+  snippets: ['.content'],
+  links: 'a[href]',
+},
+```
+
+**说明：**
+
+1. 优先级：自定义选择器 > 内置选择器
+2. 自定义引擎支持 `$site = "引擎ID"` 条件以及屏蔽/高亮/白名单规则，`titles`/`snippets` 可省略
+3. 引擎ID仅允许字母/数字/`_`/`-`，`other` 为保留键，与内置引擎同ID（`google`/`bing`/`duckduckgo(ddg)`/`yandex`/`brave`/`yahoo(yahoo-japan)`）或站点重叠时会覆盖内置选择器，如匹配 `cn.bing.com` 时将优先于内置 `bing` 命中
+4. 保存时仅存储与内置有差异的键，未改动的内置不会写入存储；把覆盖改回与内置完全相同再保存即删除该覆盖，恢复跟随脚本更新
+
 ## 测试
 
 ### 3.1 环境要求
@@ -175,23 +206,17 @@ URL通配规则按匹配模式语义从URL开头匹配，`*://`仅匹配`http/ht
 
 ### 3.2 运行测试
 
-将test文件夹和脚本放至同一目录运行，测试会自动读取上一级目录的 `.js` 脚本，包括条件表达式解析与识别、`@if`条件提取与URL路径冲突、搜索引擎检测与`@match/@include`一致性、优先级、独立表达式、通配符转义与正则标志、规则过滤(元素/uBO网络规则)、导入取消、跨域权限、规则来源标记测试
+将test文件夹和脚本放至同一目录运行，测试会自动读取上一级目录的 `.js` 脚本，按功能域分为：条件表达式、规则、选择器与引擎、跨域权限
 
 ```bash
 # 运行所有测试
-node test/test-cond-expr.cjs
-node test/test-if-cond.cjs
-node test/test-engine.cjs
-node test/test-priority.cjs
-node test/test-standalone-expr.cjs
-node test/test-regex.cjs
-node test/test-rule-filter.cjs
-node test/test-import-cancel.cjs
+node test/test-conditions.cjs
+node test/test-rules.cjs
+node test/test-selectors.cjs
 node test/test-connect.cjs
-node test/test-rule-source.cjs
 
 # 运行特定测试
-node test/test-cond-expr.cjs 2>&1 | grep "FAIL"
+node test/test-conditions.cjs 2>&1 | grep "FAIL"
 ```
 
 成功输出如 `10 passed, 0 failed`
