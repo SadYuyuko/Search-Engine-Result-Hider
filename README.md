@@ -171,7 +171,7 @@ URL通配规则按匹配模式语义从URL开头匹配，`*://`仅匹配`http/ht
 
 ### 2.8 自定义选择器：
 
-通过脚本管理器菜单`🖋️ 自定义选择器`打开编辑面板（JS 格式，与内置 `const SELECTORS` 结构一致）
+通过脚本管理器菜单`🖋️ 自定义选择器`打开编辑面板（JS 格式，与内置 [SELECTORS](https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Other/SELECTORS.js) 结构一致）
 
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
