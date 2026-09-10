@@ -38,11 +38,13 @@ const fns = [
   'foldCondExpr',
   'evalDynamicLeaf',
   'evalCondAST',
+  'isCondExprCore',
+  'looksLikeCondExpr',
 ].map((n) => extractFn(src, n));
 
   const consts = src.match(/const SUPPORTED_REGEX_FLAGS = 'imsu';/)[0];
 const factory = new Function(
-  consts + '\n' + fns.join('\n') + `\nreturn { safeRegexTest, getInvalidRegexFlags, parseConditionPart, tokenizeCondExpr, parseCondExprTokens, analyzeCondExpr, foldCondExpr, evalDynamicLeaf, evalCondAST, stripRuleComment, parseRulesetContent };`,
+  consts + '\n' + fns.join('\n') + `\nreturn { safeRegexTest, getInvalidRegexFlags, parseConditionPart, tokenizeCondExpr, parseCondExprTokens, analyzeCondExpr, foldCondExpr, evalDynamicLeaf, evalCondAST, stripRuleComment, parseRulesetContent, isCondExprCore, looksLikeCondExpr };`,
 );
 const m = factory();
 
@@ -288,6 +290,12 @@ r = condExpr('!($site = "yandex")', 'google');
 assert('S10: $site取反', r.const === true);
 r = condExpr('$site = "bing" | $site = "yandex"', 'yandex');
 assert('S11: $site多值或', r.const === true);
+r = condExpr('$site = "yahoo-japan"', 'yahoo');
+assert('S12: $site yahoo-japan别名命中', r.const === true);
+r = condExpr('$site = "yahoo-japan"', 'google');
+assert('S13: $site yahoo-japan非yahoo恒假', r.const === false);
+r = condExpr('$site = "yahoo"', 'yahoo');
+assert('S14: $site yahoo原值仍可用', r.const === true);
 
 // ---- 行尾 # 注释剥离 ----
 assert('C1: URL规则行尾注释', m.stripRuleComment('*://x.com/* # 注释') === '*://x.com/*');
@@ -483,6 +491,50 @@ r = condExpr('$site = "google" & $category = "images"', 'google', 'www.google.co
 assert('CAT11: $site与$category同时命中', r.const === true);
 r = condExpr('$site = "google" & $category = "images"', 'google', 'www.google.com', 'web');
 assert('CAT11b: $site命中但category不命中', r.const === false);
+
+// ---- 条件表达式识别(行级判定) ----
+const condTrueCases = [
+  'host $= ".example.com"',
+  'path *= "/download/"',
+  'title *= "关键词"',
+  'title ^= "关键词"',
+  'title $= "关键词"',
+  'title = "关键词"',
+  'url =~ /example\\.(com|net)/',
+  'url/example\\.(com|net)/',
+  'host/\\.example\\.com$/i',
+  'scheme = "https"',
+  'scheme="http"',
+  '$site = "google"',
+  '$category = "images"',
+  'site = "google.com.hk"',
+  '!scheme = "https"',
+  '(host $= "a" | title *= "b")',
+  'host $= ".example.com" & path *= "/download/"',
+  'title *= "example" i | title *= "domain" i',
+];
+for (const rule of condTrueCases) {
+  assert(`D: 条件表达式识别 ${rule}`, m.looksLikeCondExpr(rule) === true);
+}
+
+const condFalseCases = [
+  'https://example.com/?url=x',
+  'https://example.com/?a=1&title=x',
+  'https://example.com/path?host=x',
+  'https://example.com/?site=x',
+  'https://example.com/?path=x',
+  'https://example.com/?scheme=http',
+  'https://example.com/?url="x"',
+  '*://*.example.com/*',
+  '/example\\.com/',
+  'title/foo/i',
+  'text/ad/',
+  'example.com',
+  'https://example.com/',
+];
+for (const rule of condFalseCases) {
+  assert(`D: 非条件表达式 ${rule}`, m.looksLikeCondExpr(rule) === false);
+}
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
