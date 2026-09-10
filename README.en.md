@@ -168,7 +168,7 @@ Note: `@N` only supports 5 colors, numbered `@1` through `@5`. Open the custom c
 
 ### 3.2 Running the tests
 
-Place the script in the test directory and run it. Covers condition expressions, search engine matching, engine inclusion, priority, and standalone expression tests.
+Place the test folder and the script in the same directory to run it. Covers condition expressions, search engine matching, engine inclusion, priority, and standalone expression tests.
 
 ```bash
 # Run all tests
