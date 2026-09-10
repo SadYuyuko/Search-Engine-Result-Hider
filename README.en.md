@@ -170,7 +170,7 @@ Note: `@N` only supports 5 colors, numbered `@1` through `@5`. Open the custom c
 
 ### 2.8 Custom Selectors:
 
-Open the selector editor panel via the userscript manager menu `🖋️ Custom Selectors`(JS object literal format, matching the built-in `const SELECTORS` structure).
+Open the selector editor panel via the userscript manager menu `🖋️ Custom Selectors`(JS object literal format, matching the built-in [SELECTORS](https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Other/SELECTORS.js) structure).
 
 | Field | Type | Description |
 | --- | --- | --- |
