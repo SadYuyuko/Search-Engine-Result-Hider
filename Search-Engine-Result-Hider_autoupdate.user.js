@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.7.4
+// @version      7.7.5
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -24,7 +24,7 @@
 // @include      /^https?:\/\/(?:[\w-]+\.)*yahoo\.(?:co\.jp|com|[a-z]{2}(?:\.[a-z]{2})?)\/.*$/
 // @include      /^https?:\/\/(?:[\w-]+\.)*google\.(?:com|[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})\/.*$/
 // @include      /^https?:\/\/(?:(?:[\w-]+\.)*yandex\.(?:com|[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})|(?:[\w-]+\.)*ya\.ru)\/.*$/
-// @connect      dav.jianguoyun.com
+// @connect      *
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_addStyle
@@ -57,7 +57,7 @@
 
   // 默认配置
   let currentConfig = GM_getValue(CONFIG_KEY, {
-    rules: ['*://*.csdn.net/*\n*://*.giffgaff.com/*\n*://*.example.com/*'],
+    rules: ['*://*.example.com/*'],
     enabled: true,
     showCount: false,
     bubbleSize: 30,
@@ -785,7 +785,7 @@
   function parseConditionPart(trimmed, currentEngine, currentSite, currentCategory) {
     const enginePropMatch = trimmed.match(/^\$site\s*[=:]\s*['"](.*?)['"]\s*i?\s*$/i);
     if (enginePropMatch) {
-      const target = enginePropMatch[1].trim().toLowerCase().replace(/^ddg$/, 'duckduckgo');
+      const target = enginePropMatch[1].trim().toLowerCase().replace(/^ddg$/, 'duckduckgo').replace(/^yahoo-japan$/, 'yahoo');
       return { matched: true, static: currentEngine === target };
     }
 
@@ -830,6 +830,7 @@
 
   function validateUrlWildcard(rule) {
     if (!rule || /[<>"']/.test(rule) || /\s/.test(rule)) return false;
+    if (rule.startsWith('|') || rule.startsWith('@@')) return false;
     if (/^\*:\/\/\*\*+/.test(rule) || /\*{3,}/.test(rule)) return false;
     if (rule.startsWith('*://') && !/^\*:\/\/[^/]+(?:\/.*)?$/.test(rule)) return false;
     return true;
@@ -847,9 +848,38 @@
   function extractBalancedParens(str, startIndex) {
     if (str[startIndex] !== '(') return null;
     let depth = 0;
+    let inSQ = false;
+    let inDQ = false;
+    let inRE = false;
+    let inReClass = false;
     for (let i = startIndex; i < str.length; i++) {
-      if (str[i] === '(') depth++;
-      else if (str[i] === ')') {
+      const ch = str[i];
+      if (inSQ) {
+        if (ch === '\\') { i++; continue; }
+        if (ch === "'") inSQ = false;
+        continue;
+      }
+      if (inDQ) {
+        if (ch === '\\') { i++; continue; }
+        if (ch === '"') inDQ = false;
+        continue;
+      }
+      if (inRE) {
+        if (ch === '\\') { i++; continue; }
+        if (inReClass) {
+          if (ch === ']') inReClass = false;
+          continue;
+        }
+        if (ch === '[') { inReClass = true; continue; }
+        if (ch === '/') inRE = false;
+        continue;
+      }
+      if (ch === '\\') { i++; continue; }
+      if (ch === "'") { inSQ = true; continue; }
+      if (ch === '"') { inDQ = true; continue; }
+      if (ch === '/') { inRE = true; continue; }
+      if (ch === '(') depth++;
+      else if (ch === ')') {
         depth--;
         if (depth === 0) {
           return {
@@ -862,25 +892,87 @@
     return null;
   }
 
+  function findIfOccurrences(ruleStr) {
+    const occurrences = [];
+    const n = ruleStr.length;
+    let start = 0;
+    if (ruleStr[start] === '@') {
+      start++;
+      while (start < n && /\d/.test(ruleStr[start])) start++;
+      while (start < n && /\s/.test(ruleStr[start])) start++;
+    }
+    let i = 0;
+    let inRE = false;
+    let inReClass = false;
+    let inSQ = false;
+    let inDQ = false;
+    const leadingShorthand = /^(?:url|host|path|scheme)\//i.exec(ruleStr.slice(start));
+    if (ruleStr[start] === '/') {
+      inRE = true;
+      i = start + 1;
+    } else if (ruleStr.startsWith('title/', start)) {
+      inRE = true;
+      i = start + 6;
+    } else if (ruleStr.startsWith('text/', start)) {
+      inRE = true;
+      i = start + 5;
+    } else if (leadingShorthand) {
+      inRE = true;
+      i = start + leadingShorthand[0].length;
+    }
+    for (; i < n; i++) {
+      const ch = ruleStr[i];
+      if (inSQ) {
+        if (ch === '\\') i++;
+        else if (ch === "'") inSQ = false;
+        continue;
+      }
+      if (inDQ) {
+        if (ch === '\\') i++;
+        else if (ch === '"') inDQ = false;
+        continue;
+      }
+      if (inRE) {
+        if (ch === '\\') { i++; continue; }
+        if (inReClass) {
+          if (ch === ']') inReClass = false;
+          continue;
+        }
+        if (ch === '[') { inReClass = true; continue; }
+        if (ch === '/') inRE = false;
+        continue;
+      }
+      if (ch === "'") { inSQ = true; continue; }
+      if (ch === '"') { inDQ = true; continue; }
+      if (ch === '@' && ruleStr.substr(i, 3).toLowerCase() === '@if') {
+        let j = i + 3;
+        while (j < n && /\s/.test(ruleStr[j])) j++;
+        if (ruleStr[j] === '(') {
+          occurrences.push({ index: i, condStart: j });
+          const parenResult = extractBalancedParens(ruleStr, j);
+          if (parenResult) i = parenResult.endIndex - 1;
+        }
+        continue;
+      }
+    }
+    return occurrences;
+  }
+
   // 剥离@if条件
   function stripIfConditions(ruleStr, evaluateCond) {
     let coreRule = ruleStr.trim();
     let staticPass = true;
 
-    const ifRegex = /@if\s*\(/gi;
-    let match;
     const ranges = [];
 
-    while ((match = ifRegex.exec(coreRule)) !== null) {
-      const condStartIdx = match.index + match[0].length - 1;
-
-      const parenResult = extractBalancedParens(coreRule, condStartIdx);
+    for (const occ of findIfOccurrences(coreRule)) {
+      const parenResult = extractBalancedParens(coreRule, occ.condStart);
       if (!parenResult) continue;
 
       const cond = parenResult.content.trim();
 
       ranges.push({
-        start: match.index,
+        start: occ.index,
         end: parenResult.endIndex
       });
 
@@ -912,9 +1004,24 @@
 
   function looksLikeCondExpr(str) {
     if (!isCondExprCore(str)) return false;
-    return /(?:\$site|\$category|\bsite\b|\btitle\b|\burl\b|\bhost\b|\bpath\b|\bscheme\b)\s*(?:=~|\^=|\$=|\*=|=|:|\(|\/)/i.test(str)
-      || /(?:\^=|\$=|\*=|=~)/.test(str)
+    return /(?:^|[\s(&|!])(?:\$site|\$category|site|title|url|host|path|scheme)\s*(?:(?:=~|\^=|\$=|\*=|=|:)\s*["'/]|\/)/i.test(str)
       || /^\s*!/.test(str);
+  }
+
+  // 判断规则行
+  function isScriptRuleLine(line) {
+    const s = line.trim();
+    if (!s) return false;
+    if (s.startsWith('/') || s.startsWith('*://') || /^[a-z][a-z0-9+.-]*:\/\//i.test(s)) return true;
+    if (/^title\//i.test(s) || /^text\//i.test(s)) return true;
+    if (s.startsWith('@')) return true;
+    return looksLikeCondExpr(s);
+  }
+
+  // uBO元素判定
+  function isElementRuleLine(line) {
+    if (!/(?:##|#@#|#(?:@)?[$?%]#)/.test(line)) return false;
+    return !isScriptRuleLine(line);
   }
 
   function absorbStandaloneExpr(coreRule, dynamicConditions) {
@@ -956,10 +1063,8 @@
   // 处理@if条件
   function extractIfConditions(ruleStr) {
     const conds = [];
-    const ifRegex = /@if\s*\(/gi;
-    let match;
-    while ((match = ifRegex.exec(ruleStr)) !== null) {
-      const parenResult = extractBalancedParens(ruleStr, match.index + match[0].length - 1);
+    for (const occ of findIfOccurrences(ruleStr)) {
+      const parenResult = extractBalancedParens(ruleStr, occ.condStart);
       if (parenResult) conds.push(parenResult.content.trim());
     }
     return conds;
@@ -1009,12 +1114,9 @@
     // @if条件语法检查
     if (!ruleToCheck.startsWith('/') && !ruleToCheck.startsWith('title/') && !ruleToCheck.startsWith('text/')) {
       if (/@if\s*\(/i.test(ruleToCheck)) {
-        const ifRegex = /@if\s*\(/gi;
-        let m;
         let unbalanced = false;
-        while ((m = ifRegex.exec(ruleToCheck)) !== null) {
-          const parenResult = extractBalancedParens(ruleToCheck, m.index + m[0].length - 1);
-          if (!parenResult) { unbalanced = true; break; }
+        for (const occ of findIfOccurrences(ruleToCheck)) {
+          if (!extractBalancedParens(ruleToCheck, occ.condStart)) { unbalanced = true; break; }
         }
         if (unbalanced) return { valid: false, errors: [t('ifParenError')], warnings };
         for (const cond of extractIfConditions(ruleToCheck)) {
@@ -1075,7 +1177,7 @@
           errors.push(t('invalidRegexFlags', { flags: invalidFlags }));
           return { valid: false, errors, warnings };
         }
-        new RegExp(pattern, flags.replace('s', ''));
+        new RegExp(pattern, flags);
       } else {
         if (!validateUrlWildcard(ruleToCheck)) {
           errors.push(t('invalidUrlWildcard', { rule: ruleToCheck }));
@@ -1118,28 +1220,54 @@
         pattern = pattern.substring(oldFlagMatch[0].length);
       }
     }
-    if (flags.includes('s')) {
-      pattern = pattern.replace(/\./g, '[\\s\\S]');
-      flags = flags.replace('s', '');
-    }
     return { pattern, flags };
   }
 
-  // URL通配符转正则
-  function wildcardToRegex(pattern) {
-    if (pattern.startsWith('*://')) pattern = pattern.substring(4);
-    if (pattern.includes('/')) {
-      const parts = pattern.split('/');
-      return parts.map((part, index) => {
-        if (index === 0) {
-          return part.replace(/(?<!\\)\./g, '\\.').replace(/\*/g, '.*').replace(/\?/g, '\\?');
-        } else {
-          return part.replace(/\*/g, '.*').replace(/\?/g, '\\?');
-        }
-      }).join('\\/');
-    } else {
-      return pattern.replace(/(?<!\\)\./g, '\\.').replace(/\*/g, '.*').replace(/\?/g, '\\?');
+  // 通配符片段转正则
+  function escapeWildcardPart(part, isHost) {
+    const starPattern = isHost ? '[^/]*' : '.*';
+    let out = '';
+    let i = 0;
+    if (isHost && part.startsWith('*.')) {
+      out += '(?:[^/]*\\.)?';
+      i = 2;
     }
+    for (; i < part.length; i++) {
+      const ch = part[i];
+      if (ch === '\\' && i + 1 < part.length) {
+        out += ch + part[i + 1];
+        i++;
+        continue;
+      }
+      if (ch === '*') { out += starPattern; continue; }
+      if (ch === '?') { out += '\\?'; continue; }
+      if ('.+^${}()|[]\\'.includes(ch)) { out += '\\' + ch; continue; }
+      out += ch;
+    }
+    return out;
+  }
+
+  function wildcardToRegex(pattern) {
+    let prefix = '^';
+    let hostIsFirst = false;
+    if (pattern.startsWith('*://')) {
+      prefix += 'https?:\\/\\/';
+      pattern = pattern.substring(4);
+      hostIsFirst = true;
+    } else {
+      const schemeMatch = pattern.match(/^([a-z][a-z0-9+.-]*):\/\//i);
+      if (schemeMatch) {
+        prefix += escapeWildcardPart(schemeMatch[1], false) + ':\\/\\/';
+        pattern = pattern.substring(schemeMatch[0].length);
+        hostIsFirst = true;
+      }
+    }
+    if (pattern.includes('/')) {
+      return prefix + pattern.split('/')
+        .map((part, index) => escapeWildcardPart(part, hostIsFirst && index === 0))
+        .join('\\/');
+    }
+    return prefix + escapeWildcardPart(pattern, hostIsFirst);
   }
 
   function ruleToRegex(rule) {
@@ -1239,20 +1367,17 @@
     const subscriptionRules = getAllSubscriptionRules();
     const allRules = currentConfig.rules.concat(subscriptionRules);
     const subscriptions = getSubscriptions();
-
-    const subRuleSets = subscriptions.map((sub, idx) => ({
-      idx,
-      set: (sub.enabled && sub.rules && sub.rules.length) ? new Set(sub.rules.map(r => stripRuleComment(r.trim()))) : null
-    }));
-
-    function getRuleSource(rule) {
-      for (const {idx, set} of subRuleSets) {
-        if (set && set.has(rule)) return `${t('subscription')}${idx + 1}`;
+    const localRuleCount = currentConfig.rules.length;
+    const subscriptionSources = [];
+    subscriptions.forEach((sub, idx) => {
+      if (sub.enabled && sub.rules && Array.isArray(sub.rules)) {
+        for (let i = 0; i < sub.rules.length; i++) {
+          subscriptionSources.push(`${t('subscription')}${idx + 1}`);
+        }
       }
-      return t('localRule');
-    }
+    });
 
-    allRules.forEach(rule => {
+    allRules.forEach((rule, ruleIndex) => {
       rule = stripRuleComment(rule.trim());
       if (!rule) return;
 
@@ -1312,7 +1437,9 @@
 
       if (!rule || rule.trim() === '' || rule.startsWith('#')) return;
 
-      const source = getRuleSource(rule);
+      const source = ruleIndex < localRuleCount
+        ? t('localRule')
+        : (subscriptionSources[ruleIndex - localRuleCount] || t('localRule'));
 
       let parsed;
       try {
@@ -2113,6 +2240,7 @@
 
     const engine = getSearchEngine();
     const selector = getContainerSelector(engine);
+    if (!selector) return;
 
     // 调试1
     if (currentConfig.debug) {
@@ -2153,6 +2281,7 @@
 
     const engine = getSearchEngine();
     const selector = getContainerSelector(engine);
+    if (!selector) return;
 
     // 调试2
     if (currentConfig.debug) {
@@ -3508,7 +3637,7 @@
 
     const engine = getSearchEngine();
     const selector = getContainerSelector(engine);
-    const results = document.querySelectorAll(selector);
+    const results = selector ? document.querySelectorAll(selector) : [];
     const statsBySource = new Map();
 
     results.forEach(result => {
@@ -4309,30 +4438,35 @@
     return { lines, meta };
   }
 
-  async function performSubscriptionForUrl(url, showAlerts = true) {
-    const resp = await gmRequest('GET', url);
-    const content = resp.responseText;
+function collectSubscriptionRules(lines) {
+  const validRules = [];
+  for (let line of lines) {
+    if (line.length === 0) continue;
+    if (line.startsWith('!') && !looksLikeCondExpr(line)) continue;
+    if (line.startsWith('[') && line.endsWith(']')) continue;
+    if (line.startsWith('@@')) continue;
+    if (isElementRuleLine(line)) continue;
+    if (line.startsWith('#')) continue;
 
-    const { lines: contentLines, meta } = parseRulesetContent(content);
-    const lines = contentLines.map(line => line.trim());
-    const validRules = [];
-
-    for (let line of lines) {
-      if (line.length === 0) continue;
-      if (line.startsWith('!')) continue;
-      if (line.startsWith('[') && line.endsWith(']')) continue;
-      if (line.includes('##') || line.startsWith('#@#') || line.startsWith('@@')) continue;
-      if (line.startsWith('#')) continue;
-
-      const cleanLine = stripRuleComment(line);
-      if (cleanLine && validateRule(cleanLine)) {
-        validRules.push(cleanLine);
-      } else if (currentConfig.debug) {
-        console.warn('[订阅] 无效规则已跳过:', line);
-      }
+    const cleanLine = stripRuleComment(line);
+    if (cleanLine && validateRule(cleanLine)) {
+      validRules.push(cleanLine);
+    } else if (currentConfig.debug) {
+      console.warn('[订阅] 无效规则已跳过:', line);
     }
+  }
+  return validRules;
+}
 
-    const subs = getSubscriptions();
+async function performSubscriptionForUrl(url, showAlerts = true) {
+  const resp = await gmRequest('GET', url);
+  const content = resp.responseText;
+
+  const { lines: contentLines, meta } = parseRulesetContent(content);
+  const lines = contentLines.map(line => line.trim());
+  const validRules = collectSubscriptionRules(lines);
+
+  const subs = getSubscriptions();
     const existingIndex = subs.findIndex(s => s.url === url);
     const subData = {
       url,
@@ -4774,11 +4908,25 @@
     fileInput.accept = '.txt,text/plain';
     fileInput.style.display = 'none';
     document.body.appendChild(fileInput);
+
+    let cleanedUp = false;
+    const cleanup = () => {
+      if (cleanedUp) return;
+      cleanedUp = true;
+      window.removeEventListener('focus', onWindowFocus);
+      fileInput.remove();
+      preventPanelClose = false;
+    };
+    const onWindowFocus = () => {
+      setTimeout(() => {
+        if (!fileInput.files || fileInput.files.length === 0) cleanup();
+      }, 300);
+    };
+
     fileInput.onchange = (e) => {
       const file = e.target.files[0];
       if (!file) {
-        document.body.removeChild(fileInput);
-        preventPanelClose = false;
+        cleanup();
         return;
       }
       const reader = new FileReader();
@@ -4790,11 +4938,13 @@
           textarea.value = content;
           updateLineNumbers();
         }
-        document.body.removeChild(fileInput);
-        preventPanelClose = false;
+        cleanup();
       };
+      reader.onerror = cleanup;
       reader.readAsText(file, 'UTF-8');
     };
+    fileInput.addEventListener('cancel', cleanup);
+    window.addEventListener('focus', onWindowFocus);
     fileInput.click();
   }
 
