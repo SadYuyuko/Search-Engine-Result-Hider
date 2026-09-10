@@ -37,7 +37,7 @@ Click the links in a browser that supports installing user scripts to install di
 
 ### 1.4 About Subscription:
 1. Subscriptions update once per day. Only remote `.txt` or `.yaml` file links are supported, e.g. `https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Other/rules.txt`.
-2. Subscription rules are appended after local rules, due to the limited performance the script can allocate, it is recommended that the total number of rules not exceed 30,000 to avoid performance issues on mobile devices.
+2. Subscription rules are appended after local rules, due to the limited performance the script can allocate, it is recommended that the total number of rules not exceed 50,000 to avoid performance issues on mobile devices.
 3. The script has limited extensions and does not support DOM-type syntax rules such as `##`. Such rules will be automatically removed when imported via subscription.
 
 ### 1.5 Notes:
