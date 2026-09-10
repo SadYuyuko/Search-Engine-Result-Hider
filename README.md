@@ -46,7 +46,7 @@
 
 ### 1.5 注意：
 
-1. 一键屏蔽逻辑：屏蔽`example.com`并加入规则`*://example.com/*`（开启屏蔽域名为`*://*.example.com/*`），取消屏蔽不删除源规则而是新增白名单`@*://example.com/*`（开启屏蔽域名为`@*://*.example.com/*`）
+1. 一键屏蔽逻辑：点击屏蔽`example.com`同时加入规则`*://example.com/*`（开启屏蔽域名为`*://*.example.com/*`），取消屏蔽不删除源规则而是新增白名单`@*://example.com/*`（开启屏蔽域名为`@*://*.example.com/*`）
 2. 规则优先级：本地白名单 > 本地黑名单 > 订阅白名单 > 订阅黑名单
 
 ## 规则说明
@@ -62,6 +62,8 @@
 
 在脚本中添加域名规则时可不加`*://*.`前缀直接写域名(如`example.com`)，但对于需要同时在ublacklist使用的规则必须加上
 
+URL通配规则按匹配模式语义从URL开头匹配，`*://`仅匹配http/https，主机通配`*`不跨越路径，`*.`前缀同时匹配裸域
+
 ### 2.2 正则匹配：
 
 | 规则 | 说明 |
@@ -70,7 +72,7 @@
 | `title/pattern/flags` | 使用正则表达式匹配标题，如`title/.*屏蔽.*/i` |
 | `text/pattern/flags` | 使用正则表达式匹配摘要内容，如`text/.*广告.*/i` |
 
-普通正则使用浏览器支持的 JavaScript `RegExp` flags，支持`i`、`m`、`s`、`u`，其中 `s` 会转换为跨行匹配；不支持`g`、`y`，脚本规则只判断是否匹配不执行全局提取
+普通正则使用浏览器支持的 JavaScript `RegExp` flags，支持`i`、`m`、`s`、`u`，其中 `s` 使用原生 dotAll 匹配(点号匹配换行)；不支持`g`、`y`，脚本规则只判断是否匹配不执行全局提取
 
 ### 2.3 标题匹配：
 
@@ -113,18 +115,18 @@
 
 ### 2.7 复合规则：
 
-**注意：**
- - 在规则后添加 `@if(...)` 作为附加条件，多个 `@if` 条件同时生效(逻辑与`&`，可转换为单个`@if`)，复合规则匹配默认忽略大小写
- - 条件表达式也可单独使用不需要套 `@if(...)`，如 `host $= ".example.com"`、`path *= "/download/"`，对所有搜索结果生效
- - 单个 `@if` 内支持逻辑运算：`|` 或、`&` 与、`!` 非，可用 `( )` 括号嵌套分组，优先级 `!` > `&` > `|`
- - `!` 取反的是条件本身。当结果缺少标题等被比较内容时，该条件视为不成立，取反后即为成立，如 `!(title *= "关键词")` 会命中无标题的结果
+**说明：**
+1. 在规则后添加 `@if(...)` 作为附加条件，多个 `@if` 条件同时生效(逻辑与`&`，可转换为单个`@if`)，复合规则匹配默认忽略大小写
+2. 条件表达式也可单独使用不需要套 `@if(...)`，如 `host $= ".example.com"`、`path *= "/download/"`，对所有搜索结果生效
+3. 单个 `@if` 内支持逻辑运算：`|` 或、`&` 与、`!` 非，可用 `( )` 括号嵌套分组，优先级 `!` > `&` > `|`
+4. `!` 取反的是条件本身。当结果缺少标题等被比较内容时，该条件视为不成立，取反后即为成立，如 `!(title *= "关键词")` 会命中无标题的结果
 
 **`@if` 支持条件：**
 
 | 条件类型 | 语法 | 说明 |
 | --- | --- | --- |
-| 搜索引擎 | `$site = "google"` | 仅在指定搜索引擎中生效，可写`google`、`bing`、`duckduckgo`(`ddg`)、`yandex`、`brave`、`yahoo`，忽略大小写，分隔符可用`=`或`:` |
-| 搜索类型 | `$category = "images"` | 仅在指定搜索类型中生效，可写`web`、`images`、`videos`、`news`，由当前页 URL 推断，网页搜索默认为`web` |
+| 搜索引擎 | `$site = "google"` | 仅在指定搜索引擎中生效，可写`google`、`bing`、`duckduckgo`(`ddg`)、`yandex`、`brave`、`yahoo`(`yahoo-japan`)，忽略大小写，分隔符可用`=`或`:` |
+| 搜索类型 | `$category = "web"` | 仅在指定搜索类型中生效，可写`web`、`images`、`videos`、`news`，由当前页 URL 推断，网页搜索默认为`web` |
 | 搜索站点 | `site = "google.com.hk"` | 仅在指定搜索引擎地区站点中生效 |
 | 标题包含 | `title *= "关键词"` | 标题中包含指定字符串`关键词` |
 | 标题精确 | `title = "关键词"` | 标题精确匹配指定字符串`关键词` |
@@ -173,15 +175,20 @@
 
 ### 3.2 运行测试
 
-将test文件夹和脚本放至同一目录运行，包括条件表达式、搜索引擎匹配、引擎包含、优先级、独立表达式测试
+将test文件夹和脚本放至同一目录运行，测试会自动读取上一级目录的 `.js` 脚本，包括条件表达式解析与识别、`@if`条件提取与URL路径冲突、搜索引擎检测与`@match/@include`一致性、优先级、独立表达式、通配符转义与正则标志、规则过滤(元素/uBO网络规则)、导入取消、跨域权限、规则来源标记测试
 
 ```bash
 # 运行所有测试
 node test/test-cond-expr.cjs
-node test/test-engine-match.cjs
-node test/test-include-engine.cjs
+node test/test-if-cond.cjs
+node test/test-engine.cjs
 node test/test-priority.cjs
 node test/test-standalone-expr.cjs
+node test/test-regex.cjs
+node test/test-rule-filter.cjs
+node test/test-import-cancel.cjs
+node test/test-connect.cjs
+node test/test-rule-source.cjs
 
 # 运行特定测试
 node test/test-cond-expr.cjs 2>&1 | grep "FAIL"
