@@ -12,6 +12,7 @@ Install sources [Github](https://raw.githubusercontent.com/SadYuyuko/Search-Engi
 Click the links in a browser that supports installing user scripts to install directly.
 
 ### 1.2 Features:
+
 - Basic/advanced syntax matching
 - One-click domain blocking
 - Display matched rule counts and debug output
@@ -22,6 +23,7 @@ Click the links in a browser that supports installing user scripts to install di
 - Script manager menu  
 ┣ Open configuration panel  
 ┣ Language switching  
+┣ Custom selectors  
 ┣ Edit highlight result colors  
 ┣ Toggle error detection on/off  
 ┣ Toggle floating bubble visibility  
@@ -31,19 +33,24 @@ Click the links in a browser that supports installing user scripts to install di
 　┗ 🔵 Click to toggle visibility of blocked results; long-press to open the configuration panel. Clicking the block button on a blocked result unblocks it.
 
 ### 1.3 About WebDAV:
-1. Auto-sync runs once per hour, performing deduplication and merging. Manual upload/download performs an overwrite sync.
+
+1. Auto-sync runs once per hour, performing deduplication and merging. Manual upload/download performs an overwrite sync, sync configuration takes effect after refreshing the page.
 2. Only HTTPS addresses and full folder path are supported, e.g., for Nutstore: `https://dav.jianguoyun.com/dav/your_folder/`
-3. Sync configuration takes effect after refreshing the page.
+3. Auto-sync runs in the background on every site. When multiple tabs are open, a cross-tab lock ensures only one tab performs each request per interval, so the same WebDAV file is never fetched twice.
 
 ### 1.4 About Subscription:
+
 1. Subscriptions update once per day. Only remote `.txt` or `.yaml` file links are supported, e.g. `https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Other/rules.txt`.
 2. Subscription rules are appended after local rules, due to the limited performance the script can allocate, it is recommended that the total number of rules not exceed 50,000 to avoid performance issues on mobile devices.
 3. The script has limited extensions and does not support DOM-type syntax rules such as `##`. Such rules will be automatically removed when imported via subscription.
+4. Subscription auto-update also runs in the background on every site, when multiple tabs are open, only one tab fetches each due subscription (cross-tab lock).
 
 ### 1.5 Notes:
+
 1. One-click blocking logic: Block `example.com` and add the rule `*://example.com/*` (block domain name is enabled as `*://*.example.com/*`). Unblocking does not delete the source rule but instead creates a whitelist `@*://example.com/*` (domain block enabled is `@*://*.example.com/*`).
 2. Subscription and WebDAV sync requires cross-origin request permissions, if there is a permission request in a pop-up select `Always allow`.
 3. Rule priority: local whitelist > local blacklist > subscription whitelist > subscription blacklist
+4. The script is injected on all sites via `@match *://*/*`, the floating bubble and blocking filter are active only on search engine sites.
 
 ## Rule Description
 
@@ -105,7 +112,7 @@ Regular expressions use the browser-supported JavaScript `RegExp` flags `i`, `m`
 | `@N *://*.example.com/*` | adds a colored border to results from `example.com` and its subdomains |
 | `@N title/.*example.*/` | adds a colored border to results whose title contains `example` |
 
-Priority: highlight > whitelist, but blacklist > highlight  
+Priority: blocking > highlighting; whitelisted results are never blocked but can still be highlighted  
 Note: `@N` only supports 5 colors, numbered `@1` through `@5`. Open the custom color panel via the script menu.
 
 ### 2.7 Composite Rules:
@@ -120,7 +127,7 @@ Note: `@N` only supports 5 colors, numbered `@1` through `@5`. Open the custom c
 
 | Condition Type | Syntax | Description |
 | --- | --- | --- |
-| Search Engine | `$site = "google"` | only apply on the specified search engine; accepts `google`/`bing`/`duckduckgo` (`ddg`)/`yandex`/`brave`/`yahoo`, case-insensitive, `=` or `:` separator |
+| Search Engine | `$site = "google"` | only apply on the specified search engine; accepts `google`/`bing`/`duckduckgo` (`ddg`)/`yandex`/`brave`/`yahoo` (`yahoo-japan`), case-insensitive, `=` or `:` separator |
 | Search Category | `$category = "web"` | only apply on the specified search type; accepts `web`/`images`/`videos`/`news`, inferred from the current page URL, defaults to `web` on web search |
 | Site | `site = "google.com.hk"` | only apply on the specified regional site of the search engine |
 | Title Contains | `title *= "keyword"` | title contains the specified string |
@@ -161,6 +168,38 @@ Note: `@N` only supports 5 colors, numbered `@1` through `@5`. Open the custom c
 | `host $= ".example.com" & path *= "/download/"` | block `example.com` results whose path contains `/download/` |
 | `@1 path $= ".pdf"` | highlight results whose path ends with `.pdf` |
 
+### 2.8 Custom Selectors:
+
+Open the selector editor panel via the userscript manager menu `🖋️ Custom Selectors`(JS object literal format, matching the built-in `const SELECTORS` structure).
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `match` | regex | Required, hostname matching regex literal, e.g. `/(?:^\|\\.)searx\.example\.com$/` (only the `imsu` flags are supported and preserved with the configuration) |
+| `containers` | string | Required, CSS selector for result containers (pseudo-elements such as `::after` are not supported) |
+| `links` | string \| string\[\] | Required, link selector, defaults to `a[href]` |
+| `titles` | string \| string\[\] | Optional, title selector list (first match wins) |
+| `snippets` | string \| string\[\] | Optional, snippet selector list |
+| `disabled` | boolean | Optional, when `true` the engine is disabled; built-in engines can be disabled the same way |
+
+Example:
+
+```
+example: {
+  match: /(?:^|\.)searx\.example\.com$/,
+  containers: '.result',
+  titles: ['h3'],
+  snippets: ['.content'],
+  links: 'a[href]',
+},
+```
+
+**Notes:**
+
+1. Priority: Custom selector > built-in selector. Changing the override back to the built-in value or using "Reset" can restore following script updates
+2. The custom engine supports the `$site = "engine ID"` condition and mask/highlight/whitelist rules; `titles`/`snippets` can be omitted
+3. Engine IDs only allow letters/numbers /`_`/`-`; `other` is reserved key. If the engine shares the same ID as the built-in engine (`google`/`bing`/`duckduckgo(ddg)`/`yandex`/`brave`/`yahoo(yahoo-japan)`) or overlaps with sites, the built-in selector will be overridden. If matching `cn.bing.com`, the built-in `bing` will take precedence
+4. When saving, only keys that differ from the built-in ones are stored; unmodified built-in keys will not be written to the store
+
 ## Testing
 
 ### 3.1 Requirements
@@ -170,23 +209,17 @@ Note: `@N` only supports 5 colors, numbered `@1` through `@5`. Open the custom c
 
 ### 3.2 Running the tests
 
-Place the test folder and the script in the same directory to run; tests automatically read the `.js` script from the parent directory, covering conditional expression parsing and recognition, `@if` condition extraction and URL path conflicts, search engine detection and `@match/@include` consistency, priority, standalone expressions, wildcard escaping and regex flags, rule filtering (element/uBO network rules), import cancellation, cross-origin permissions, and rule source labeling tests.
+Place the test folder and the script in the same directory to run, tests automatically read the `.js` script from the parent directory and are grouped into files by domain: conditional expressions, rules, selectors and engines, cross-origin permissions
 
 ```bash
 # Run all tests
-node test/test-cond-expr.cjs
-node test/test-if-cond.cjs
-node test/test-engine.cjs
-node test/test-priority.cjs
-node test/test-standalone-expr.cjs
-node test/test-regex.cjs
-node test/test-rule-filter.cjs
-node test/test-import-cancel.cjs
+node test/test-conditions.cjs
+node test/test-rules.cjs
+node test/test-selectors.cjs
 node test/test-connect.cjs
-node test/test-rule-source.cjs
 
 # Run a specific test
-node test/test-cond-expr.cjs 2>&1 | grep "FAIL"
+node test/test-conditions.cjs 2>&1 | grep "FAIL"
 ```
 
 A successful run outputs something like `10 passed, 0 failed`.
