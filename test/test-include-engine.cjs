@@ -1,7 +1,11 @@
 const fs = require('fs');
 const path = require('path');
 
-const file = path.join(__dirname, '..', '7.7.2.js');
+const scriptDir = path.join(__dirname, '..');
+const scriptFiles = fs.readdirSync(scriptDir).filter((name) => name.endsWith('.js')).sort();
+if (!scriptFiles.length) throw new Error('no .js script found in ' + scriptDir);
+const file = path.join(scriptDir, scriptFiles[0]);
+console.log('Testing', file);
 const src = fs.readFileSync(file, 'utf8');
 
 // 头部 @match/@include
