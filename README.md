@@ -177,7 +177,7 @@ URL通配规则按匹配模式语义从URL开头匹配，`*://`仅匹配`http/ht
 | --- | --- | --- |
 | `match` | regex | 必填，hostname 匹配正则字面量，如 `/(?:^\|\\.)searx\.example\.com$/`（仅支持并保留 `imsu` flags） |
 | `containers` | string | 必填，结果容器的 CSS 选择器（不支持伪元素，如 `::after`） |
-| `links` | string \| string\[\] | 可选，链接选择器，默认 `a[href]` |
+| `links` | string \| string\[\] | 必填，链接选择器，默认 `a[href]` |
 | `titles` | string \| string\[\] | 可选，标题选择器列表 |
 | `snippets` | string \| string\[\] | 可选，摘要选择器列表 |
 | `disabled` | boolean | 可选，`true` 时停用该引擎，内置引擎同样适用 |
