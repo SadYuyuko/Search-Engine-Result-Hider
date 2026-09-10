@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.7.5
+// @version      7.7.6
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -237,7 +237,7 @@
       stateEnabled: '启用',
       stateDisabled: '关闭',
       subLinkEmpty: '链接为空',
-      subImportSuccess: '导入成功，已导入 {count} 条规则',
+      subImportSuccess: '导入成功',
       subImportFailed: '导入失败，请检查链接或网络状态',
       maxSubscriptions: '最多只能添加100条订阅',
       webdavUploading: '正在上传...',
@@ -338,7 +338,7 @@
       stateEnabled: 'Enabled',
       stateDisabled: 'Disabled',
       subLinkEmpty: 'URL is empty',
-      subImportSuccess: 'Import success, {count} rules imported',
+      subImportSuccess: 'Import success',
       subImportFailed: 'Import failed, check URL or network',
       maxSubscriptions: 'Maximum 100 subscriptions allowed',
       webdavUploading: 'Uploading...',
@@ -2826,6 +2826,14 @@
             flex-shrink: 0;
             line-height: 1.2;
         }
+        .subscription-info {
+            font-size: 11px;
+            color: #718096;
+            white-space: nowrap;
+            line-height: 1.2;
+            margin-left: auto;
+            margin-right: 40px;
+        }
         .subscription-input-row {
             display: flex;
             align-items: center;
@@ -2875,6 +2883,9 @@
         }
         @media (prefers-color-scheme: dark) {
             .subscription-index {
+                color: #9ca3af;
+            }
+            .subscription-info {
                 color: #9ca3af;
             }
         }
@@ -4504,7 +4515,7 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
     function createSubscriptionRow(url = '') {
       const row = document.createElement('div');
       row.className = 'subscription-row';
-      row.innerHTML = `<div class="subscription-meta-row"><span class="subscription-index"></span><div class="subscription-status-message"></div></div><div class="subscription-input-row"><input type="text" class="subscription-url" placeholder="https://example.com/rules.txt"><button class="delete-subscription-btn">❌</button></div>`;
+      row.innerHTML = `<div class="subscription-meta-row"><span class="subscription-index"></span><div class="subscription-status-message"></div><span class="subscription-info"></span></div><div class="subscription-input-row"><input type="text" class="subscription-url" placeholder="https://example.com/rules.txt"><button class="delete-subscription-btn">❌</button></div>`;
       row.querySelector('.subscription-url').value = url;
       return row;
     }
@@ -4543,8 +4554,19 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
     }
 
     function reindexRows() {
-      container.querySelectorAll('.subscription-row').forEach((row, index) => {
+      const rows = container.querySelectorAll('.subscription-row');
+      rows.forEach((row, index) => {
         row.querySelector('.subscription-index').textContent = `${t('subscription')}${index + 1}`;
+        const infoEl = row.querySelector('.subscription-info');
+        const sub = subscriptions[index];
+        if (sub && sub.lastUpdate) {
+          const d = new Date(sub.lastUpdate);
+          const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          const ruleCount = Array.isArray(sub.rules) ? sub.rules.length : 0;
+          infoEl.textContent = `${dateStr} - ${ruleCount}`;
+        } else {
+          infoEl.textContent = '';
+        }
       });
     }
 
@@ -4643,10 +4665,18 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
         }
         try {
           const result = await performSubscriptionForUrl(url, false);
-          msgDiv.textContent = t('subImportSuccess', {
-            count: result.count
-          });
+          msgDiv.textContent = t('subImportSuccess');
           msgDiv.className = 'subscription-status-message success';
+          const rowIndex = rows.indexOf(row);
+          const updatedSubs = getSubscriptions();
+          const sub = updatedSubs[rowIndex];
+          const infoEl = row.querySelector('.subscription-info');
+          if (sub && sub.lastUpdate) {
+            const d = new Date(sub.lastUpdate);
+            const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            const ruleCount = Array.isArray(sub.rules) ? sub.rules.length : 0;
+            infoEl.textContent = `${dateStr} - ${ruleCount}`;
+          }
         } catch (err) {
           console.error(`导入失败 [${url}]:`, err);
           msgDiv.textContent = t('subImportFailed');
@@ -4655,6 +4685,7 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
       }
       subscriptions = getSubscriptions();
       forceReprocessAll();
+      showToast(t('saved'), 'success');
     };
 
     document.getElementById('subscription-cancel').onclick = (e) => {
