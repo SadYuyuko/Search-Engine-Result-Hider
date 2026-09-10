@@ -60,9 +60,9 @@
 | `*://*.example.com/*` | 匹配`example.com`及其所有子域名 |
 | `*://*.example.com/path/*` | 匹配`example.com`特定路径 |
 | `*://*.example.*` | 匹配`example.com`所有顶级域名 |
+| `example.com` | 等效`*://*.example.com/*`，仅用于脚本的简单写法，对于需要同时在ublacklist使用的规则必须加`*://*.`前缀 |
 
-在脚本中添加域名规则时可不加`*://*.`前缀直接写域名(如`example.com`)，但对于需要同时在ublacklist使用的规则必须加上  
-URL通配规则按匹配模式语义从URL开头匹配，`*://`仅匹配http/https，主机通配`*`不跨越路径，`*.`前缀同时匹配裸域
+URL通配规则按匹配模式语义从URL开头匹配，`*://`仅匹配`http/https`，主机通配`*`不跨越路径，`*.`前缀同时匹配裸域
 
 ### 2.2 正则匹配：
 
