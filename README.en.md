@@ -32,7 +32,7 @@ Click the links in a browser that supports installing user scripts to install di
 
 ### 1.3 About WebDAV:
 1. Auto-sync runs once per hour, performing deduplication and merging. Manual upload/download performs an overwrite sync.
-2. WebDAV sync requires cross-origin request permissions; only HTTPS addresses and full folder path are supported, e.g., for Nutstore: `https://dav.jianguoyun.com/dav/your_folder/`
+2. Only HTTPS addresses and full folder path are supported, e.g., for Nutstore: `https://dav.jianguoyun.com/dav/your_folder/`
 3. Sync configuration takes effect after refreshing the page.
 
 ### 1.4 About Subscription:
@@ -42,7 +42,8 @@ Click the links in a browser that supports installing user scripts to install di
 
 ### 1.5 Notes:
 1. One-click blocking logic: Block `example.com` and add the rule `*://example.com/*` (block domain name is enabled as `*://*.example.com/*`). Unblocking does not delete the source rule but instead creates a whitelist `@*://example.com/*` (domain block enabled is `@*://*.example.com/*`).
-2. Rule priority: local whitelist > local blacklist > subscription whitelist > subscription blacklist
+2. Subscription and WebDAV sync requires cross-origin request permissions, if there is a permission request in a pop-up select `Always allow`.
+3. Rule priority: local whitelist > local blacklist > subscription whitelist > subscription blacklist
 
 ## Rule Description
 
