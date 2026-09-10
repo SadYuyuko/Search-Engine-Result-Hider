@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      7.7.6
+// @version      8.0.0
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -11,20 +11,10 @@
 // @author       南雪莲
 // @homepageURL  https://greasyfork.org/zh-CN/scripts/552394
 // @homepageURL  https://github.com/SadYuyuko/Search-Engine-Result-Hider
-// @license      MIT
-// @match        *://*.bing.com/*
-// @match        *://*.brave.com/*
-// @match        *://*.yahoo.com/*
-// @match        *://*.google.com/*
-// @match        *://*.yandex.com/*
-// @match        *://*.duckduckgo.com/*
-// @include      /^https?:\/\/(?:[\w-]+\.)*brave\.com\/.*$/
-// @include      /^https?:\/\/(?:[\w-]+\.)*(?:duckduckgo\.com|ddg\.gg)\/.*$/
-// @include      /^https?:\/\/(?:[\w-]+\.)*bing\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)\/.*$/
-// @include      /^https?:\/\/(?:[\w-]+\.)*yahoo\.(?:co\.jp|com|[a-z]{2}(?:\.[a-z]{2})?)\/.*$/
-// @include      /^https?:\/\/(?:[\w-]+\.)*google\.(?:com|[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})\/.*$/
-// @include      /^https?:\/\/(?:(?:[\w-]+\.)*yandex\.(?:com|[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})|(?:[\w-]+\.)*ya\.ru)\/.*$/
+// @license       GPL-3.0
+// @match        *://*/*
 // @connect      *
+// @noframes
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_addStyle
@@ -38,8 +28,18 @@
 (function() {
   'use strict';
 
+  // 顶层页面运行
+  if (window.top !== window.self) return;
+
   let preventPanelClose = false;
   let yandexParentTimeouts = new Set();
+  let _engineSiteSetup = false;
+  let _domObserver = null;
+  let _observedSelector = '';
+  let _searchForm = null;
+  let _searchFormHandler = null;
+  let _syncIntervalIds = [];
+  let _syncInitialTimeout = null;
 
   // 配置存储键
   const CONFIG_KEY = 'searchfilter_blocker';
@@ -52,6 +52,7 @@
   const LOCAL_LAST_MODIFIED_KEY = 'searchfilter_local_last_modified';
   const WEBDAV_AUTO_SYNC_KEY = 'searchfilter_webdav_auto_sync';
   const WEBDAV_SYNC_CONFIG_KEY = 'searchfilter_webdav_sync_config';
+  const SELECTORS_KEY = 'searchfilter_selectors';
   const HL_STATS_REGEX = /^@\d+/;
   const MAX_SUBSCRIPTIONS = 100;
 
@@ -134,19 +135,89 @@
     },
     other: {
       containers: '',
+      titles: [],
+      snippets: [],
+      links: 'a[href]',
     }
   };
 
+  // 自定义选择器
+  let activeSelectors = null;
+  let _selectorStoreSignature = null;
+
+  function normalizeSelectorList(value) {
+    if (Array.isArray(value)) return value.filter(s => typeof s === 'string' && s);
+    if (typeof value === 'string' && value) return [value];
+    return [];
+  }
+
+  function getUserSelectors() {
+    const raw = GM_getValue(SELECTORS_KEY);
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+    return raw;
+  }
+
+  function getSelectors() {
+    if (activeSelectors) return activeSelectors;
+    const merged = {};
+    const user = getUserSelectors();
+    for (const key of Object.keys(user)) {
+      if (key === 'other') continue;
+      const def = user[key];
+      if (!def || typeof def !== 'object' || Array.isArray(def)) continue;
+      if (def.disabled) {
+        merged[key] = { disabled: true };
+        continue;
+      }
+      let match = null;
+      try {
+        if (typeof def.match === 'string' && def.match) {
+          match = new RegExp(def.match);
+        } else if (def.match && typeof def.match === 'object' && typeof def.match.source === 'string' && def.match.source) {
+          match = new RegExp(def.match.source, String(def.match.flags || '').toLowerCase().replace(/[^imsu]/g, ''));
+        }
+      } catch (e) { match = null; }
+      merged[key] = {
+        match,
+        containers: typeof def.containers === 'string' ? def.containers : '',
+        titles: normalizeSelectorList(def.titles),
+        snippets: normalizeSelectorList(def.snippets),
+        links: Array.isArray(def.links) ? normalizeSelectorList(def.links)
+          : (typeof def.links === 'string' && def.links ? def.links : 'a[href]'),
+      };
+    }
+    for (const key of Object.keys(SELECTORS)) {
+      if (!(key in merged)) merged[key] = SELECTORS[key];
+    }
+    activeSelectors = merged;
+    return merged;
+  }
+
+  function resetSelectorCache() {
+    activeSelectors = null;
+    _engineCacheHost = null;
+    _engineCacheResult = 'other';
+    _observedSelector = '';
+  }
+
   // 引擎检测
-  let _engineCacheHost = '';
-  let _engineCacheResult = '';
+  let _engineCacheHost = null;
+  let _engineCacheResult = 'other';
   function getSearchEngine() {
-    const hostname = window.location.hostname;
-    if (_engineCacheHost === hostname) return _engineCacheResult;
-    _engineCacheHost = hostname;
-    for (const name of Object.keys(SELECTORS)) {
-      const def = SELECTORS[name];
-      if (def && def.match && def.match.test(hostname)) return (_engineCacheResult = name);
+    const loc = window.location || {};
+    const hostname = String(loc.hostname || '');
+    const href = String(loc.href || '');
+    const cacheKey = href || hostname;
+    if (_engineCacheHost === cacheKey) return _engineCacheResult;
+    _engineCacheHost = cacheKey;
+    const defs = getSelectors();
+    for (const name of Object.keys(defs)) {
+      const def = defs[name];
+      if (!def || def.disabled || !def.match) continue;
+      if (def.match.test(hostname)) return (_engineCacheResult = name);
+      if (def !== SELECTORS[name] && href && def.match.source.includes('/') && def.match.test(href)) {
+        return (_engineCacheResult = name);
+      }
     }
     return (_engineCacheResult = 'other');
   }
@@ -171,7 +242,12 @@
   }
 
   function getContainerSelector(engine) {
-    return (SELECTORS[engine] || SELECTORS.other).containers;
+    return (getSelectors()[engine] || SELECTORS.other).containers;
+  }
+
+  // 判断引擎站点
+  function isEngineSite() {
+    return getSearchEngine() !== 'other';
   }
 
   // 文本映射
@@ -227,6 +303,7 @@
       downloadSuccess: '下载成功！规则已加载到编辑区，保存生效',
       noRulesExport: '没有规则可导出',
       confirmBlock: '确定要屏蔽并添加规则 [ {rule} ] 吗？',
+      cannotBlockCurrentSite: '无法屏蔽当前搜索引擎自身域名: {domain}',
       statsErrors: '发现 {count} 个规则错误: ',
       matchedCountLabel: '匹配',
       matchedCountUnit: '条',
@@ -276,6 +353,15 @@
       unknownIfCondition: '未知 @if 条件: {part}',
       condExprError: '@if 表达式语法错误: {part}',
       invalidUrlWildcard: 'URL 通配符格式无效: {rule}',
+      menuCustomSelectors: '🖋️ 自定义选择器',
+      selectorPanelTitle: '自定义选择器',
+      selectorHint: '如果不知道有什么用，请勿修改',
+      selectorJsonError: '解析失败，请检查格式',
+      selectorReservedKey: '保留键不可使用: {key}',
+      selectorInvalidKey: '引擎ID仅允许字母/数字/_/-: {key}',
+      selectorInvalidRegex: 'match 正则无效: {key}',
+      selectorInvalidCss: 'CSS 选择器无效: {key}.{field}: {value}',
+      selectorFieldRequired: '字段必填: {key}.{field}',
     },
     'en': {
       enableBlock: 'Block',
@@ -328,6 +414,7 @@
       downloadSuccess: 'Download successful! Rules loaded into editor, save to apply.',
       noRulesExport: 'No rules to export',
       confirmBlock: 'Add block rule [ {rule} ] ?',
+      cannotBlockCurrentSite: 'Cannot block search engine own domain: {domain}',
       statsErrors: 'Found {count} rule errors:',
       matchedCountLabel: 'Hits',
       matchedCountUnit: 'Rule',
@@ -377,6 +464,15 @@
       unknownIfCondition: 'Unknown @if condition: {part}',
       condExprError: 'Syntax error in @if expression: {part}',
       invalidUrlWildcard: 'Invalid URL wildcard format: {rule}',
+      menuCustomSelectors: '🖋️ Custom Selectors',
+      selectorPanelTitle: 'Custom Selectors',
+      selectorHint: 'If you don\'t know what it is for, do not modify it',
+      selectorJsonError: 'Failed to parse, check the format',
+      selectorReservedKey: 'Reserved key not allowed: {key}',
+      selectorInvalidKey: 'Engine id allows letters/digits/_/- only: {key}',
+      selectorInvalidRegex: 'Invalid match regex: {key}',
+      selectorInvalidCss: 'Invalid CSS selector: {key}.{field}: {value}',
+      selectorFieldRequired: 'Required field: {key}.{field}',
     }
   };
 
@@ -785,8 +881,10 @@
   function parseConditionPart(trimmed, currentEngine, currentSite, currentCategory) {
     const enginePropMatch = trimmed.match(/^\$site\s*[=:]\s*['"](.*?)['"]\s*i?\s*$/i);
     if (enginePropMatch) {
-      const target = enginePropMatch[1].trim().toLowerCase().replace(/^ddg$/, 'duckduckgo').replace(/^yahoo-japan$/, 'yahoo');
-      return { matched: true, static: currentEngine === target };
+      const raw = enginePropMatch[1].trim().toLowerCase();
+      const target = raw.replace(/^ddg$/, 'duckduckgo').replace(/^yahoo-japan$/, 'yahoo');
+      const engine = String(currentEngine || '').toLowerCase();
+      return { matched: true, static: engine === target || engine === raw };
     }
 
     const categoryMatch = trimmed.match(/^\$category\s*[=:]\s*['"](.*?)['"]\s*i?\s*$/i);
@@ -1939,6 +2037,7 @@
 
   // 选择器适配
   function getResultText(result, selectors) {
+    if (!Array.isArray(selectors)) return '';
     for (let selector of selectors) {
       const elem = result.querySelector(selector);
       if (elem && elem.textContent) return elem.textContent.trim();
@@ -1947,24 +2046,25 @@
   }
 
   function getResultSnippet(result, engine) {
-    return getResultText(result, (SELECTORS[engine] || SELECTORS.bing).snippets);
+    return getResultText(result, (getSelectors()[engine] || SELECTORS.bing).snippets);
   }
 
   function getResultLink(result, engine) {
-    const linkSelectors = (SELECTORS[engine] || SELECTORS.google).links;
+    const linkSelectors = (getSelectors()[engine] || SELECTORS.google).links;
     if (Array.isArray(linkSelectors)) {
       for (let selector of linkSelectors) {
         const el = result.querySelector(selector);
         if (el && el.href) return el;
       }
     } else if (typeof linkSelectors === 'string') {
-      return result.querySelector(linkSelectors);
+      const el = result.querySelector(linkSelectors);
+      if (el && el.href) return el;
     }
     return result.querySelector('a[href]');
   }
 
   function getResultTitle(result, engine) {
-    return getResultText(result, (SELECTORS[engine] || SELECTORS.google).titles);
+    return getResultText(result, (getSelectors()[engine] || SELECTORS.google).titles);
   }
 
   function ensurePositioned(el) {
@@ -2008,6 +2108,14 @@
     btn.onclick = (e) => {
       e.preventDefault();
       e.stopPropagation();
+
+      // 误屏蔽确认
+      const currentHost = String(window.location.hostname || '').toLowerCase();
+      const targetDomain = String(domain || '').toLowerCase();
+      if (targetDomain && (currentHost === targetDomain || currentHost.endsWith('.' + targetDomain) || targetDomain.endsWith('.' + currentHost))) {
+        showToast(t('cannotBlockCurrentSite', { domain: targetDomain }), 'error');
+        return;
+      }
 
       // 取消屏蔽
       if (isBlocked) {
@@ -2210,7 +2318,15 @@
     entries.forEach(entry => {
       if (entry.isIntersecting) {
         const result = entry.target;
-        const blocked = processSingleResult(result);
+        let blocked = false;
+        try {
+          blocked = processSingleResult(result);
+        } catch (e) {
+          if (currentConfig.debug) {
+            console.error('[屏蔽] 处理结果时出错:', result, e);
+          }
+          result.setAttribute('data-blocker-processed', 'true');
+        }
         if (blocked) newlyBlocked++;
         observer.unobserve(result);
       }
@@ -2226,6 +2342,37 @@
     threshold: 0
   });
 
+  function clearStaleObserved(selector) {
+    document.querySelectorAll('[data-observed]').forEach(result => {
+      let stillMatches = false;
+      try { stillMatches = result.matches(selector); } catch (e) { stillMatches = false; }
+      if (stillMatches) return;
+      resultObserver.unobserve(result);
+      const quickBtn = result.querySelector('.searchfilter-quick-block');
+      if (quickBtn) quickBtn.remove();
+      resetResultStyles(result);
+      result.removeAttribute('data-observed');
+    });
+  }
+
+  function syncObservedSelector(selector) {
+    if (_observedSelector === selector) return;
+    _observedSelector = selector;
+    clearStaleObserved(selector);
+  }
+
+  function queryUnobserved(selector) {
+    try {
+      return document.querySelectorAll(`:is(${selector}):not([data-observed])`);
+    } catch (e) {
+      const out = [];
+      document.querySelectorAll(selector).forEach(el => {
+        if (!el.hasAttribute('data-observed')) out.push(el);
+      });
+      return out;
+    }
+  }
+
   // 增量扫描
   function scanNewResults() {
     if (!currentConfig.enabled) {
@@ -2235,12 +2382,14 @@
         result.removeAttribute('data-observed');
       });
       showHiddenResults = false;
+      _observedSelector = '';
       return;
     }
 
     const engine = getSearchEngine();
     const selector = getContainerSelector(engine);
     if (!selector) return;
+    syncObservedSelector(selector);
 
     // 调试1
     if (currentConfig.debug) {
@@ -2262,7 +2411,7 @@
       }
     }
 
-    const newResults = document.querySelectorAll(`${selector}:not([data-observed])`);
+    const newResults = queryUnobserved(selector);
 
     if (currentConfig.debug) {
       console.log(`[屏蔽] 未处理的新结果数量: ${newResults.length}`);
@@ -2275,6 +2424,7 @@
   }
 
   function forceReprocessAll() {
+    if (!isEngineSite()) return;
     yandexParentTimeouts.forEach(id => clearTimeout(id));
     yandexParentTimeouts.clear();
     buildRuleIndex();
@@ -2282,6 +2432,7 @@
     const engine = getSearchEngine();
     const selector = getContainerSelector(engine);
     if (!selector) return;
+    syncObservedSelector(selector);
 
     // 调试2
     if (currentConfig.debug) {
@@ -2295,7 +2446,7 @@
       el.removeAttribute('data-blocker-yandex-parent');
     });
 
-    const newResults = document.querySelectorAll(`${selector}:not([data-observed])`);
+    const newResults = queryUnobserved(selector);
     newResults.forEach(r => r.setAttribute('data-observed', 'true'));
 
     const batchId = ++forceReprocessBatchId;
@@ -2332,12 +2483,21 @@
   }
 
   // UI
-  GM_addStyle(`
+  const LAYOUT_CSS = `
         /* 预留翻页高度 */
         body { min-height: 101vh !important; }
         #rcnt, #rso { min-height: 60vh; }
+  `;
 
-        #searchfilter-panel, #searchfilter-webdav-panel, #searchfilter-subscription-panel {
+  let widgetStylesInjected = false;
+  let _globalStyleEl = null;
+
+  // 组件样式
+  function injectWidgetStyles() {
+    if (widgetStylesInjected) return;
+    widgetStylesInjected = true;
+    GM_addStyle(`
+        #searchfilter-panel, #searchfilter-webdav-panel, #searchfilter-subscription-panel, #searchfilter-selector-panel {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             font-size: 13px;
             box-sizing: border-box;
@@ -2425,7 +2585,8 @@
         }
 
         /* 规则栏行号 */
-        #searchfilter-line-numbers {
+        #searchfilter-line-numbers,
+        #searchfilter-sel-line-numbers {
             min-width: 20px;
             padding: 8px 4px 8px 2px;
             background: #edf2f7;
@@ -2442,7 +2603,8 @@
             box-sizing: border-box;
         }
 
-        #searchfilter-rules {
+        #searchfilter-rules,
+        #searchfilter-sel-rules {
             flex: 1;
             height: 100%;
             font-size: 11px;
@@ -2459,10 +2621,10 @@
             outline: none;
         }
 
-        #searchfilter-rules::-webkit-scrollbar { width: 6px; height: 0px; }
-        #searchfilter-rules::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
-        #searchfilter-rules::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
-        #searchfilter-rules::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        #searchfilter-rules::-webkit-scrollbar, #searchfilter-sel-rules::-webkit-scrollbar { width: 6px; height: 0px; }
+        #searchfilter-rules::-webkit-scrollbar-track, #searchfilter-sel-rules::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+        #searchfilter-rules::-webkit-scrollbar-thumb, #searchfilter-sel-rules::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+        #searchfilter-rules::-webkit-scrollbar-thumb:hover, #searchfilter-sel-rules::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
 
         /* 统计面板 */
         #searchfilter-stats-panel {
@@ -2586,6 +2748,7 @@
         #searchfilter-panel *,
         #searchfilter-webdav-panel *,
         #searchfilter-subscription-panel *,
+        #searchfilter-selector-panel *,
         #searchfilter-hlcolor-panel * {
         box-sizing: border-box !important;
         }
@@ -2604,18 +2767,21 @@
             color: #9ca3af !important;
         }
 
-        #searchfilter-panel .rules-container {
+        #searchfilter-panel .rules-container,
+        #searchfilter-selector-panel .rules-container {
             border-color: #4b5563 !important;
             background: #1E1F21 !important;
         }
 
-        #searchfilter-line-numbers {
+        #searchfilter-line-numbers,
+        #searchfilter-sel-line-numbers {
             background: #222629 !important;
             border-right-color: #4b5563 !important;
             color: #9ca3af !important;
         }
 
-        #searchfilter-rules {
+        #searchfilter-rules,
+        #searchfilter-sel-rules {
             background: #1E1F21 !important;
             color: #f3f4f6 !important;
         }
@@ -2644,6 +2810,7 @@
 
         #searchfilter-webdav-panel h3,
         #searchfilter-subscription-panel h3,
+        #searchfilter-selector-panel h3,
         #searchfilter-hlcolor-panel h3 {
             margin: 0 0 8px 0 !important;
             font-size: 14px !important;
@@ -2723,9 +2890,10 @@
         @media (prefers-color-scheme: dark) {
             #searchfilter-webdav-panel,
             #searchfilter-subscription-panel,
+            #searchfilter-selector-panel,
             #searchfilter-hlcolor-panel {
-                background: #171717 !important; 
-                color: #f3f4f6 !important; 
+                background: #171717 !important;
+                color: #f3f4f6 !important;
                 border-color: #374151 !important;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
             }
@@ -2748,7 +2916,7 @@
             #searchfilter-webdav-panel input:focus,
             #searchfilter-subscription-panel input:focus,
             #searchfilter-hlcolor-panel .hlcolor-row input:focus {
-                border-color: #60a5fa !important; 
+                border-color: #60a5fa !important;
             }
             #searchfilter-hlcolor-panel .hlcolor-row .hlcolor-preview {
                 border-color: #4b5563 !important;
@@ -3146,6 +3314,30 @@
         .searchfilter-toast-error { border-left-color: #c53030; }
         .searchfilter-toast-info { border-left-color: #2c5282; }
     `);
+  }
+
+  // 仅内置引擎注入布局
+  function injectGlobalStyles() {
+    const engine = getSearchEngine();
+    const applyLayout = engine !== 'other' && !!SELECTORS[engine];
+    if (applyLayout) {
+      if (!_globalStyleEl) {
+        const el = GM_addStyle(LAYOUT_CSS);
+        if (el && typeof el.remove === 'function') _globalStyleEl = el;
+      }
+    } else if (_globalStyleEl) {
+      _globalStyleEl.remove();
+      _globalStyleEl = null;
+    }
+    injectWidgetStyles();
+  }
+
+  function removeGlobalStyles() {
+    if (_globalStyleEl) {
+      _globalStyleEl.remove();
+      _globalStyleEl = null;
+    }
+  }
 
   // 悬浮球样式
   function applyBubbleStyle(element) {
@@ -3223,6 +3415,7 @@
 
   // 拖动与边缘吸附
   function updateStatus(blocked) {
+    if (!isEngineSite()) return;
     function applyBubbleStatePosition(el) {
       if (!currentConfig.bubbleState) return;
       el.style.top = currentConfig.bubbleState.top || 'auto';
@@ -3518,11 +3711,6 @@
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
-  function setInputValue(id, value) {
-    const input = document.getElementById(id);
-    if (input) input.value = value == null ? '' : String(value);
-  }
-
   // 配置持久化
   function persistConfig(updateModifiedTime = true) {
     GM_setValue(CONFIG_KEY, currentConfig);
@@ -3549,6 +3737,7 @@
     const panel = document.getElementById('searchfilter-webdav-panel') ||
       document.getElementById('searchfilter-subscription-panel') ||
       document.getElementById('searchfilter-hlcolor-panel') ||
+      document.getElementById('searchfilter-selector-panel') ||
       document.getElementById('searchfilter-panel');
     if (panel) {
       if (container.parentElement !== panel) {
@@ -3839,6 +4028,7 @@
       fadeOutAndRemovePanel(panel, () => document.removeEventListener('click', closeHandler));
     };
     const closeHandler = (e) => {
+      if (preventPanelClose) return;
       if (!panel.contains(e.target)) closePanel();
     };
     setTimeout(() => document.addEventListener('click', closeHandler), 200);
@@ -3847,6 +4037,7 @@
 
   // 主面板样式
   function showConfigPanel() {
+    injectWidgetStyles();
     const existingPanel = document.getElementById('searchfilter-panel');
     if (existingPanel) {
       if (window._panelCloseHandler) {
@@ -4049,7 +4240,7 @@
 
     const closeHandler = (e) => {
       if (preventPanelClose) return;
-      if (!panel.contains(e.target) && !e.target.closest('#searchfilter-status') && !e.target.closest('#searchfilter-webdav-panel') && !e.target.closest('#searchfilter-subscription-panel') && !e.target.closest('#searchfilter-hlcolor-panel') && !e.target.closest('#searchfilter-hlcolor-popup')) {
+      if (!panel.contains(e.target) && !e.target.closest('#searchfilter-status') && !e.target.closest('#searchfilter-webdav-panel') && !e.target.closest('#searchfilter-subscription-panel') && !e.target.closest('#searchfilter-hlcolor-panel') && !e.target.closest('#searchfilter-hlcolor-popup') && !e.target.closest('#searchfilter-selector-panel')) {
         closePanel();
       }
     };
@@ -4299,7 +4490,6 @@
       if (hasError) return;
       currentConfig.highlightColors = newColors;
       persistConfig();
-      buildRuleIndex();
       forceReprocessAll();
       showToast(t('saved'), 'success');
     };
@@ -4328,6 +4518,463 @@
     document.getElementById('hlcolor-cancel').onclick = (e) => {
       e.stopPropagation();
       cleanupColorListeners();
+      closePanel();
+    };
+  }
+
+  // 选择器正则转入
+  function regexSourceToLiteralText(source) {
+    let out = '';
+    for (let i = 0; i < source.length; i++) {
+      const ch = source[i];
+      if (ch === '\\') { out += ch + (source[i + 1] || ''); i++; continue; }
+      if (ch === '/') out += '\\/';
+      else out += ch;
+    }
+    return out;
+  }
+
+  function escapeJsString(text) {
+    let out = '';
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (ch === '\\') out += '\\\\';
+      else if (ch === '\'') out += '\\\'';
+      else out += ch;
+    }
+    return out;
+  }
+
+  // 选择器序列化
+  function serializeSelectors() {
+    const merged = getSelectors();
+    const parts = [];
+    const defToText = (def, disabled) => {
+      const links = Array.isArray(def.links)
+        ? `[${(def.links || []).map(s => `'${escapeJsString(s)}'`).join(', ')}]`
+        : `'${escapeJsString(def.links || 'a[href]')}'`;
+      const m = matchDefToParts(def.match);
+      return `{\n` +
+        `  match: /${regexSourceToLiteralText(m.source)}/${m.flags},\n` +
+        `  containers: '${escapeJsString(def.containers || '')}',\n` +
+        `  titles: [${(def.titles || []).map(s => `'${escapeJsString(s)}'`).join(', ')}],\n` +
+        `  snippets: [${(def.snippets || []).map(s => `'${escapeJsString(s)}'`).join(', ')}],\n` +
+        `  links: ${links},\n` +
+        (disabled ? `  disabled: true,\n` : '') +
+        `}`;
+    };
+    for (const key of Object.keys(merged)) {
+      if (key === 'other') continue;
+      const def = merged[key];
+      if (def && def.disabled) {
+        const builtin = SELECTORS[key];
+        parts.push(`${key}: ${builtin ? defToText(builtin, true) : `{\n  disabled: true,\n}`}`);
+        continue;
+      }
+      parts.push(`${key}: ${defToText(def, false)}`);
+    }
+    return parts.join(',\n');
+  }
+
+  function isValidCssSelector(selector) {
+    try {
+      document.querySelector(selector);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function hasPseudoElement(selector) {
+    return /::/.test(String(selector).replace(/(["'])(?:\\.|(?!\1).)*\1/g, ''));
+  }
+
+  // 选择器配置校验
+  function validateUserSelectors(config) {
+    if (!config || typeof config !== 'object' || Array.isArray(config)) return [t('selectorJsonError')];
+    const errors = [];
+    for (const key of Object.keys(config)) {
+      const def = config[key];
+      if (key === 'other') { errors.push(t('selectorReservedKey', { key })); continue; }
+      if (!/^[A-Za-z0-9_-]+$/.test(key)) { errors.push(t('selectorInvalidKey', { key })); continue; }
+      if (!def || typeof def !== 'object' || Array.isArray(def)) { errors.push(t('selectorFieldRequired', { key, field: 'match' })); continue; }
+      if (def.disabled === true) continue;
+      if (typeof def.match === 'string' && def.match) {
+        try { new RegExp(def.match); } catch (e) { errors.push(t('selectorInvalidRegex', { key })); }
+      } else if (def.match && typeof def.match === 'object' && typeof def.match.source === 'string' && def.match.source) {
+        try { new RegExp(def.match.source, String(def.match.flags || '').toLowerCase().replace(/[^imsu]/g, '')); } catch (e) { errors.push(t('selectorInvalidRegex', { key })); }
+        const badFlags = getInvalidRegexFlags(String(def.match.flags || ''));
+        if (badFlags) errors.push(t('invalidRegexFlags', { flags: badFlags }));
+      } else {
+        errors.push(t('selectorFieldRequired', { key, field: 'match' }));
+      }
+      if (typeof def.containers !== 'string' || !def.containers.trim()) {
+        errors.push(t('selectorFieldRequired', { key, field: 'containers' }));
+      } else if (!isValidCssSelector(def.containers) || hasPseudoElement(def.containers)) {
+        errors.push(t('selectorInvalidCss', { key, field: 'containers', value: def.containers }));
+      }
+      for (const field of ['titles', 'snippets']) {
+        const value = def[field];
+        if (value === undefined || value === null) continue;
+        if (!Array.isArray(value) && typeof value !== 'string') {
+          errors.push(t('selectorFieldRequired', { key, field }));
+          continue;
+        }
+        for (const s of normalizeSelectorList(value)) {
+          if (!isValidCssSelector(s)) errors.push(t('selectorInvalidCss', { key, field, value: s }));
+        }
+      }
+      if (def.links === undefined || def.links === null) continue;
+      if (typeof def.links === 'string') {
+        if (def.links && !isValidCssSelector(def.links)) errors.push(t('selectorInvalidCss', { key, field: 'links', value: def.links }));
+      } else if (Array.isArray(def.links)) {
+        for (const s of normalizeSelectorList(def.links)) {
+          if (!isValidCssSelector(s)) errors.push(t('selectorInvalidCss', { key, field: 'links', value: s }));
+        }
+      } else {
+        errors.push(t('selectorFieldRequired', { key, field: 'links' }));
+      }
+    }
+    return errors;
+  }
+
+  function matchDefToParts(match) {
+    if (typeof match === 'string') return { source: match, flags: '' };
+    if (match instanceof RegExp) return { source: match.source, flags: match.flags || '' };
+    if (match && typeof match === 'object' && typeof match.source === 'string') return { source: match.source, flags: String(match.flags || '').toLowerCase() };
+    return { source: '', flags: '' };
+  }
+
+  function sameSelectorDef(a, b) {
+    if (!a || !b) return false;
+    const aM = matchDefToParts(a.match);
+    const bM = matchDefToParts(b.match);
+    if (aM.source !== bM.source || aM.flags !== bM.flags) return false;
+    if ((a.containers || '') !== (b.containers || '')) return false;
+    const norm = (v) => JSON.stringify(normalizeSelectorList(v));
+    if (norm(a.titles) !== norm(b.titles)) return false;
+    if (norm(a.snippets) !== norm(b.snippets)) return false;
+    if (norm(a.links) !== norm(b.links)) return false;
+    return true;
+  }
+
+  function diffUserSelectors(config) {
+    const out = {};
+    if (!config || typeof config !== 'object' || Array.isArray(config)) return out;
+    for (const key of Object.keys(config)) {
+      if (key === 'other') continue;
+      const def = config[key];
+      if (!def || typeof def !== 'object' || Array.isArray(def)) continue;
+      if (def.disabled === true) { out[key] = { disabled: true }; continue; }
+      const builtin = SELECTORS[key];
+      if (!builtin) { out[key] = def; continue; }
+      if (!sameSelectorDef(def, builtin)) out[key] = def;
+    }
+    return out;
+  }
+
+  // 恢复更新
+  function pruneUserSelectors() {
+    const user = getUserSelectors();
+    let changed = false;
+    const next = {};
+    for (const key of Object.keys(user)) {
+      const def = user[key];
+      if (key !== 'other' && SELECTORS[key] && sameSelectorDef(def, SELECTORS[key])) { changed = true; continue; }
+      next[key] = def;
+    }
+    if (changed) {
+      GM_setValue(SELECTORS_KEY, next);
+      resetSelectorCache();
+    }
+  }
+
+  // 解析编辑器JS
+  function parseSelectorText(text) {
+    const fail = () => ({ config: null, errors: [t('selectorJsonError')] });
+    let s = String(text == null ? '' : text).trim();
+    if (!s) return fail();
+    s = s.replace(/^const\s+SELECTORS\s*=\s*/i, '').replace(/;\s*$/, '').trim();
+    if (s.startsWith('{') && s.endsWith('}')) s = s.slice(1, -1);
+    const n = s.length;
+    let i = 0;
+    const skipWs = () => { while (i < n && /\s/.test(s[i])) i++; };
+    const readString = () => {
+      const quote = s[i];
+      let j = i + 1, val = '';
+      while (j < n) {
+        const ch = s[j];
+        if (ch === '\\') {
+          const nx = s[j + 1];
+          if (nx === '\\' || nx === quote) { val += nx; j += 2; continue; }
+          val += ch + (nx || ''); j += 2; continue;
+        }
+        if (ch === quote) { i = j + 1; return val; }
+        val += ch; j++;
+      }
+      return null;
+    };
+    const config = {};
+    const readKey = () => {
+      if (s[i] === '\'' || s[i] === '"') return readString();
+      const m = /^[A-Za-z_$][\w$-]*/.exec(s.slice(i));
+      if (!m) return null;
+      i += m[0].length;
+      return m[0];
+    };
+    while (true) {
+      skipWs();
+      if (i >= n) break;
+      if (s[i] === ',' || s[i] === ';') { i++; continue; }
+      const key = readKey();
+      if (key === null) return fail();
+      skipWs();
+      if (s[i] !== ':') return fail();
+      i++;
+      skipWs();
+      if (s[i] !== '{') return fail();
+      i++;
+      const def = {};
+      while (true) {
+        skipWs();
+        if (i >= n) return fail();
+        if (s[i] === ',') { i++; continue; }
+        if (s[i] === '}') { i++; break; }
+        const field = readKey();
+        if (field === null) return fail();
+        skipWs();
+        if (s[i] !== ':') return fail();
+        i++;
+        skipWs();
+        if (s[i] === '/') {
+          let j = i + 1, src = '', inClass = false, closed = false;
+          while (j < n) {
+            const ch = s[j];
+            if (ch === '\\') { src += ch + (s[j + 1] || ''); j += 2; continue; }
+            if (inClass) { if (ch === ']') inClass = false; src += ch; j++; continue; }
+            if (ch === '[') { inClass = true; src += ch; j++; continue; }
+            if (ch === '/') { closed = true; j++; break; }
+            src += ch; j++;
+          }
+          if (!closed) return fail();
+          let k = j;
+          while (k < n && /[a-z]/i.test(s[k])) k++;
+          const flags = s.slice(j, k);
+          if (flags && getInvalidRegexFlags(flags)) return { config: null, errors: [t('invalidRegexFlags', { flags })] };
+          i = k;
+          if (field !== 'match') return fail();
+          def[field] = flags ? { source: src, flags: flags.toLowerCase() } : src;
+        } else if (s[i] === '\'' || s[i] === '"') {
+          const val = readString();
+          if (val === null) return fail();
+          def[field] = val;
+        } else if (s[i] === '[') {
+          i++;
+          const arr = [];
+          while (true) {
+            skipWs();
+            if (i >= n) return fail();
+            if (s[i] === ',') { i++; continue; }
+            if (s[i] === ']') { i++; break; }
+            if (s[i] === '\'' || s[i] === '"') {
+              const val = readString();
+              if (val === null) return fail();
+              arr.push(val);
+            } else return fail();
+          }
+          def[field] = arr;
+        } else if (s.startsWith('true', i) && !/[\w$]/.test(s[i + 4] || '')) {
+          def[field] = true;
+          i += 4;
+        } else if (s.startsWith('false', i) && !/[\w$]/.test(s[i + 5] || '')) {
+          def[field] = false;
+          i += 5;
+        } else return fail();
+      }
+      if (key === 'other') continue;
+      config[key] = def;
+    }
+    return { config, errors: [] };
+  }
+
+  // 选择器文件导入
+  function importSelectorsFromFile(textarea, onLoaded) {
+    preventPanelClose = true;
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.js,.json,application/javascript,application/json';
+    fileInput.style.display = 'none';
+    document.body.appendChild(fileInput);
+
+    let cleanedUp = false;
+    const cleanup = () => {
+      if (cleanedUp) return;
+      cleanedUp = true;
+      window.removeEventListener('focus', onWindowFocus);
+      fileInput.remove();
+      preventPanelClose = false;
+    };
+    const onWindowFocus = () => {
+      setTimeout(() => {
+        if (!fileInput.files || fileInput.files.length === 0) cleanup();
+      }, 300);
+    };
+
+    fileInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) {
+        cleanup();
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        textarea.value = String(ev.target.result || '');
+        if (onLoaded) onLoaded();
+        cleanup();
+      };
+      reader.onerror = cleanup;
+      reader.readAsText(file, 'UTF-8');
+    };
+    fileInput.addEventListener('cancel', cleanup);
+    window.addEventListener('focus', onWindowFocus);
+    fileInput.click();
+  }
+
+  // 自定义选择器面板
+  function showSelectorPanel() {
+    injectWidgetStyles();
+    hideStatsPanel();
+    const existing = document.getElementById('searchfilter-selector-panel');
+    if (existing) {
+      existing.remove();
+      return;
+    }
+
+    const panel = createPanel('searchfilter-selector-panel', '320px', '15px');
+
+    panel.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <h3 style="margin:0;font-size:14px;">${t('selectorPanelTitle')}</h3>
+                <div style="display:flex;gap:4px;">
+                    <button id="searchfilter-selector-import" class="searchfilter-button searchfilter-button-secondary" style="padding: 3px 8px; border: 1px solid transparent;">${t('import')}</button>
+                    <button id="searchfilter-selector-export" class="searchfilter-button searchfilter-button-success" style="padding: 3px 8px; border: 1px solid transparent;">${t('export')}</button>
+                </div>
+            </div>
+            <div style="font-size:11px;color:#718096;margin-bottom:6px;">${t('selectorHint')}</div>
+            <div class="rules-container" style="height:255px;">
+                <div id="searchfilter-sel-line-numbers"></div>
+                <textarea id="searchfilter-sel-rules" spellcheck="false" wrap="off">${escHtml(serializeSelectors())}</textarea>
+                <div id="searchfilter-sel-scroll-top" class="searchfilter-scroll-btn" style="top: 2px;">⬆️</div>
+                <div id="searchfilter-sel-scroll-bottom" class="searchfilter-scroll-btn" style="bottom: 1px;">⬇️</div>
+            </div>
+            <div id="searchfilter-selector-errors" style="display:none;margin-top:6px;padding:6px 8px;background:#fff5f5;color:#c53030;font-size:11px;border-radius:4px;white-space:pre-wrap;word-break:break-all;max-height:80px;overflow-y:auto;"></div>
+            <div style="display:flex;gap:6px;margin-top:8px;">
+                <button id="searchfilter-selector-save" class="searchfilter-button searchfilter-button-primary action-button" style="flex:2;">${t('save')}</button>
+                <button id="searchfilter-selector-reset" class="searchfilter-button searchfilter-button-danger action-button" style="flex:1;">${t('hlColorReset')}</button>
+                <button id="searchfilter-selector-cancel" class="searchfilter-button searchfilter-button-secondary action-button" style="flex:1;">${t('cancel')}</button>
+            </div>
+        `;
+
+    const closePanel = bindOutsideClickClose(panel);
+    const textarea = document.getElementById('searchfilter-sel-rules');
+    const lineNums = document.getElementById('searchfilter-sel-line-numbers');
+
+    const updateSelLineNumbers = () => {
+      if (!textarea || !lineNums || !lineNums.isConnected) return;
+      const lines = textarea.value.split('\n');
+      lineNums.style.minWidth = `max(20px, calc(${String(lines.length).length}ch + 8px))`;
+      let html = '';
+      for (let i = 1; i <= lines.length; i++) {
+        html += `<div style="position:relative;height:1.4em;">${i}</div>`;
+      }
+      lineNums.innerHTML = html;
+    };
+    updateSelLineNumbers();
+
+    textarea.addEventListener('input', updateSelLineNumbers);
+    textarea.addEventListener('scroll', () => {
+      lineNums.scrollTop = textarea.scrollTop;
+    });
+
+    document.getElementById('searchfilter-sel-scroll-top').onclick = () => textarea.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+    document.getElementById('searchfilter-sel-scroll-bottom').onclick = () => textarea.scrollTo({
+      top: textarea.scrollHeight,
+      behavior: 'smooth'
+    });
+
+    const applyUserSelectors = (config) => {
+      GM_setValue(SELECTORS_KEY, diffUserSelectors(config));
+      _selectorStoreSignature = getSelectorStoreSignature();
+      resetSelectorCache();
+      refreshEngineSite();
+    };
+
+    const showError = (messages) => {
+      const box = document.getElementById('searchfilter-selector-errors');
+      if (!box) return;
+      box.textContent = messages.join('\n');
+      box.style.display = messages.length ? 'block' : 'none';
+    };
+
+    document.getElementById('searchfilter-selector-import').onclick = () => {
+      importSelectorsFromFile(textarea, () => {
+        showError([]);
+        updateSelLineNumbers();
+      });
+    };
+
+    document.getElementById('searchfilter-selector-export').onclick = () => {
+      preventPanelClose = true;
+      const content = textarea.value;
+      if (!content.trim()) {
+        preventPanelClose = false;
+        showToast(t('noRulesExport'), 'error');
+        return;
+      }
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      const filename = `rules-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.js`;
+      const blob = new Blob([content], {
+        type: 'application/json;charset=utf-8'
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      preventPanelClose = false;
+    };
+
+    document.getElementById('searchfilter-selector-save').onclick = () => {
+      const parsed = parseSelectorText(textarea.value);
+      if (!parsed.config || parsed.errors.length) {
+        showError(parsed.errors.length ? parsed.errors : [t('selectorJsonError')]);
+        return;
+      }
+      const errors = validateUserSelectors(parsed.config);
+      if (errors.length) {
+        showError(errors);
+        return;
+      }
+      applyUserSelectors(parsed.config);
+      showToast(t('saved'), 'success');
+    };
+
+    document.getElementById('searchfilter-selector-reset').onclick = () => {
+      applyUserSelectors({});
+      textarea.value = serializeSelectors();
+      showError([]);
+      updateSelLineNumbers();
+    };
+
+    document.getElementById('searchfilter-selector-cancel').onclick = (e) => {
+      e.stopPropagation();
       closePanel();
     };
   }
@@ -4925,10 +5572,12 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
     if (!GM_getValue(WEBDAV_AUTO_SYNC_KEY, false)) return;
     const config = GM_getValue(WEBDAV_KEY);
     if (!config || !config.url) return;
-    const lastSync = GM_getValue(WEBDAV_LAST_SYNC_KEY, 0);
-    if (Date.now() - lastSync < 60 * 60 * 1000) return;
+    if (Date.now() - GM_getValue(WEBDAV_LAST_SYNC_KEY, 0) < 60 * 60 * 1000) return;
     if (document.getElementById('searchfilter-panel')) return;
-    performAutoWebDAVSync(config).catch(err => console.error('[自动 WebDAV] 同步失败:', err.message));
+    runWithSyncLock('webdav', async () => {
+      if (Date.now() - GM_getValue(WEBDAV_LAST_SYNC_KEY, 0) < 60 * 60 * 1000) return;
+      await performAutoWebDAVSync(config);
+    }).catch(err => console.error('[自动 WebDAV] 同步失败:', err.message));
   }
 
   // TXT导入
@@ -5039,16 +5688,74 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
     GM_registerMenuCommand(t('menuHighlightColor'), () => showHighlightColorPanel());
   }
 
+  // 跨标签页同步锁
+  const SYNC_LOCK_KEY_PREFIX = 'searchfilter_sync_lock_';
+  const SYNC_LOCK_TTL = 2 * 60 * 1000;
+  const SYNC_TAB_ID = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+
+  function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  function readSyncLock(task) {
+    const raw = GM_getValue(SYNC_LOCK_KEY_PREFIX + task);
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+    return raw;
+  }
+
+  function writeSyncLock(task, lock) {
+    GM_setValue(SYNC_LOCK_KEY_PREFIX + task, lock);
+  }
+
+  function tryAcquireSyncLock(task, ttl = SYNC_LOCK_TTL) {
+    const now = Date.now();
+    const held = readSyncLock(task);
+    if (held && held.owner !== SYNC_TAB_ID && held.expires > now) return false;
+    writeSyncLock(task, { owner: SYNC_TAB_ID, expires: now + ttl });
+    return true;
+  }
+
+  async function acquireSyncLock(task, ttl = SYNC_LOCK_TTL) {
+    if (!tryAcquireSyncLock(task, ttl)) return false;
+    await delay(120 + Math.floor(Math.random() * 180));
+    const held = readSyncLock(task);
+    return !!held && held.owner === SYNC_TAB_ID && held.expires > Date.now();
+  }
+
+  function renewSyncLock(task, ttl = SYNC_LOCK_TTL) {
+    const held = readSyncLock(task);
+    if (!held || held.owner !== SYNC_TAB_ID) return false;
+    writeSyncLock(task, { owner: SYNC_TAB_ID, expires: Date.now() + ttl });
+    return true;
+  }
+
+  function releaseSyncLock(task) {
+    const held = readSyncLock(task);
+    if (held && held.owner === SYNC_TAB_ID) GM_setValue(SYNC_LOCK_KEY_PREFIX + task, null);
+  }
+
+  async function runWithSyncLock(task, fn) {
+    if (!(await acquireSyncLock(task))) return;
+    const renewTimer = setInterval(() => renewSyncLock(task), Math.max(5000, Math.floor(SYNC_LOCK_TTL / 3)));
+    try {
+      await fn();
+    } finally {
+      clearInterval(renewTimer);
+      releaseSyncLock(task);
+    }
+  }
+
   // 订阅
   function checkAutoSubscription() {
     if (!currentConfig.subscriptionAutoUpdate) return;
     const subs = getSubscriptions();
     if (!subs || subs.length === 0) return;
     const now = Date.now();
-    const needUpdate = subs.filter(s => s.enabled && now - s.lastUpdate >= 24 * 60 * 60 * 1000);
-    if (needUpdate.length === 0) return;
-    (async () => {
-      for (const sub of needUpdate) {
+    if (!subs.some(s => s.enabled && now - s.lastUpdate >= 24 * 60 * 60 * 1000)) return;
+    runWithSyncLock('subscription', async () => {
+      const pending = getSubscriptions().filter(s => s.enabled && Date.now() - s.lastUpdate >= 24 * 60 * 60 * 1000);
+      if (!pending.length) return;
+      for (const sub of pending) {
         console.log(`[订阅] 开始更新: ${sub.url}`);
         try {
           await performSubscriptionForUrl(sub.url, false);
@@ -5057,34 +5764,135 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
         }
       }
       forceReprocessAll();
-    })();
+    }).catch(err => console.error('[订阅] 更新失败:', err.message));
   }
 
-  function init() {
-    migrateSubscriptions();
-    registerMenu();
+  // 同步定时器
+  function startBackgroundSync() {
+    if (_syncIntervalIds.length) return;
+    _syncIntervalIds = [
+      setInterval(checkAutoSubscription, 60 * 60 * 1000),
+      setInterval(checkAutoWebDAV, 60 * 60 * 1000)
+    ];
+    _syncInitialTimeout = setTimeout(() => {
+      _syncInitialTimeout = null;
+      checkAutoSubscription();
+      checkAutoWebDAV();
+    }, 5000 + Math.floor(Math.random() * 5000));
+  }
+
+  // 站点运行环境
+  function ensureEngineSiteSetup() {
+    if (_engineSiteSetup || !isEngineSite()) return;
+    _engineSiteSetup = true;
+    injectGlobalStyles();
     buildRuleIndex();
     updateStatus(0);
     scanNewResults();
 
-    const domObserver = new MutationObserver((mutations) => {
-      if (mutations.some(m => m.addedNodes.length > 0)) requestAnimationFrame(() => scanNewResults());
+    let _scanPending = false;
+    _domObserver = new MutationObserver((mutations) => {
+      if (mutations.some(m => m.addedNodes.length > 0)) {
+        if (_scanPending) return;
+        _scanPending = true;
+        requestAnimationFrame(() => {
+          _scanPending = false;
+          scanNewResults();
+        });
+      }
     });
-    domObserver.observe(document.body, {
+    _domObserver.observe(document.body, {
       childList: true,
       subtree: true
     });
 
     const searchForm = document.querySelector('form[role="search"], form[name="search"], form[action*="search"]');
-    if (searchForm) searchForm.addEventListener('submit', () => setTimeout(forceReprocessAll, 800));
+    if (searchForm) {
+      _searchForm = searchForm;
+      _searchFormHandler = () => setTimeout(forceReprocessAll, 800);
+      searchForm.addEventListener('submit', _searchFormHandler);
+    }
+  }
 
-    // 同步间隔
-    setInterval(checkAutoSubscription, 60 * 60 * 1000);
-    setInterval(checkAutoWebDAV, 60 * 60 * 1000);
-    setTimeout(() => {
-      checkAutoSubscription();
-      checkAutoWebDAV();
-    }, 5000);
+  function teardownEngineSite() {
+    if (!_engineSiteSetup) return;
+    _engineSiteSetup = false;
+    forceReprocessBatchId++;
+    if (_domObserver) {
+      _domObserver.disconnect();
+      _domObserver = null;
+    }
+    yandexParentTimeouts.forEach(clearTimeout);
+    yandexParentTimeouts.clear();
+    if (_searchForm && _searchFormHandler) {
+      _searchForm.removeEventListener('submit', _searchFormHandler);
+    }
+    _searchForm = null;
+    _searchFormHandler = null;
+    document.querySelectorAll('.searchfilter-quick-block').forEach(btn => btn.remove());
+    document.querySelectorAll('[data-blocker-yandex-parent]').forEach(el => {
+      el.style.display = '';
+      el.removeAttribute('data-blocker-yandex-parent');
+    });
+    document.querySelectorAll('[data-observed]').forEach(el => {
+      resultObserver.unobserve(el);
+      el.removeAttribute('data-observed');
+      resetResultStyles(el);
+    });
+    showHiddenResults = false;
+    _observedSelector = '';
+    const status = document.getElementById('searchfilter-status');
+    if (status) status.remove();
+    removeGlobalStyles();
+  }
+
+  function refreshEngineSite() {
+    const wasEngine = _engineSiteSetup;
+    if (isEngineSite()) {
+      ensureEngineSiteSetup();
+      if (wasEngine) injectGlobalStyles();
+      forceReprocessAll();
+    } else if (wasEngine) {
+      teardownEngineSite();
+    }
+  }
+
+  function getSelectorStoreSignature() {
+    try {
+      return JSON.stringify(GM_getValue(SELECTORS_KEY) ?? null);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function checkExternalSelectorChange() {
+    const signature = getSelectorStoreSignature();
+    if (signature === null) return false;
+    if (_selectorStoreSignature === signature) return false;
+    const isBaseline = _selectorStoreSignature === null;
+    _selectorStoreSignature = signature;
+    if (isBaseline) return false;
+    resetSelectorCache();
+    refreshEngineSite();
+    return true;
+  }
+
+  function init() {
+    migrateSubscriptions();
+    pruneUserSelectors();
+    _selectorStoreSignature = getSelectorStoreSignature();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') checkExternalSelectorChange();
+    });
+
+    startBackgroundSync();
+
+    if (isEngineSite()) {
+      ensureEngineSiteSetup();
+    }
+
+    registerMenu();
+    GM_registerMenuCommand(t('menuCustomSelectors'), showSelectorPanel);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
