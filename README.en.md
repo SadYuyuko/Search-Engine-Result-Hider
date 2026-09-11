@@ -36,14 +36,14 @@ Click the links in a browser that supports installing user scripts to install di
 
 1. Auto-sync runs once per hour, performing deduplication and merging. Manual upload/download performs an overwrite sync, sync configuration takes effect after refreshing the page.
 2. Only HTTPS addresses and full folder path are supported, e.g., for Nutstore: `https://dav.jianguoyun.com/dav/your_folder/`
-3. Auto-sync runs in the background on every site. When multiple tabs are open, a cross-tab lock ensures only one tab performs each request per interval, so the same WebDAV file is never fetched twice.
+3. Auto-sync runs in the background. When multiple tabs are open, a cross-tab lock ensures only one tab performs each request per interval.
 
 ### 1.4 About Subscription:
 
 1. Subscriptions update once per day. Only remote `.txt` or `.yaml` file links are supported, e.g. `https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Other/rules.txt`.
 2. Subscription rules are appended after local rules, due to the limited performance the script can allocate, it is recommended that the total number of rules not exceed 50,000 to avoid performance issues on mobile devices.
 3. The script has limited extensions and does not support DOM-type syntax rules such as `##`. Such rules will be automatically removed when imported via subscription.
-4. Subscription auto-update also runs in the background on every site, when multiple tabs are open, only one tab fetches each due subscription (cross-tab lock).
+4. Subscription auto-update also runs in the background, only one tab fetches each due subscription.
 
 ### 1.5 Notes:
 
