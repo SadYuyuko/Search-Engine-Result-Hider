@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      8.0.1
+// @version      8.1.0
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -40,6 +40,7 @@
   let _observedSelector = '';
   let _searchForm = null;
   let _searchFormHandler = null;
+  let _urlChangeHandler = null;
   let _syncIntervalIds = [];
   let _syncInitialTimeout = null;
 
@@ -87,7 +88,12 @@
   if (currentConfig.panelCentered === undefined) currentConfig.panelCentered = true;
   if (currentConfig.bubbleAction === undefined) currentConfig.bubbleAction = 'openPanel';
   if (currentConfig.language === undefined) currentConfig.language = 'zh-CN';
-  if (currentConfig.highlightColors === undefined) currentConfig.highlightColors = {1:'#CE2029', 2:'#FF8C00', 3:'#FFD700', 4:'#228B22', 5:'#1E90FF'};
+  const DEFAULT_HIGHLIGHT_COLORS = {1:'#CE2029', 2:'#FF8C00', 3:'#FFD700', 4:'#228B22', 5:'#1E90FF'};
+  if (!currentConfig.highlightColors || typeof currentConfig.highlightColors !== 'object') {
+    currentConfig.highlightColors = {...DEFAULT_HIGHLIGHT_COLORS};
+  } else {
+    currentConfig.highlightColors = Object.assign({}, DEFAULT_HIGHLIGHT_COLORS, currentConfig.highlightColors);
+  }
   if (currentConfig.subscriptionAutoUpdate === undefined) currentConfig.subscriptionAutoUpdate = false;
   if (currentConfig.errorDetection === undefined) currentConfig.errorDetection = true;
   let showHiddenResults = false;
@@ -100,6 +106,13 @@
       titles: ['h2 a', 'a h2', '.b_title'],
       snippets: ['.b_caption p', '.b_snippet', '.b_paractl p', '.b_lineclamp2'],
       links: 'a[href]',
+    },
+    google_scholar: {
+      match: /(?:^|\.)scholar\.google\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})$/,
+      containers: 'div.gs_r.gs_or.gs_scl',
+      titles: ['h3.gs_rt a', 'h3.gs_rt', '.gs_rt'],
+      snippets: ['.gs_rs'],
+      links: ['h3.gs_rt a[href]', 'a[href]'],
     },
     google: {
       match: /(?:^|\.)google\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})$/,
@@ -164,12 +177,17 @@
     if (activeSelectors) return activeSelectors;
     const merged = {};
     const user = getUserSelectors();
-    for (const key of Object.keys(user)) {
-      if (key === 'other') continue;
+    const userKeys = Object.keys(user).filter(k => k !== 'other');
+    for (const key of userKeys) {
       const def = user[key];
       if (!def || typeof def !== 'object' || Array.isArray(def)) continue;
-      if (def.disabled) {
+      if (def.disabled || def.disable) {
         merged[key] = { disabled: true };
+        continue;
+      }
+      const defContentKeys = Object.keys(def).filter(k => k !== 'disabled' && k !== 'disable' && def[k] !== undefined && def[k] !== null && def[k] !== '');
+      if (!defContentKeys.length) {
+        if (SELECTORS[key]) merged[key] = SELECTORS[key];
         continue;
       }
       let match = null;
@@ -191,6 +209,22 @@
     }
     for (const key of Object.keys(SELECTORS)) {
       if (!(key in merged)) merged[key] = SELECTORS[key];
+    }
+    const keys = Object.keys(merged);
+    const gIdx = keys.indexOf('google');
+    const gsIdx = keys.indexOf('google_scholar');
+    if (gIdx !== -1 && gsIdx !== -1 && gIdx < gsIdx) {
+      const fixed = {};
+      for (const k of keys) {
+        if (k === 'google') {
+          fixed['google_scholar'] = merged['google_scholar'];
+          fixed['google'] = merged['google'];
+        } else if (k !== 'google_scholar') {
+          fixed[k] = merged[k];
+        }
+      }
+      activeSelectors = fixed;
+      return fixed;
     }
     activeSelectors = merged;
     return merged;
@@ -306,6 +340,10 @@
       downloadSuccess: '下载成功！规则已加载到编辑区，保存生效',
       noRulesExport: '没有规则可导出',
       confirmBlock: '确定要屏蔽并添加规则 [ {rule} ] 吗？',
+      bcDomain: '域名',
+      bcExact: '精确',
+      bcWhitelist: '白名单',
+      bcConfirm: '确认',
       cannotBlockCurrentSite: '无法屏蔽当前搜索引擎自身域名: {domain}',
       statsErrors: '发现 {count} 个规则错误: ',
       matchedCountLabel: '匹配',
@@ -343,12 +381,11 @@
       duplicateRules: '重复规则',
       invalidRule: '规则无效',
       hlColorError: '高亮级别需在 1-5 之间',
+      hlWhitelistConflict: '高亮规则不能与白名单组合',
       ifParenError: '@if(...) 括号未闭合',
-      condUnknown: '无法识别的条件: {part}',
       condRegexError: '条件正则无效: {part}',
       regexError: '正则表达式无效',
       urlError: 'URL规则无效',
-      slashWarning: '以 / 开头但未闭合，将按URL规则处理',
       ruleDuplicate: '重复了 {count} 次',
       emptyPrefixRule: '规则前缀后缺少内容',
       invalidRegexFlags: '正则 flags 无效: {flags}',
@@ -417,6 +454,10 @@
       downloadSuccess: 'Download successful! Rules loaded into editor, save to apply.',
       noRulesExport: 'No rules to export',
       confirmBlock: 'Add block rule [ {rule} ] ?',
+      bcDomain: 'Domain',
+      bcExact: 'Exact',
+      bcWhitelist: 'Whitelist',
+      bcConfirm: 'Confirm',
       cannotBlockCurrentSite: 'Cannot block search engine own domain: {domain}',
       statsErrors: 'Found {count} rule errors:',
       matchedCountLabel: 'Hits',
@@ -454,12 +495,11 @@
       duplicateRules: 'Duplicate Rules',
       invalidRule: 'Invalid rule',
       hlColorError: 'Highlight level must be 1-5',
+      hlWhitelistConflict: 'Highlight rules cannot be combined with whitelist',
       ifParenError: 'Unbalanced @if(...) parentheses',
-      condUnknown: 'Unknown condition: {part}',
       condRegexError: 'Invalid condition regex: {part}',
       regexError: 'Invalid regex',
       urlError: 'Invalid URL rule',
-      slashWarning: 'Starts with / but has no closing slash, treated as URL rule',
       ruleDuplicate: 'duplicated {count} times',
       emptyPrefixRule: 'Missing content after rule prefix',
       invalidRegexFlags: 'Invalid regular expression flags: {flags}',
@@ -542,10 +582,16 @@
       while (i < n && /\s/.test(line[i])) i++;
     }
     const body = line.slice(i);
-    if (/^\/(?:[^/\\]|\\.)*\//.test(body)) { i += 1; }
-    else if (body.startsWith('title/')) { i += 6; }
-    else if (body.startsWith('text/')) { i += 5; }
-    let inRE = /^\/(?:[^/\\]|\\.)*\//.test(body) || body.startsWith('title/') || body.startsWith('text/');
+    const prefixRegexMatch = body.match(/^(?:title|text|host|path|url|scheme)\/(?:[^/\\]|\\.)*\//i);
+    let inRE = false;
+    if (/^\/(?:[^/\\]|\\.)*\//.test(body)) {
+      i += 1;
+      inRE = true;
+    } else if (prefixRegexMatch) {
+      const prefix = body.match(/^(?:title|text|host|path|url|scheme)\//i)[0];
+      i += prefix.length;
+      inRE = true;
+    }
     let inReClass = false;
     let inSQ = false;
     let inDQ = false;
@@ -580,6 +626,13 @@
       }
       if (ch === "'") { inSQ = true; continue; }
       if (ch === '"') { inDQ = true; continue; }
+      if (ch === '/' && !inRE) {
+        const prev = line.slice(0, i).trimEnd();
+        if (ifDepth > 0 || /(?:=~|~)$/.test(prev) || /(?:title|url|host|path|scheme)$/i.test(prev)) {
+          inRE = true;
+          continue;
+        }
+      }
       if (ch === '@' && line.substr(i, 3).toLowerCase() === '@if') { atIf = true; i += 2; continue; }
       if (ch === '(' && ifDepth > 0) { ifDepth++; continue; }
       if (ch === ')' && ifDepth > 0) { ifDepth--; continue; }
@@ -769,7 +822,7 @@
     const leafParser = (text) => {
       const trimmed = text.trim();
       const regexLeafFlags = (() => {
-        const m = trimmed.match(/^(?:title|url|host|path|scheme)\s*(?:=\~\s*)?\/((?:[^/\\]|\\.)*)\/([a-z]*)$/i);
+        const m = trimmed.match(/^(?:title|url|host|path|scheme)\s*(?:=\~\s*)?\/((?:[^/\\\[]|\\.|\[(?:[^\]\\]|\\.)*\])*)\/([a-z]*)$/i);
         return m ? m[2] : null;
       })();
       if (regexLeafFlags !== null && getInvalidRegexFlags(regexLeafFlags)) {
@@ -836,7 +889,16 @@
       if (!url) return false;
       let u;
       try {
-        u = new URL(url);
+        const isAbsolute = /^[a-z][a-z0-9+.-]*:\/\//i.test(url) || url.startsWith('//');
+        if (isAbsolute) {
+          u = new URL(url.startsWith('//') ? 'http:' + url : url);
+        } else {
+          if (cond.type === 'scheme' || cond.type === 'host') {
+            const m = url.match(/^([a-z][a-z0-9+.-]*):(?:\/\/)?/i);
+            if (!m) return false;
+          }
+          u = new URL(url, 'http://localhost');
+        }
       } catch (e) {
         return false;
       }
@@ -882,36 +944,53 @@
 
   // 解析条件片段
   function parseConditionPart(trimmed, currentEngine, currentSite, currentCategory) {
-    const enginePropMatch = trimmed.match(/^\$site\s*[=:]\s*['"](.*?)['"]\s*i?\s*$/i);
+    const stripQuotes = (str) => {
+      const s = String(str || '').trim();
+      if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+        return s.slice(1, -1);
+      }
+      return s;
+    };
+
+    const enginePropMatch = trimmed.match(/^\$site\s*[=:]\s*(?:['"](.*?)['"]|([^\s\)]+))\s*i?\s*$/i);
     if (enginePropMatch) {
-      const raw = enginePropMatch[1].trim().toLowerCase();
+      const raw = (enginePropMatch[1] !== undefined ? enginePropMatch[1] : enginePropMatch[2]).trim().toLowerCase();
       const target = raw.replace(/^ddg$/, 'duckduckgo').replace(/^yahoo-japan$/, 'yahoo');
       const engine = String(currentEngine || '').toLowerCase();
       return { matched: true, static: engine === target || engine === raw };
     }
 
-    const categoryMatch = trimmed.match(/^\$category\s*[=:]\s*['"](.*?)['"]\s*i?\s*$/i);
+    const categoryMatch = trimmed.match(/^\$category\s*[=:]\s*(?:['"](.*?)['"]|([^\s\)]+))\s*i?\s*$/i);
     if (categoryMatch) {
-      const target = categoryMatch[1].trim().toLowerCase();
+      const target = (categoryMatch[1] !== undefined ? categoryMatch[1] : categoryMatch[2]).trim().toLowerCase();
       return { matched: true, static: (currentCategory || 'web') === target };
     }
 
-    let siteMatch = trimmed.match(/^site\s*[=:]\s*['"](.*?)['"]\s*i?\s*$/i);
-    if (!siteMatch) siteMatch = trimmed.match(/^site\s*\(\s*['"](.*?)['"]\s*\)\s*i?\s*$/i);
+    let siteMatch = trimmed.match(/^site\s*[=:]\s*(?:['"](.*?)['"]|([^\s\)]+))\s*i?\s*$/i);
+    if (!siteMatch) siteMatch = trimmed.match(/^site\s*\(\s*(?:['"](.*?)['"]|([^\s\)]+))\s*\)\s*i?\s*$/i);
     if (siteMatch) {
-      const target = siteMatch[1].trim().toLowerCase().replace(/^\.+|\.+$/g, '');
-      return { matched: true, static: currentSite === target || currentSite.endsWith(`.${target}`) };
+      const rawVal = (siteMatch[1] !== undefined ? siteMatch[1] : siteMatch[2]);
+      const target = rawVal.trim().toLowerCase().replace(/^\.+|\.+$/g, '');
+      const curSite = String(currentSite || '').toLowerCase();
+      return { matched: true, static: curSite === target || curSite.endsWith(`.${target}`) };
     }
 
-    const strMatch = trimmed.match(/^(title|url|host|path|scheme)\s*(\^=|\$=|\*=|=)\s*['"](.*?)['"]\s*i?\s*$/i);
+    const strMatch = trimmed.match(/^(title|url|host|path|scheme)\s*(\^=|\$=|\*=|=|:)\s*(?:['"](.*?)['"]|([a-z0-9_.~:/?#@!$&'()*+,;=-]+))\s*i?\s*$/i);
     if (strMatch) {
-      return { matched: true, dynamic: { type: strMatch[1].toLowerCase(), op: strMatch[2], val: strMatch[3].toLowerCase() } };
+      const op = strMatch[2] === ':' ? '=' : strMatch[2];
+      const val = (strMatch[3] !== undefined ? strMatch[3] : strMatch[4]).toLowerCase();
+      return { matched: true, dynamic: { type: strMatch[1].toLowerCase(), op, val } };
     }
 
-    const reMatch = trimmed.match(/^(title|url|host|path|scheme)\s*(?:=\~\s*)?\/((?:[^/\\]|\\.)*)\/([a-z]*)$/i);
+    const reMatch = trimmed.match(/^(title|url|host|path|scheme)\s*(?:=\~\s*)?\/((?:[^/\\\[]|\\.|\[(?:[^\]\\]|\\.)*\])*)\/([a-z]*)$/i);
     if (reMatch) {
       if (getInvalidRegexFlags(reMatch[3])) return { matched: false };
-      return { matched: true, dynamic: { type: reMatch[1].toLowerCase(), op: '=~', regex: new RegExp(reMatch[2], reMatch[3]) } };
+      const condType = reMatch[1].toLowerCase();
+      let flags = reMatch[3];
+      if ((condType === 'host' || condType === 'scheme') && !flags.includes('i')) {
+        flags += 'i';
+      }
+      return { matched: true, dynamic: { type: condType, op: '=~', regex: new RegExp(reMatch[2], flags) } };
     }
 
     return { matched: false };
@@ -1007,19 +1086,14 @@
     let inReClass = false;
     let inSQ = false;
     let inDQ = false;
-    const leadingShorthand = /^(?:url|host|path|scheme)\//i.exec(ruleStr.slice(start));
-    if (ruleStr[start] === '/') {
+    const prefixRegexMatch = /^(?:url|host|path|scheme|title|text)\/(?:[^/\\]|\\.)*\//i.exec(ruleStr.slice(start));
+    if (ruleStr[start] === '/' && /^\/(?:[^/\\]|\\.)*\//.test(ruleStr.slice(start))) {
       inRE = true;
       i = start + 1;
-    } else if (ruleStr.startsWith('title/', start)) {
+    } else if (prefixRegexMatch) {
+      const prefix = /^(?:url|host|path|scheme|title|text)\//i.exec(ruleStr.slice(start))[0];
       inRE = true;
-      i = start + 6;
-    } else if (ruleStr.startsWith('text/', start)) {
-      inRE = true;
-      i = start + 5;
-    } else if (leadingShorthand) {
-      inRE = true;
-      i = start + leadingShorthand[0].length;
+      i = start + prefix.length;
     }
     for (; i < n; i++) {
       const ch = ruleStr[i];
@@ -1046,6 +1120,11 @@
       if (ch === "'") { inSQ = true; continue; }
       if (ch === '"') { inDQ = true; continue; }
       if (ch === '@' && ruleStr.substr(i, 3).toLowerCase() === '@if') {
+        const prevChar = i > 0 ? ruleStr[i - 1] : '';
+        const isBoundary = i === 0 || /\s/.test(prevChar) || prevChar === '@' || prevChar === '(';
+        if (!isBoundary) {
+          continue;
+        }
         let j = i + 3;
         while (j < n && /\s/.test(ruleStr[j])) j++;
         if (ruleStr[j] === '(') {
@@ -1086,7 +1165,7 @@
       coreRule = coreRule.slice(0, r.start) + coreRule.slice(r.end);
     }
 
-    coreRule = coreRule.replace(/\s{2,}/g, ' ').trim();
+    coreRule = coreRule.trim();
 
     if (coreRule.startsWith('{') && coreRule.endsWith('}') && coreRule.length > 1) {
       coreRule = coreRule.slice(1, -1).trim();
@@ -1100,13 +1179,13 @@
 
   function isCondExprCore(str) {
     if (!str) return false;
-    return !str.startsWith('/') && !/^title\//i.test(str) && !/^text\//i.test(str) && !str.startsWith('*://');
+    return !str.startsWith('/') && !/^title\//i.test(str) && !/^text\//i.test(str) && !str.startsWith('*://') && !/^[a-z][a-z0-9+.-]*:\/\//i.test(str);
   }
 
   function looksLikeCondExpr(str) {
     if (!isCondExprCore(str)) return false;
-    return /(?:^|[\s(&|!])(?:\$site|\$category|site|title|url|host|path|scheme)\s*(?:(?:=~|\^=|\$=|\*=|=|:)\s*["'/]|\/)/i.test(str)
-      || /^\s*!/.test(str);
+    return /(?:^|[\s(&|!])(?:\$site|\$category|site|title|url|host|path|scheme)\s*(?:(?:=~|\^=|\$=|\*=|=|:)\s*(?:["'/]|[a-z0-9_.~:/?#@!$&'()*+,;=-])|\/)/i.test(str)
+      || /^\s*!\s*(?:(?:\$site|\$category|site|title|url|host|path|scheme)\b|\()/i.test(str);
   }
 
   // 判断规则行
@@ -1202,19 +1281,20 @@
     const errors = [];
     const warnings = [];
 
+    let hlN = null;
     const hlValMatch = ruleToCheck.match(/^@(\d+)/);
     if (hlValMatch) {
       const N = parseInt(hlValMatch[1]);
       if (N < 1 || N > 5) {
         return { valid: false, errors: [t('hlColorError')], warnings };
       }
+      hlN = N;
       ruleToCheck = ruleToCheck.substring(hlValMatch[0].length).trim();
       if (!ruleToCheck) return { valid: false, errors: [t('emptyPrefixRule')], warnings };
     }
 
     // @if条件语法检查
-    if (!ruleToCheck.startsWith('/') && !ruleToCheck.startsWith('title/') && !ruleToCheck.startsWith('text/')) {
-      if (/@if\s*\(/i.test(ruleToCheck)) {
+    if (/@if\s*\(/i.test(ruleToCheck)) {
         let unbalanced = false;
         for (const occ of findIfOccurrences(ruleToCheck)) {
           if (!extractBalancedParens(ruleToCheck, occ.condStart)) { unbalanced = true; break; }
@@ -1229,7 +1309,6 @@
           errors.push(...r.errors);
           warnings.push(...r.warnings);
         }
-      }
     }
 
     const stripped = stripIfConditions(ruleToCheck);
@@ -1237,6 +1316,10 @@
 
     // 白名单规则
     if (ruleToCheck.startsWith('@')) {
+      if (hlN !== null) {
+        errors.push(t('hlWhitelistConflict'));
+        return { valid: false, errors, warnings };
+      }
       ruleToCheck = ruleToCheck.substring(1).trim();
       if (!ruleToCheck) return { valid: false, errors: [t('emptyPrefixRule')], warnings };
     }
@@ -1260,6 +1343,10 @@
     try {
       if (ruleToCheck.startsWith('/') && ruleToCheck.lastIndexOf('/') > 0) {
         const { pattern, flags } = ruleToRegex(ruleToCheck);
+        if (!pattern.trim()) {
+          errors.push(t('regexError'));
+          return { valid: false, errors, warnings };
+        }
         const invalidFlags = getInvalidRegexFlags(flags);
         if (invalidFlags) {
           errors.push(t('invalidRegexFlags', { flags: invalidFlags }));
@@ -1301,10 +1388,28 @@
   function parsePrefixedRegexRule(rawRule, prefixLen) {
     let remaining = rawRule.substring(prefixLen);
     let pattern, flags = '';
-    const lastSlashIndex = remaining.lastIndexOf('/');
+    let lastSlashIndex = -1;
+    for (let i = remaining.length - 1; i >= 0; i--) {
+      if (remaining[i] === '/') {
+        let backslashCount = 0;
+        let j = i - 1;
+        while (j >= 0 && remaining[j] === '\\') {
+          backslashCount++;
+          j--;
+        }
+        if (backslashCount % 2 === 0) {
+          lastSlashIndex = i;
+          break;
+        }
+      }
+    }
     if (lastSlashIndex !== -1 && lastSlashIndex < remaining.length - 1) {
       const possibleFlags = remaining.substring(lastSlashIndex + 1);
-      if (/^[a-z]+$/i.test(possibleFlags)) {
+      const isUniqueFlags = (str) => {
+        const lower = str.toLowerCase();
+        return /^[imsu]+$/.test(lower) && new Set(lower).size === lower.length;
+      };
+      if (isUniqueFlags(possibleFlags)) {
         flags = possibleFlags.toLowerCase();
         pattern = remaining.substring(0, lastSlashIndex);
       } else {
@@ -1313,7 +1418,17 @@
     } else {
       pattern = remaining;
     }
-    if (!flags && remaining.endsWith('/')) pattern = remaining.slice(0, -1);
+    if (!flags && remaining.endsWith('/')) {
+      let backslashCount = 0;
+      let j = remaining.length - 2;
+      while (j >= 0 && remaining[j] === '\\') {
+        backslashCount++;
+        j--;
+      }
+      if (backslashCount % 2 === 0) {
+        pattern = remaining.slice(0, -1);
+      }
+    }
     if (!flags) {
       const oldFlagMatch = pattern.match(/^\(\?([ims]+)\)/);
       if (oldFlagMatch) {
@@ -1361,14 +1476,18 @@
         prefix += escapeWildcardPart(schemeMatch[1], false) + ':\\/\\/';
         pattern = pattern.substring(schemeMatch[0].length);
         hostIsFirst = true;
+      } else {
+        prefix += '(?:https?:\\/\\/)?';
+        hostIsFirst = true;
       }
     }
     if (pattern.includes('/')) {
-      return prefix + pattern.split('/')
+      const regexStr = prefix + pattern.split('/')
         .map((part, index) => escapeWildcardPart(part, hostIsFirst && index === 0))
         .join('\\/');
+      return pattern.endsWith('*') ? regexStr : regexStr + '(?:[\\/?#:]|$)';
     }
-    return prefix + escapeWildcardPart(pattern, hostIsFirst);
+    return prefix + escapeWildcardPart(pattern, hostIsFirst) + '(?:[\\/?#:]|$)';
   }
 
   function ruleToRegex(rule) {
@@ -1406,6 +1525,16 @@
 
   // 域名检查
   function matchWildcardDomainPattern(pattern) {
+    const bareWildcard = pattern.match(/^\*\.([^\/\*\s]+)$/);
+    if (bareWildcard && bareWildcard[1].includes('.')) {
+      return { domain: bareWildcard[1].toLowerCase(), domainType: 'wildcard' };
+    }
+    if (!pattern.startsWith('/') && !pattern.startsWith('title/') && !pattern.startsWith('text/') &&
+      !pattern.includes('*') && !pattern.includes('://') && !pattern.startsWith('.')) {
+      if (pattern.includes('.') && !/\s/.test(pattern) && !pattern.includes('/')) {
+        return { domain: pattern.toLowerCase(), domainType: 'wildcard' };
+      }
+    }
     const wildcardMatch = pattern.match(/^\*:\/\/\*\.([^\/\*]+)\/\*$/);
     if (wildcardMatch) return { domain: wildcardMatch[1].toLowerCase(), domainType: 'wildcard' };
     const exactMatch = pattern.match(/^\*:\/\/([^\/\*]+)\/\*$/);
@@ -1498,6 +1627,10 @@
         }
         if (!parsed.staticPass) return;
         let coreRule = parsed.coreRule;
+        if (coreRule.startsWith('@')) {
+          if (currentConfig.debug) console.warn('高亮+白名单组合规则无效，已跳过:', hlRule);
+          return;
+        }
 
         if (!coreRule && (parsed.standaloneExpr || parsed.dynamicConditions.length)) {
           compiledRules.highlightConditionalRules.push({type: 'expr', conditions: parsed.dynamicConditions, N});
@@ -1997,9 +2130,24 @@
         const urlObj = new URL(url);
         if (urlObj.hostname.includes('google.') && urlObj.pathname === '/url') {
           const realUrl = urlObj.searchParams.get('q') || urlObj.searchParams.get('url');
-          if (realUrl) {
+          if (realUrl && /^https?:\/\//i.test(realUrl)) {
             url = realUrl;
             link.href = realUrl;
+          }
+        }
+      } catch (e) {}
+    }
+    if (engine === 'duckduckgo') {
+      try {
+        const urlObj = new URL(url);
+        if (/(?:^|\.)(?:duckduckgo\.com|ddg\.gg)$/.test(urlObj.hostname) && (urlObj.pathname === '/l/' || urlObj.pathname.startsWith('/l/'))) {
+          const uddg = urlObj.searchParams.get('uddg');
+          if (uddg) {
+            const realUrl = decodeURIComponent(uddg);
+            if (realUrl && /^https?:\/\//i.test(realUrl)) {
+              url = realUrl;
+              link.href = realUrl;
+            }
           }
         }
       } catch (e) {}
@@ -2049,11 +2197,11 @@
   }
 
   function getResultSnippet(result, engine) {
-    return getResultText(result, (getSelectors()[engine] || SELECTORS.bing).snippets);
+    return getResultText(result, (getSelectors()[engine] || SELECTORS.other).snippets);
   }
 
   function getResultLink(result, engine) {
-    const linkSelectors = (getSelectors()[engine] || SELECTORS.google).links;
+    const linkSelectors = (getSelectors()[engine] || SELECTORS.other).links;
     if (Array.isArray(linkSelectors)) {
       for (let selector of linkSelectors) {
         const el = result.querySelector(selector);
@@ -2067,11 +2215,140 @@
   }
 
   function getResultTitle(result, engine) {
-    return getResultText(result, (getSelectors()[engine] || SELECTORS.google).titles);
+    return getResultText(result, (getSelectors()[engine] || SELECTORS.other).titles);
   }
 
   function ensurePositioned(el) {
     if (window.getComputedStyle(el).position === 'static') el.style.position = 'relative';
+  }
+
+  // 一键屏蔽规则
+  function buildBlockRuleOptions(domain) {
+    const d = String(domain || '');
+    const ipParts = d.split('.');
+    const isIP = ipParts.length === 4 && ipParts.every(p => {
+      const n = parseInt(p, 10);
+      return n >= 0 && n <= 255 && String(n) === p;
+    });
+    const baseDomain = (!isIP && d.startsWith('www.')) ? d.substring(4) : d;
+    const exactRule = `*://${d}/*`;
+    const domainRule = isIP ? exactRule : `*://*.${baseDomain}/*`;
+    const whitelistRule = `@${exactRule}`;
+    return { isIP, domainRule, exactRule, whitelistRule };
+  }
+
+  // 添加屏蔽规则
+  function applyBlockRule(result, newRule) {
+    const stored = GM_getValue(CONFIG_KEY);
+    if (stored && Array.isArray(stored.rules)) {
+      currentConfig.rules = stored.rules;
+    }
+    const cleanRule = stripRuleComment(newRule.trim());
+    if (!currentConfig.rules.some(rule => stripRuleComment(rule.trim()) === cleanRule)) {
+      currentConfig.rules.push(newRule);
+      persistConfig();
+      syncRulesTextarea();
+      forceReprocessAll();
+    } else {
+      result.style.display = 'none';
+      result.setAttribute('data-is-blocked', 'true');
+      const totalBlocked = document.querySelectorAll('[data-is-blocked="true"]').length;
+      updateStatus(totalBlocked);
+    }
+  }
+
+  // 二次确认面板
+  let _blockConfirmOutsideHandler = null;
+  function showBlockConfirmPanel(anchor, domain, onConfirm) {
+    injectWidgetStyles();
+    if (_blockConfirmOutsideHandler) {
+      document.removeEventListener('click', _blockConfirmOutsideHandler, true);
+      _blockConfirmOutsideHandler = null;
+    }
+    const existing = document.getElementById('searchfilter-block-confirm-dialog');
+    if (existing) existing.remove();
+
+    const opts = buildBlockRuleOptions(domain);
+    const options = opts.isIP
+      ? [
+          { label: t('bcExact'), rule: opts.exactRule },
+          { label: t('bcWhitelist'), rule: opts.whitelistRule }
+        ]
+      : [
+          { label: t('bcDomain'), rule: opts.domainRule },
+          { label: t('bcExact'), rule: opts.exactRule },
+          { label: t('bcWhitelist'), rule: opts.whitelistRule }
+        ];
+
+    const panel = document.createElement('div');
+    panel.id = 'searchfilter-block-confirm-dialog';
+    panel.innerHTML = `
+      <div class="sfb-confirm-domain">${escHtml(domain)}</div>
+      ${options.map((o, i) => `
+        <label class="sfb-confirm-option">
+          <input type="radio" name="sfb-confirm-rule" value="${i}" ${i === 0 ? 'checked' : ''}>
+          <span class="sfb-confirm-label">${escHtml(o.label)}</span>
+          <input type="text" class="sfb-confirm-rule" data-idx="${i}" value="${escHtml(o.rule)}" spellcheck="false">
+        </label>`).join('')}
+      <div class="sfb-confirm-btns">
+        <button id="sfb-confirm-ok" class="searchfilter-button searchfilter-button-primary">${t('bcConfirm')}</button>
+        <button id="sfb-confirm-cancel" class="searchfilter-button searchfilter-button-secondary">${t('cancel')}</button>
+      </div>`;
+    document.body.appendChild(panel);
+
+    const rect = anchor.getBoundingClientRect();
+    const pw = panel.offsetWidth;
+    const ph = panel.offsetHeight;
+    let left = Math.min(Math.max(8, rect.right - pw), window.innerWidth - pw - 8);
+    if (left < 8) left = 8;
+    let top = rect.bottom + 6;
+    if (top + ph > window.innerHeight - 8) top = Math.max(8, rect.top - ph - 6);
+    panel.style.left = left + 'px';
+    panel.style.top = top + 'px';
+
+    const close = () => {
+      if (_blockConfirmOutsideHandler) {
+        document.removeEventListener('click', _blockConfirmOutsideHandler, true);
+        _blockConfirmOutsideHandler = null;
+      }
+      panel.remove();
+    };
+    const outsideHandler = (e) => {
+      if (!panel.contains(e.target)) close();
+    };
+    _blockConfirmOutsideHandler = outsideHandler;
+    setTimeout(() => {
+      if (_blockConfirmOutsideHandler === outsideHandler) {
+        document.addEventListener('click', outsideHandler, true);
+      }
+    }, 200);
+
+    panel.querySelectorAll('.sfb-confirm-rule').forEach(inp => {
+      inp.addEventListener('focus', () => {
+        const radio = panel.querySelector(`input[type="radio"][value="${inp.getAttribute('data-idx')}"]`);
+        if (radio) radio.checked = true;
+      });
+      inp.addEventListener('click', (e) => e.stopPropagation());
+    });
+
+    panel.querySelector('#sfb-confirm-cancel').onclick = (e) => {
+      e.stopPropagation();
+      close();
+    };
+    panel.querySelector('#sfb-confirm-ok').onclick = (e) => {
+      e.stopPropagation();
+      const checked = panel.querySelector('input[type="radio"]:checked');
+      const idx = checked ? checked.value : '0';
+      const ruleInput = panel.querySelector(`.sfb-confirm-rule[data-idx="${idx}"]`);
+      const rule = (ruleInput ? ruleInput.value : '').trim();
+      if (!rule) { close(); return; }
+      if (!validateRule(rule)) {
+        showToast(t('invalidRule'), 'error');
+        return;
+      }
+      close();
+      onConfirm(rule);
+    };
   }
 
   // 一键屏蔽
@@ -2108,6 +2385,14 @@
       btn.style.top = '10px';
     }
 
+    const stopNavEvents = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    btn.addEventListener('mousedown', stopNavEvents, true);
+    btn.addEventListener('pointerdown', stopNavEvents, true);
+    btn.addEventListener('auxclick', stopNavEvents, true);
+
     btn.onclick = (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -2122,23 +2407,8 @@
 
       // 取消屏蔽
       if (isBlocked) {
-        let whitelistRule = '';
-        const ipParts = domain.split('.');
-        const isIP = ipParts.length === 4 && ipParts.every(p => {
-          const n = parseInt(p, 10);
-          return n >= 0 && n <= 255 && String(n) === p;
-        });
-
-        if (isIP) {
-          whitelistRule = `@*://${domain}/*`;
-        } else {
-          const baseDomain = domain.startsWith('www.') ? domain.substring(4) : domain;
-          if (currentConfig.blockDomain) {
-            whitelistRule = `@*://*.${baseDomain}/*`;
-          } else {
-            whitelistRule = `@*://${domain}/*`;
-          }
-        }
+        const opts = buildBlockRuleOptions(domain);
+        const whitelistRule = '@' + (currentConfig.blockDomain ? opts.domainRule : opts.exactRule);
 
         if (!currentConfig.rules.some(rule => stripRuleComment(rule.trim()) === whitelistRule)) {
           currentConfig.rules.push(whitelistRule);
@@ -2149,42 +2419,13 @@
         return;
       }
 
-       // 添加规则
-       let newRule = '';
-       const ipParts = domain.split('.');
-       const isIP = ipParts.length === 4 && ipParts.every(p => {
-         const n = parseInt(p, 10);
-         return n >= 0 && n <= 255 && String(n) === p;
-       });
-
-       if (isIP) {
-         newRule = `*://${domain}/*`;
-       } else {
-         const baseDomain = domain.startsWith('www.') ? domain.substring(4) : domain;
-         if (currentConfig.blockDomain) {
-           newRule = `*://*.${baseDomain}/*`;
-         } else {
-           newRule = `*://${domain}/*`;
-         }
-       }
-
-       if (currentConfig.blockConfirm) {
-         const userRule = prompt(t('confirmBlock', { rule: newRule }), newRule);
-         if (userRule === null) return;
-         newRule = userRule.trim();
-       }
-
-      if (!currentConfig.rules.some(rule => stripRuleComment(rule.trim()) === newRule)) {
-        currentConfig.rules.push(newRule);
-        persistConfig();
-        syncRulesTextarea();
-        forceReprocessAll();
-      } else {
-        result.style.display = 'none';
-        result.setAttribute('data-is-blocked', 'true');
-        const totalBlocked = document.querySelectorAll('[data-is-blocked="true"]').length;
-        updateStatus(totalBlocked);
+      // 添加规则
+      const opts = buildBlockRuleOptions(domain);
+      if (currentConfig.blockConfirm) {
+        showBlockConfirmPanel(btn, domain, (chosenRule) => applyBlockRule(result, chosenRule));
+        return;
       }
+      applyBlockRule(result, currentConfig.blockDomain ? opts.domainRule : opts.exactRule);
     };
     result.appendChild(btn);
   }
@@ -2331,7 +2572,12 @@
           result.setAttribute('data-blocker-processed', 'true');
         }
         if (blocked) newlyBlocked++;
-        observer.unobserve(result);
+        if (result.hasAttribute('data-blocker-processed')) {
+          observer.unobserve(result);
+        } else {
+          result.removeAttribute('data-observed');
+          observer.unobserve(result);
+        }
       }
     });
 
@@ -2364,15 +2610,26 @@
     clearStaleObserved(selector);
   }
 
+  function filterNestedContainers(nodes) {
+    if (!nodes || nodes.length <= 1) return Array.from(nodes || []);
+    const arr = Array.from(nodes);
+    return arr.filter(el => !arr.some(other => other !== el && other.contains(el)));
+  }
+
   function queryUnobserved(selector) {
     try {
-      return document.querySelectorAll(`:is(${selector}):not([data-observed])`);
+      const nodes = document.querySelectorAll(`:is(${selector}):not([data-observed])`);
+      return filterNestedContainers(nodes);
     } catch (e) {
-      const out = [];
-      document.querySelectorAll(selector).forEach(el => {
-        if (!el.hasAttribute('data-observed')) out.push(el);
-      });
-      return out;
+      try {
+        const out = [];
+        document.querySelectorAll(selector).forEach(el => {
+          if (!el.hasAttribute('data-observed')) out.push(el);
+        });
+        return filterNestedContainers(out);
+      } catch (err) {
+        return [];
+      }
     }
   }
 
@@ -2472,6 +2729,10 @@
           }
           result.setAttribute('data-blocker-processed', 'true');
         }
+        if (!result.hasAttribute('data-blocker-processed')) {
+          result.removeAttribute('data-observed');
+          resultObserver.observe(result);
+        }
       }
       if (processIdx < allResults.length) {
         requestAnimationFrame(processBatch);
@@ -2500,34 +2761,80 @@
     if (widgetStylesInjected) return;
     widgetStylesInjected = true;
     GM_addStyle(`
+        /* 强隔离样式 */
+        [id^="searchfilter-"]:not(button) {
+            text-align: left !important;
+            letter-spacing: normal !important;
+            word-spacing: normal !important;
+            text-transform: none !important;
+            text-indent: 0 !important;
+            text-shadow: none !important;
+            text-decoration: none !important;
+            direction: ltr !important;
+            font-style: normal !important;
+            font-variant: normal !important;
+        }
+
         #searchfilter-panel, #searchfilter-webdav-panel, #searchfilter-subscription-panel, #searchfilter-selector-panel {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            font-size: 13px;
-            box-sizing: border-box;
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+            font-size: 13px !important;
+            box-sizing: border-box !important;
+            background: white !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
             transition: all 0.3s ease;
         }
 
+        /* 强隔离按钮 */
+        [id^="searchfilter-"] button,
         .searchfilter-button {
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 11px;
-            padding: 4px 8px;
+            border: none !important;
+            border-radius: 4px !important;
+            cursor: pointer !important;
+            box-sizing: border-box !important;
+            line-height: normal !important;
+            letter-spacing: normal !important;
+            text-transform: none !important;
+            white-space: nowrap !important;
+            vertical-align: middle !important;
+            appearance: none !important;
+            -webkit-appearance: none !important;
+            background-image: none !important;
+            box-shadow: none !important;
+            margin: 0 !important;
+            outline: none !important;
+            text-shadow: none !important;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
             transition: background-color 0.2s;
-            box-sizing: border-box;
         }
-        .searchfilter-button-primary { background: #2c5282; color: white; }
-        .searchfilter-button-primary:hover { background: #1a365d; }
-        .searchfilter-button-secondary { background: #4a5568; color: white; }
-        .searchfilter-button-secondary:hover { background: #2d3748; }
-        .searchfilter-button-success { background: #276749; color: white; }
-        .searchfilter-button-success:hover { background: #22543d; }
-        .searchfilter-button-danger { background: #c53030; color: white; }
-        .searchfilter-button-danger:hover { background: #9b2c2c; }
+
+        /* 次级小按钮 */
+        [id^="searchfilter-"] button:not(.action-button),
+        .searchfilter-button:not(.action-button) {
+            font-size: 11px !important;
+            padding: 4px 8px !important;
+            height: auto !important;
+            min-height: 0 !important;
+            width: auto !important;
+            min-width: 0 !important;
+            max-width: none !important;
+        }
+        .searchfilter-button-primary { background: #2c5282 !important; color: #ffffff !important; }
+        .searchfilter-button-primary:hover { background: #1a365d !important; color: #ffffff !important; }
+        .searchfilter-button-primary:active, .searchfilter-button-primary:focus, .searchfilter-button-primary:focus-visible { background: #15294a !important; color: #ffffff !important; }
+
+        .searchfilter-button-secondary { background: #4a5568 !important; color: #ffffff !important; }
+        .searchfilter-button-secondary:hover { background: #2d3748 !important; color: #ffffff !important; }
+        .searchfilter-button-secondary:active, .searchfilter-button-secondary:focus, .searchfilter-button-secondary:focus-visible { background: #1a202c !important; color: #ffffff !important; }
+
+        .searchfilter-button-success { background: #276749 !important; color: #ffffff !important; }
+        .searchfilter-button-success:hover { background: #22543d !important; color: #ffffff !important; }
+        .searchfilter-button-success:active, .searchfilter-button-success:focus, .searchfilter-button-success:focus-visible { background: #1c4532 !important; color: #ffffff !important; }
+
+        .searchfilter-button-danger { background: #c53030 !important; color: #ffffff !important; }
+        .searchfilter-button-danger:hover { background: #9b2c2c !important; color: #ffffff !important; }
+        .searchfilter-button-danger:active, .searchfilter-button-danger:focus, .searchfilter-button-danger:focus-visible { background: #742a2a !important; color: #ffffff !important; }
 
         .option-row {
             display: flex;
@@ -2569,10 +2876,17 @@
             margin-bottom: 10px;
         }
         .action-button {
-            padding: 8px 12px;
-            font-size: 12px;
-            font-weight: 500;
-            box-sizing: border-box;
+            padding: 7px 12px !important;
+            font-size: 12px !important;
+            font-weight: 500 !important;
+            box-sizing: border-box !important;
+            height: 32px !important;
+            min-height: 32px !important;
+            line-height: 1 !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            text-align: center !important;
         }
 
         /* 规则栏输入 */
@@ -2587,41 +2901,45 @@
             overflow: hidden;
         }
 
-        /* 规则栏行号 */
+        /* 行号排版锁定 */
         #searchfilter-line-numbers,
         #searchfilter-sel-line-numbers {
             min-width: 20px;
-            padding: 8px 4px 8px 2px;
+            padding: 8px 4px 8px 2px !important;
             background: #edf2f7;
             border-right: 1px solid #e2e8f0;
-            text-align: right;
+            text-align: right !important;
             color: #a0aec0;
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 11px;
-            line-height: 1.4;
-            white-space: nowrap;
-            overflow: hidden;
-            user-select: none;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
+            font-size: 11px !important;
+            line-height: 15.4px !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            user-select: none !important;
             flex-shrink: 0;
-            box-sizing: border-box;
+            box-sizing: border-box !important;
         }
 
         #searchfilter-rules,
         #searchfilter-sel-rules {
             flex: 1;
-            height: 100%;
-            font-size: 11px;
-            padding: 8px;
-            border: none;
-            resize: none;
-            background: transparent;
-            box-sizing: border-box;
-            font-family: 'Consolas', 'Monaco', monospace;
-            line-height: 1.4;
-            white-space: pre;
-            overflow-x: auto;
-            overflow-y: auto;
-            outline: none;
+            height: 100% !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            font-size: 11px !important;
+            padding: 8px !important;
+            margin: 0 !important;
+            border: none !important;
+            resize: none !important;
+            background: transparent !important;
+            box-sizing: border-box !important;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
+            line-height: 15.4px !important;
+            white-space: pre !important;
+            overflow-x: auto !important;
+            overflow-y: auto !important;
+            outline: none !important;
+            box-shadow: none !important;
         }
 
         #searchfilter-rules::-webkit-scrollbar, #searchfilter-sel-rules::-webkit-scrollbar { width: 6px; height: 0px; }
@@ -2686,16 +3004,142 @@
             }
         }
 
+        /* 屏蔽确认面板 */
+        #searchfilter-block-confirm-dialog {
+            position: fixed;
+            z-index: 10002;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            width: 250px;
+            max-width: calc(100vw - 16px);
+            padding: 8px 10px;
+            background: #ffffff;
+            color: #2d3748;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 12px;
+            text-align: left;
+            line-height: 1.4;
+            box-sizing: border-box;
+        }
+        #searchfilter-block-confirm-dialog .sfb-confirm-domain {
+            font-size: 11px;
+            color: #718096;
+            word-break: break-all;
+            margin-bottom: 2px;
+        }
+        #searchfilter-block-confirm-dialog .sfb-confirm-option {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            margin: 0;
+            padding: 0;
+            border: none;
+            background: transparent;
+            font-weight: normal;
+            white-space: nowrap;
+        }
+        /* 开关控件防污染 */
+        #searchfilter-block-confirm-dialog .sfb-confirm-option input[type="radio"] {
+            margin: 0 !important;
+            padding: 0 !important;
+            flex-shrink: 0 !important;
+            accent-color: #2c5282 !important;
+            cursor: pointer !important;
+            width: auto !important;
+            height: auto !important;
+            min-width: 0 !important;
+            appearance: auto !important;
+            -webkit-appearance: auto !important;
+            display: inline-block !important;
+        }
+
+        .searchfilter-switch input[type="checkbox"] {
+            opacity: 0 !important;
+            width: 0 !important;
+            height: 0 !important;
+            min-width: 0 !important;
+            max-width: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            position: absolute !important;
+            pointer-events: none !important;
+            appearance: none !important;
+            -webkit-appearance: none !important;
+            border: none !important;
+        }
+        #searchfilter-block-confirm-dialog .sfb-confirm-label {
+            flex-shrink: 0;
+            min-width: 36px;
+            white-space: nowrap;
+            font-size: 12px;
+        }
+        #searchfilter-block-confirm-dialog .sfb-confirm-rule {
+            flex: 1;
+            min-width: 0;
+            padding: 3px 6px;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: #f7fafc;
+            color: #2d3748;
+            outline: none;
+            box-shadow: none;
+            height: auto;
+            box-sizing: border-box;
+        }
+        #searchfilter-block-confirm-dialog .sfb-confirm-rule:focus {
+            border-color: #3182ce;
+            background: #ffffff;
+        }
+        #searchfilter-block-confirm-dialog .sfb-confirm-btns {
+            display: flex;
+            gap: 6px;
+            justify-content: flex-end;
+            margin-top: 4px;
+        }
+        #searchfilter-block-confirm-dialog .sfb-confirm-btns .searchfilter-button {
+            height: 24px;
+            padding: 0 10px;
+            font-size: 11px;
+        }
+        @media (prefers-color-scheme: dark) {
+            #searchfilter-block-confirm-dialog {
+                background: #171717;
+                color: #f3f4f6;
+                border-color: #374151;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            }
+            #searchfilter-block-confirm-dialog .sfb-confirm-rule {
+                background: #374151;
+                border-color: #4b5563;
+                color: #f3f4f6;
+            }
+            #searchfilter-block-confirm-dialog .sfb-confirm-rule:focus {
+                border-color: #60a5fa;
+                background: #374151;
+            }
+        }
+
         /* 快速滑动按钮 */
         .searchfilter-scroll-btn {
             position: absolute;
             right: 7px;
             cursor: pointer;
             opacity: 0.5;
-            font-size: 14px;
-            user-select: none;
+            font-size: 18px !important;
+            line-height: 1 !important;
+            user-select: none !important;
             transition: opacity 0.2s, transform 0.2s;
-            background: transparent;
+            background: transparent !important;
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
             z-index: 10;
         }
 
@@ -2803,7 +3247,16 @@
             color: #f3f4f6 !important;
         }
 
-        #searchfilter-panel .searchfilter-button {
+        #searchfilter-panel .compact-row button.searchfilter-button {
+            height: auto !important;
+            min-height: 0 !important;
+            width: auto !important;
+            min-width: 0 !important;
+            flex: 0 0 auto !important;
+            line-height: normal !important;
+            padding: 3px 8px !important;
+            font-size: 11px !important;
+            margin: 0 !important;
         }
         }
 
@@ -2887,14 +3340,28 @@
 
         #searchfilter-webdav-panel .searchfilter-button,
         #searchfilter-subscription-panel .searchfilter-button,
-        #searchfilter-hlcolor-panel .searchfilter-button {
+        #searchfilter-hlcolor-panel .searchfilter-button,
+        #searchfilter-panel .action-button,
+        #searchfilter-selector-panel .action-button {
             height: 30px !important;
+            min-height: 30px !important;
+            max-height: 30px !important;
             padding: 0 12px !important;
             font-size: 13px !important;
+            font-weight: 500 !important;
+            box-sizing: border-box !important;
             margin: 0 !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
+            text-align: center !important;
+            line-height: 1 !important;
+            border: none !important;
+            border-radius: 4px !important;
+            appearance: none !important;
+            -webkit-appearance: none !important;
+            box-shadow: none !important;
+            background-image: none !important;
         }
         
         #searchfilter-webdav-panel .searchfilter-button {
@@ -3653,16 +4120,6 @@
 
     lineNums.style.minWidth = `max(20px, calc(${String(len).length}ch + 8px))`;
 
-    const children = lineNums.children;
-    while (children.length < len) {
-      const div = document.createElement('div');
-      div.style.position = 'relative';
-      div.style.color = '#a0aec0';
-      div.style.height = '1.4em';
-      lineNums.appendChild(div);
-    }
-
-    // 分帧处理
     let index = 0;
     const step = () => {
       if (token !== _lineChunkToken) return;
@@ -3678,15 +4135,27 @@
       }
 
       const end = Math.min(index + LINE_NUM_CHUNK, len);
+      const frag = document.createDocumentFragment();
       for (let i = index; i < end; i++) {
-        const node = children[i];
+        let node = children[i];
+        if (!node) {
+          node = document.createElement('div');
+          node.style.position = 'relative';
+          node.style.color = '#a0aec0';
+          node.style.height = '1.4em';
+          frag.appendChild(node);
+        }
         const analysis = currentConfig.errorDetection !== false ? cachedAnalyzeRule(lines[i]) : { valid: true, errors: [], warnings: [] };
         const valid = analysis.valid;
         const errMsg = valid ? '' : analysis.errors.join(' | ');
         const html = `${i + 1}${valid ? '' : `<span class="searchfilter-line-error" title="${escHtml(errMsg)}" data-error="${escHtml(errMsg)}" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 10px; background: #edf2f7; z-index: 1; cursor: pointer;">⚠️</span>`}`;
-        if (node.dataset.v === html) continue;
-        node.innerHTML = html;
-        node.dataset.v = html;
+        if (node.dataset.v !== html) {
+          node.innerHTML = html;
+          node.dataset.v = html;
+        }
+      }
+      if (frag.childNodes.length > 0) {
+        lineNums.appendChild(frag);
       }
 
       index = end;
@@ -3843,12 +4312,33 @@
     });
     const duplicateRules = [...ruleCounts.entries()].filter(([, c]) => c > 1);
 
-    const whitelistRules = activeRules
-      .filter(rule => rule.startsWith('@') && !rule.toLowerCase().startsWith('@if') && !HL_STATS_REGEX.test(rule))
-      .map(rule => rule.substring(1).trim());
-
-    const highlightRules = activeRules
-      .filter(rule => HL_STATS_REGEX.test(rule));
+    const whitelistRules = [];
+    const highlightRules = [];
+    activeRules.forEach(rule => {
+      const hlMatch = rule.match(/^@(\d+)/);
+      if (hlMatch) {
+        const N = parseInt(hlMatch[1]);
+        const hlBody = rule.substring(hlMatch[0].length).trim();
+        if (N >= 1 && N <= 5 && hlBody) {
+          try {
+            if (parseRuleWithConditions(hlBody).staticPass) highlightRules.push(rule);
+          } catch (e) {
+            if (currentConfig.debug) console.warn('统计高亮规则解析失败:', rule, e);
+          }
+        }
+        return;
+      }
+      if (!rule.startsWith('@')) return;
+      try {
+        const parsed = parseRuleWithConditions(rule);
+        const isWhitelist = parsed.staticPass
+          && parsed.coreRule.startsWith('@')
+          && (parsed.coreRule.length > 1 || parsed.standaloneExpr || parsed.dynamicConditions.length > 0);
+        if (isWhitelist) whitelistRules.push(rule);
+      } catch (e) {
+        if (currentConfig.debug) console.warn('统计白名单规则解析失败:', rule, e);
+      }
+    });
 
     const engine = getSearchEngine();
     const selector = getContainerSelector(engine);
@@ -3954,7 +4444,7 @@
     if (whitelistRules.length > 0) {
       resultHTML += statsSectionStartHtml(t('whitelistRules'), `${t('stateEnabled')} ${whitelistRules.length} ${t('matchedCountUnit')}`);
       whitelistRules.forEach(rule => {
-        resultHTML += `<div style="font-size: 11px; color: #4a5568; word-break: break-all; font-family: 'Consolas', monospace;">@${escHtml(rule)}</div>`;
+        resultHTML += `<div style="font-size: 11px; color: #4a5568; word-break: break-all; font-family: 'Consolas', monospace;">${escHtml(rule)}</div>`;
       });
       resultHTML += `</div>`;
     }
@@ -4031,22 +4521,35 @@
   // 面板淡出移除
   function fadeOutAndRemovePanel(panel, onClosed) {
     panel.classList.remove('show');
-    panel.addEventListener('transitionend', () => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
       panel.remove();
       if (onClosed) onClosed();
-    }, { once: true });
+    };
+    panel.addEventListener('transitionend', finish, { once: true });
+    setTimeout(finish, 350);
   }
 
   // 点击面板外关闭
-  function bindOutsideClickClose(panel) {
-    const closePanel = () => {
-      fadeOutAndRemovePanel(panel, () => document.removeEventListener('click', closeHandler));
-    };
+  function bindOutsideClickClose(panel, onBeforeClose) {
     const closeHandler = (e) => {
       if (preventPanelClose) return;
       if (!panel.contains(e.target)) closePanel();
     };
-    setTimeout(() => document.addEventListener('click', closeHandler), 200);
+    const closePanel = () => {
+      if (typeof onBeforeClose === 'function') onBeforeClose();
+      document.removeEventListener('click', closeHandler);
+      panel._cleanupClick = null;
+      fadeOutAndRemovePanel(panel);
+    };
+    panel._cleanupClick = () => {
+      document.removeEventListener('click', closeHandler);
+    };
+    setTimeout(() => {
+      if (panel.isConnected) document.addEventListener('click', closeHandler);
+    }, 200);
     return closePanel;
   }
 
@@ -4142,18 +4645,19 @@
             <div style="margin-bottom: 0px;">
                 <div class="compact-row">
                     <span style="font-size: 12px; color: #4a5568;">${t('blockRules')}</span>
-                    <div style="display: flex; gap: 4px;">
-                        <button id="searchfilter-subscribe" class="searchfilter-button searchfilter-button-secondary" style="padding: 3px 8px; border: 1px solid transparent;">${t('subscription')}</button>
-                        <button id="searchfilter-sync" class="searchfilter-button searchfilter-button-success" style="padding: 3px 8px; border: 1px solid transparent;">${t('sync')}</button>
-                        <button id="searchfilter-import-file" class="searchfilter-button searchfilter-button-secondary" style="padding: 3px 8px; border: 1px solid transparent;">${t('import')}</button>
-                        <button id="searchfilter-export-file" class="searchfilter-button searchfilter-button-success" style="padding: 3px 8px; border: 1px solid transparent;">${t('export')}</button>
+                    <div style="display: flex; gap: 4px; flex: 0 0 auto;">
+                        <button id="searchfilter-subscribe" class="searchfilter-button searchfilter-button-secondary" style="padding: 3px 8px; border: 1px solid transparent; min-width: 0 !important; width: auto !important; flex: 0 0 auto !important;">${t('subscription')}</button>
+                        <button id="searchfilter-sync" class="searchfilter-button searchfilter-button-success" style="padding: 3px 8px; border: 1px solid transparent; min-width: 0 !important; width: auto !important; flex: 0 0 auto !important;">${t('sync')}</button>
+                        <button id="searchfilter-import-file" class="searchfilter-button searchfilter-button-secondary" style="padding: 3px 8px; border: 1px solid transparent; min-width: 0 !important; width: auto !important; flex: 0 0 auto !important;">${t('import')}</button>
+                        <button id="searchfilter-export-file" class="searchfilter-button searchfilter-button-success" style="padding: 3px 8px; border: 1px solid transparent; min-width: 0 !important; width: auto !important; flex: 0 0 auto !important;">${t('export')}</button>
                     </div>
                 </div>
                 <div class="rules-container">
                     <div id="searchfilter-line-numbers"></div>
-                    <textarea id="searchfilter-rules" placeholder="${t('placeholder')}" wrap="off">${currentConfig.rules.join('\n')}</textarea>
+                    <textarea id="searchfilter-rules" placeholder="${t('placeholder')}" wrap="off">${escHtml(currentConfig.rules.join('\n'))}</textarea>
                     <div id="searchfilter-scroll-top" class="searchfilter-scroll-btn" style="top: 2px;">⬆️</div>
                     <div id="searchfilter-scroll-bottom" class="searchfilter-scroll-btn" style="bottom: 1px;">⬇️</div>
+                </div>
             </div>
             
             <div style="display: flex; gap: 6px; margin-top: 8px;" id="searchfilter-panel-footer">
@@ -4208,14 +4712,107 @@
     document.getElementById('searchfilter-import-file').onclick = importRulesFromFile;
     document.getElementById('searchfilter-export-file').onclick = exportRulesToFile;
 
-    document.getElementById('searchfilter-scroll-top').onclick = () => textarea.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
-    document.getElementById('searchfilter-scroll-bottom').onclick = () => textarea.scrollTo({
-      top: textarea.scrollHeight,
-      behavior: 'smooth'
-    });
+    const COMMENT_HEADING_REGEX = /^\s*#\s+\S+/;
+
+    // 快速跳转
+    function findCommentLineIndices(lines) {
+      const indices = [];
+      for (let i = 0; i < lines.length; i++) {
+        if (COMMENT_HEADING_REGEX.test(lines[i])) {
+          indices.push(i);
+        }
+      }
+      return indices;
+    }
+
+    function jumpToComment(direction) {
+      const text = textarea.value;
+      const lines = text.split('\n');
+      const commentIndices = findCommentLineIndices(lines);
+      if (!commentIndices.length) return;
+
+      const cursorPos = textarea.selectionStart || 0;
+      let currentLineIndex = text.substring(0, cursorPos).split('\n').length - 1;
+
+      let targetLineIndex = -1;
+      if (direction === 'prev') {
+        if (currentLineIndex === 0) {
+          targetLineIndex = lines.length - 1;
+        } else {
+          for (let i = commentIndices.length - 1; i >= 0; i--) {
+            if (commentIndices[i] < currentLineIndex) {
+              targetLineIndex = commentIndices[i];
+              break;
+            }
+          }
+          if (targetLineIndex === -1) {
+            targetLineIndex = lines.length - 1;
+          }
+        }
+      } else {
+        for (let i = 0; i < commentIndices.length; i++) {
+          if (commentIndices[i] > currentLineIndex) {
+            targetLineIndex = commentIndices[i];
+            break;
+          }
+        }
+        if (targetLineIndex === -1) {
+          targetLineIndex = commentIndices[0];
+        }
+      }
+
+      if (targetLineIndex === -1) return;
+
+      let targetPos = 0;
+      for (let i = 0; i < targetLineIndex; i++) {
+        targetPos += lines[i].length + 1;
+      }
+
+      if (document.activeElement === textarea) {
+        textarea.focus({ preventScroll: true });
+      }
+      textarea.setSelectionRange(targetPos, targetPos);
+
+      const computedLineHeight = parseFloat(window.getComputedStyle(textarea).lineHeight) || 15.4;
+      const targetScrollTop = Math.max(0, targetLineIndex * computedLineHeight - (textarea.clientHeight / 2) + computedLineHeight);
+      textarea.scrollTo({
+        top: targetScrollTop,
+        behavior: 'smooth'
+      });
+      lineNums.scrollTo({
+        top: targetScrollTop,
+        behavior: 'smooth'
+      });
+    }
+
+    const bindScrollBtn = (id, direction) => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      let lastTouchTime = 0;
+      const handleJump = (e) => {
+        if (e) {
+          if (e.cancelable) e.preventDefault();
+          e.stopPropagation();
+        }
+        jumpToComment(direction);
+      };
+      btn.addEventListener('touchstart', (e) => {
+        if (e.cancelable) e.preventDefault();
+        e.stopPropagation();
+        lastTouchTime = Date.now();
+        handleJump(e);
+      }, { passive: false });
+      btn.addEventListener('mousedown', (e) => {
+        if (e.cancelable) e.preventDefault();
+        e.stopPropagation();
+      });
+      btn.onclick = (e) => {
+        if (Date.now() - lastTouchTime < 400) return;
+        handleJump(e);
+      };
+    };
+    bindScrollBtn('searchfilter-scroll-top', 'prev');
+    bindScrollBtn('searchfilter-scroll-bottom', 'next');
 
     // 悬浮球大小滑条
     const sizeSlider = panel.querySelector('#searchfilter-bubble-size-slider');
@@ -4274,7 +4871,10 @@
     const blockConfirm = document.getElementById('searchfilter-block-confirm').checked;
 
     const rawLines = rulesText.split('\n');
-    currentConfig.rules = filterValidRuleLines(rawLines);
+    const userRules = filterValidRuleLines(rawLines);
+
+    currentConfig.rules = userRules;
+
     currentConfig.enabled = enabled;
     currentConfig.showCount = showCount;
     currentConfig.debug = debug;
@@ -4290,13 +4890,13 @@
   }
 
   // 高亮面板
-    function showHighlightColorPanel() {
+  function showHighlightColorPanel() {
     const existing = document.getElementById('searchfilter-hlcolor-panel');
     if (existing) {
-      existing.dispatchEvent(new CustomEvent('searchfilter-color-close'));
+      if (typeof existing._cleanupClick === 'function') existing._cleanupClick();
       existing.remove();
       return;
-      }
+    }
 
     function hsvToRgb(h, s, v) {
       h /= 360;
@@ -4341,29 +4941,30 @@
     const panel = createPanel('searchfilter-hlcolor-panel', 'auto; max-width: 350px');
 
     const colors = currentConfig.highlightColors || {};
+    const sanitizeHex = (val, fallback) => (/^#[0-9A-Fa-f]{6}$/.test(String(val || '')) ? String(val).toUpperCase() : fallback);
     let rowsHtml = '';
     for (let i = 1; i <= 5; i++) {
-      const hex = (colors[i] || '#CE2029').toUpperCase();
+      const hex = sanitizeHex(colors[i], '#CE2029');
       rowsHtml += `<div class="hlcolor-row">
         <label>@${i}</label>
-        <span class="hlcolor-preview" id="hlcolor-preview-${i}" style="background:${hex}"></span>
-        <input type="text" id="hlcolor-input-${i}" value="${hex}" placeholder="#RRGGBB" maxlength="7">
+        <span class="hlcolor-preview" id="hlcolor-preview-${i}" style="background:${escHtml(hex)}"></span>
+        <input type="text" id="hlcolor-input-${i}" value="${escHtml(hex)}" placeholder="#RRGGBB" maxlength="7">
       </div>`;
     }
 
-    const defaultHex = (colors[1] || '#CE2029').toUpperCase();
+    const defaultHex = sanitizeHex(colors[1], '#CE2029');
     const [ir, ig, ib] = hexToRgb(defaultHex);
     let [currentHue, currentSat, currentVal] = rgbToHsv(ir, ig, ib);
 
     panel.innerHTML = `
-      <h3 style="margin:0 0 3px;font-size:13px;color:#2d3748;font-weight:600;">${t('hlColorTitle')}</h3>
+      <h3 style="margin:0 0 3px;font-size:13px;color:#2d3748;font-weight:600;">${escHtml(t('hlColorTitle'))}</h3>
       <div style="display:flex;gap:2px;align-items:stretch;">
         <div id="hlcolor-left" style="flex:0 0 auto;display:flex;flex-direction:column;height:132px;">
           ${rowsHtml}
           <div style="display:flex;align-items:center;gap:4px;margin-top:1px;">
             <span style="min-width:20px;font-size:12px;color:#4a5568;font-weight:600;">🎨</span>
-            <span id="hlcolor-current-preview" style="width:12px;height:12px;border-radius:2px;border:1px solid #e2e8f0;background:${defaultHex};flex-shrink:0;"></span>
-            <span id="hlcolor-code-text" style="font-size:11px;font-family:'Consolas',monospace;padding:2px 4px;background:#f7fafc;border-radius:3px;border:1px solid #e2e8f0;width:70px;flex:none;text-align:center;">${defaultHex}</span>
+            <span id="hlcolor-current-preview" style="width:12px;height:12px;border-radius:2px;border:1px solid #e2e8f0;background:${escHtml(defaultHex)};flex-shrink:0;"></span>
+            <span id="hlcolor-code-text" style="font-size:11px;font-family:'Consolas',monospace;padding:2px 4px;background:#f7fafc;border-radius:3px;border:1px solid #e2e8f0;width:70px;flex:none;text-align:center;">${escHtml(defaultHex)}</span>
           </div>
         </div>
         <div class="hlcolor-picker-wrapper" style="display:flex;gap:2px;align-items:stretch;flex-shrink:0;">
@@ -4372,9 +4973,9 @@
         </div>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:5px;">
-        <button id="hlcolor-save" class="searchfilter-button searchfilter-button-primary" style="flex:1;">${t('save')}</button>
-        <button id="hlcolor-reset" class="searchfilter-button searchfilter-button-secondary" style="flex:1;">${t('hlColorReset')}</button>
-        <button id="hlcolor-cancel" class="searchfilter-button searchfilter-button-secondary" style="flex:1;">${t('cancel')}</button>
+        <button id="hlcolor-save" class="searchfilter-button searchfilter-button-primary" style="flex:1;">${escHtml(t('save'))}</button>
+        <button id="hlcolor-reset" class="searchfilter-button searchfilter-button-secondary" style="flex:1;">${escHtml(t('hlColorReset'))}</button>
+        <button id="hlcolor-cancel" class="searchfilter-button searchfilter-button-secondary" style="flex:1;">${escHtml(t('cancel'))}</button>
       </div>
     `;
 
@@ -4435,7 +5036,6 @@
     }
 
     const svCanvas = document.getElementById('hlcolor-sv-canvas');
-    let svDragging = false;
 
     function onSVMove(clientX, clientY) {
       const rect = svCanvas.getBoundingClientRect();
@@ -4446,14 +5046,37 @@
       updatePickedColor();
     }
 
-    svCanvas.addEventListener('mousedown', (e) => { svDragging = true; onSVMove(e.clientX, e.clientY); });
-    const onSVMouseMove = (e) => { if (svDragging) onSVMove(e.clientX, e.clientY); };
-    const onSVMouseUp = () => { svDragging = false; };
-    document.addEventListener('mousemove', onSVMouseMove);
-    document.addEventListener('mouseup', onSVMouseUp);
+    svCanvas.addEventListener('mousedown', (e) => {
+      onSVMove(e.clientX, e.clientY);
+      const onSVMouseMove = (me) => onSVMove(me.clientX, me.clientY);
+      const onSVMouseUp = () => {
+        document.removeEventListener('mousemove', onSVMouseMove);
+        document.removeEventListener('mouseup', onSVMouseUp);
+      };
+      document.addEventListener('mousemove', onSVMouseMove);
+      document.addEventListener('mouseup', onSVMouseUp);
+    });
+
+    svCanvas.addEventListener('touchstart', (e) => {
+      if (!e.touches || !e.touches[0]) return;
+      e.preventDefault();
+      onSVMove(e.touches[0].clientX, e.touches[0].clientY);
+      const onSVTouchMove = (te) => {
+        if (!te.touches || !te.touches[0]) return;
+        te.preventDefault();
+        onSVMove(te.touches[0].clientX, te.touches[0].clientY);
+      };
+      const onSVTouchEnd = () => {
+        document.removeEventListener('touchmove', onSVTouchMove);
+        document.removeEventListener('touchend', onSVTouchEnd);
+        document.removeEventListener('touchcancel', onSVTouchEnd);
+      };
+      document.addEventListener('touchmove', onSVTouchMove, { passive: false });
+      document.addEventListener('touchend', onSVTouchEnd);
+      document.addEventListener('touchcancel', onSVTouchEnd);
+    }, { passive: false });
 
     const hueCanvas = document.getElementById('hlcolor-hue-canvas');
-    let hueDragging = false;
 
     function onHueMove(clientY) {
       const rect = hueCanvas.getBoundingClientRect();
@@ -4463,11 +5086,35 @@
       updatePickedColor();
     }
 
-    hueCanvas.addEventListener('mousedown', (e) => { hueDragging = true; onHueMove(e.clientY); });
-    const onHueMouseMove = (e) => { if (hueDragging) onHueMove(e.clientY); };
-    const onHueMouseUp = () => { hueDragging = false; };
-    document.addEventListener('mousemove', onHueMouseMove);
-    document.addEventListener('mouseup', onHueMouseUp);
+    hueCanvas.addEventListener('mousedown', (e) => {
+      onHueMove(e.clientY);
+      const onHueMouseMove = (me) => onHueMove(me.clientY);
+      const onHueMouseUp = () => {
+        document.removeEventListener('mousemove', onHueMouseMove);
+        document.removeEventListener('mouseup', onHueMouseUp);
+      };
+      document.addEventListener('mousemove', onHueMouseMove);
+      document.addEventListener('mouseup', onHueMouseUp);
+    });
+
+    hueCanvas.addEventListener('touchstart', (e) => {
+      if (!e.touches || !e.touches[0]) return;
+      e.preventDefault();
+      onHueMove(e.touches[0].clientY);
+      const onHueTouchMove = (te) => {
+        if (!te.touches || !te.touches[0]) return;
+        te.preventDefault();
+        onHueMove(te.touches[0].clientY);
+      };
+      const onHueTouchEnd = () => {
+        document.removeEventListener('touchmove', onHueTouchMove);
+        document.removeEventListener('touchend', onHueTouchEnd);
+        document.removeEventListener('touchcancel', onHueTouchEnd);
+      };
+      document.addEventListener('touchmove', onHueTouchMove, { passive: false });
+      document.addEventListener('touchend', onHueTouchEnd);
+      document.addEventListener('touchcancel', onHueTouchEnd);
+    }, { passive: false });
 
     function updatePreview(i) {
       const input = document.getElementById(`hlcolor-input-${i}`);
@@ -4522,17 +5169,9 @@
     };
 
     const closePanel = bindOutsideClickClose(panel);
-    const cleanupColorListeners = () => {
-      document.removeEventListener('mousemove', onSVMouseMove);
-      document.removeEventListener('mouseup', onSVMouseUp);
-      document.removeEventListener('mousemove', onHueMouseMove);
-      document.removeEventListener('mouseup', onHueMouseUp);
-    };
-    panel.addEventListener('searchfilter-color-close', cleanupColorListeners, { once: true });
 
     document.getElementById('hlcolor-cancel').onclick = (e) => {
       e.stopPropagation();
-      cleanupColorListeners();
       closePanel();
     };
   }
@@ -4555,6 +5194,9 @@
       const ch = text[i];
       if (ch === '\\') out += '\\\\';
       else if (ch === '\'') out += '\\\'';
+      else if (ch === '\n') out += '\\n';
+      else if (ch === '\r') out += '\\r';
+      else if (ch === '\t') out += '\\t';
       else out += ch;
     }
     return out;
@@ -4613,7 +5255,8 @@
       if (key === 'other') { errors.push(t('selectorReservedKey', { key })); continue; }
       if (!/^[A-Za-z0-9_-]+$/.test(key)) { errors.push(t('selectorInvalidKey', { key })); continue; }
       if (!def || typeof def !== 'object' || Array.isArray(def)) { errors.push(t('selectorFieldRequired', { key, field: 'match' })); continue; }
-      if (def.disabled === true) continue;
+      if (def.disabled === true || def.disable === true) continue;
+      if ((def.disabled === false || def.disable === false) && Object.keys(def).every(k => k === 'disabled' || k === 'disable')) continue;
       if (typeof def.match === 'string' && def.match) {
         try { new RegExp(def.match); } catch (e) { errors.push(t('selectorInvalidRegex', { key })); }
       } else if (def.match && typeof def.match === 'object' && typeof def.match.source === 'string' && def.match.source) {
@@ -4680,10 +5323,16 @@
       if (key === 'other') continue;
       const def = config[key];
       if (!def || typeof def !== 'object' || Array.isArray(def)) continue;
-      if (def.disabled === true) { out[key] = { disabled: true }; continue; }
+      if (def.disabled === true || def.disable === true) { out[key] = { disabled: true }; continue; }
+      const rest = { ...def };
+      if (rest.disable !== undefined) {
+        if (rest.disabled === undefined) rest.disabled = rest.disable;
+        delete rest.disable;
+      }
+      if (rest.disabled === false && Object.keys(rest).every(k => k === 'disabled')) continue;
       const builtin = SELECTORS[key];
-      if (!builtin) { out[key] = def; continue; }
-      if (!sameSelectorDef(def, builtin)) out[key] = def;
+      if (!builtin) { out[key] = rest; continue; }
+      if (!sameSelectorDef(rest, builtin)) out[key] = rest;
     }
     return out;
   }
@@ -4861,6 +5510,7 @@
     hideStatsPanel();
     const existing = document.getElementById('searchfilter-selector-panel');
     if (existing) {
+      if (typeof existing._cleanupClick === 'function') existing._cleanupClick();
       existing.remove();
       return;
     }
@@ -5029,14 +5679,31 @@
     return rules;
   }
 
+  // 应用云端订阅
+  function applyCloudSubscriptions(subscriptions) {
+    if (!Array.isArray(subscriptions)) return;
+    const existing = getSubscriptions();
+    const merged = subscriptions.map(s => {
+      if (!s || typeof s !== 'object') return s;
+      const local = existing.find(e => e && e.url === s.url);
+      return {
+        ...s,
+        rules: Array.isArray(local && local.rules) ? local.rules : (Array.isArray(s.rules) ? s.rules : []),
+        name: s.name !== undefined ? s.name : (local && local.name)
+      };
+    });
+    saveSubscriptions(merged.slice(0, MAX_SUBSCRIPTIONS));
+  }
+
   // 订阅管理
-  function gmRequest(method, url, { headers, data, allow404 = false } = {}) {
+  function gmRequest(method, url, { headers, data, allow404 = false, timeout = 30000 } = {}) {
     return new Promise((resolve, reject) => {
       GM_xmlhttpRequest({
         method,
         url,
         headers,
         data,
+        timeout,
         onload: (resp) => {
           if (resp.status >= 200 && resp.status < 300) resolve(resp);
           else if (allow404 && resp.status === 404) resolve(resp);
@@ -5049,12 +5716,14 @@
   }
 
   // 同步配置处理
-  function buildSyncPayload() {
-    const { rules, bubbleState, bubbleSize, ...settings } = currentConfig;
+  function buildSyncPayload(syncedAt = Date.now()) {
+    const stored = GM_getValue(CONFIG_KEY);
+    const base = (stored && typeof stored === 'object' && !Array.isArray(stored)) ? stored : currentConfig;
+    const { rules, bubbleState, bubbleSize, ...settings } = base;
     const payload = {
       ...settings,
       subscriptions: getSubscriptions().map(s => ({ url: s.url, enabled: s.enabled, lastUpdate: s.lastUpdate })),
-      syncedAt: Date.now()
+      syncedAt
     };
     if (GM_getValue(WEBDAV_SYNC_SELECTORS_KEY, false)) {
       payload.selectors = getUserSelectors();
@@ -5076,10 +5745,23 @@
     return { config: null, restLines: lines };
   }
 
+  function safeBase64Encode(str) {
+    try {
+      const bytes = new TextEncoder().encode(str);
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return btoa(binary);
+    } catch (e) {
+      return btoa(unescape(encodeURIComponent(str)));
+    }
+  }
+
   // WebDAV请求
   function getWebDAVRequest(config) {
     const headers = {};
-    if (config.username) headers['Authorization'] = 'Basic ' + btoa(`${config.username}:${config.password}`);
+    if (config.username) headers['Authorization'] = 'Basic ' + safeBase64Encode(`${config.username}:${config.password}`);
     return {
       fullUrl: config.url.replace(/\/$/, '') + '/' + config.filename,
       headers
@@ -5087,10 +5769,49 @@
   }
 
   // 配置头上传
-  function buildUploadContent(content) {
+  function buildUploadContent(content, syncedAt = Date.now()) {
     return GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)
-      ? '# ScriptConfig:' + JSON.stringify(buildSyncPayload()) + '\n' + content
+      ? '# ScriptConfig:' + JSON.stringify(buildSyncPayload(syncedAt)) + '\n' + content
       : content;
+  }
+
+  // 提取YAML
+  function extractYamlRuleItems(lines) {
+    let hasSection = false;
+    let inSection = false;
+    let name;
+    const items = [];
+    const stripQ = (raw) => {
+      const s = raw.trim();
+      if (s.length > 1 &&
+          ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'")))) {
+        return s.slice(1, -1).trim();
+      }
+      return s;
+    };
+    for (const line of lines) {
+      if (!inSection) {
+        if (/^\s*(?:rules|blacklist)\s*:\s*(?:#.*)?$/.test(line)) {
+          hasSection = true;
+          inSection = true;
+        } else if (name === undefined) {
+          const nm = line.match(/^\s*name\s*:\s*(.+?)\s*$/);
+          if (nm) name = stripQ(nm[1]);
+        }
+        continue;
+      }
+      const s = line.trim();
+      if (!s || s.startsWith('#')) continue;
+      if (/^-\s+/.test(s)) {
+        const item = stripQ(s.replace(/^-\s+/, ''));
+        if (item) items.push(item);
+        continue;
+      }
+      if (s === '-') continue;
+      if (!/^\s/.test(line)) inSection = false;
+    }
+    if (!hasSection || !items.length) return null;
+    return { items, name };
   }
 
   // 解析订阅
@@ -5109,6 +5830,11 @@
         }
         lines = lines.slice(endIndex + 1);
       }
+    }
+    const yaml = extractYamlRuleItems(lines);
+    if (yaml) {
+      if (meta.name === undefined && yaml.name) meta.name = yaml.name;
+      return { lines: yaml.items, meta };
     }
     return { lines, meta };
   }
@@ -5142,18 +5868,26 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
   const validRules = collectSubscriptionRules(lines);
 
   const subs = getSubscriptions();
-    const existingIndex = subs.findIndex(s => s.url === url);
-    const subData = {
-      url,
-      enabled: true,
-      lastUpdate: Date.now(),
-      rules: validRules
-    };
-    if (meta.name) subData.name = meta.name;
+  const existing = subs.find(s => s.url === url);
 
-    if (existingIndex >= 0) subs[existingIndex] = subData;
-    else if (subs.length < MAX_SUBSCRIPTIONS) subs.push(subData);
-    saveSubscriptions(subs.slice(0, MAX_SUBSCRIPTIONS));
+  const isHtmlResponse = /^\s*<!DOCTYPE\s+html|^\s*<html[\s>]/i.test(content);
+  if (isHtmlResponse || (validRules.length === 0 && (!content.trim() || /<[a-z][\s\S]*>/i.test(content)))) {
+    throw new Error(t('subImportFailed'));
+  }
+
+  const existingIndex = subs.findIndex(s => s.url === url);
+  const subData = {
+    url,
+    enabled: true,
+    lastUpdate: Date.now(),
+    rules: validRules
+  };
+  if (meta.name) subData.name = meta.name;
+  else if (existing && existing.name) subData.name = existing.name;
+
+  if (existingIndex >= 0) subs[existingIndex] = subData;
+  else if (subs.length < MAX_SUBSCRIPTIONS) subs.push(subData);
+  saveSubscriptions(subs.slice(0, MAX_SUBSCRIPTIONS));
 
     if (showAlerts) alert(t('subscriptionSuccess', {
       count: validRules.length
@@ -5168,6 +5902,7 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
     hideStatsPanel();
     const existing = document.getElementById('searchfilter-subscription-panel');
     if (existing) {
+      if (typeof existing._cleanupClick === 'function') existing._cleanupClick();
       existing.remove();
       return;
     }
@@ -5349,7 +6084,12 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
       }
       subscriptions = getSubscriptions();
       forceReprocessAll();
-      showToast(t('saved'), 'success');
+      const hasErrors = rows.some(r => r.querySelector('.subscription-status-message.error'));
+      if (hasErrors) {
+        showToast(t('subImportFailed'), 'error');
+      } else {
+        showToast(t('saved'), 'success');
+      }
     };
 
     document.getElementById('subscription-cancel').onclick = (e) => {
@@ -5363,6 +6103,7 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
     hideStatsPanel();
     const existing = document.getElementById('searchfilter-webdav-panel');
     if (existing) {
+      if (typeof existing._cleanupClick === 'function') existing._cleanupClick();
       existing.remove();
       return;
     }
@@ -5523,7 +6264,7 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
       const { syncedAt, subscriptions, bubbleState, bubbleSize, selectors, ...settings } = parsedHeader.config;
       Object.assign(currentConfig, settings);
       GM_setValue(CONFIG_KEY, currentConfig);
-      if (subscriptions) saveSubscriptions(subscriptions);
+      if (subscriptions) applyCloudSubscriptions(subscriptions);
       if (selectors && typeof selectors === 'object' && !Array.isArray(selectors) && GM_getValue(WEBDAV_SYNC_SELECTORS_KEY, false)) {
         GM_setValue(SELECTORS_KEY, selectors);
         _selectorStoreSignature = getSelectorStoreSignature();
@@ -5532,20 +6273,20 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
       }
     }
     const newRules = parsedHeader.restLines.map(r => r.trim()).filter(r => r);
+    currentConfig.rules = newRules;
+    persistConfig();
     const textarea = document.getElementById('searchfilter-rules');
     if (textarea) {
       textarea.value = newRules.join('\n');
       updateLineNumbers();
-    } else {
-      currentConfig.rules = newRules;
-      persistConfig();
-      forceReprocessAll();
     }
+    forceReprocessAll();
     GM_setValue(WEBDAV_LAST_SYNC_KEY, Date.now());
   }
 
   // 去重合并同步
   async function performAutoWebDAVSync(config) {
+    adoptStoredConfigIfNewer();
     const { fullUrl, headers } = getWebDAVRequest(config);
 
     const resp = await gmRequest('GET', fullUrl, { headers, allow404: true });
@@ -5553,6 +6294,8 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
     let cloudRules = [];
     let cloudConfig = null;
     let cloudTime = 0;
+    let cloudETag = '';
+    let cloudLastMod = '';
     if (resp.status !== 404) {
       const content = resp.responseText;
       const parsedHeader = parseSyncHeader(content);
@@ -5564,35 +6307,60 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
       if (parsedHeader.config && typeof parsedHeader.config.syncedAt === 'number') {
         headerTime = parsedHeader.config.syncedAt;
       }
-      const lastModMatch = resp.responseHeaders.match(/last-modified:\s*(.*)/i);
-      cloudTime = headerTime || (lastModMatch ? Date.parse(lastModMatch[1]) : 0);
+      let lastModTime = 0;
+      if (resp.responseHeaders && typeof resp.responseHeaders === 'string') {
+        const lastModMatch = resp.responseHeaders.match(/last-modified:\s*(.*)/i);
+        if (lastModMatch) {
+          cloudLastMod = lastModMatch[1].trim();
+          lastModTime = Date.parse(cloudLastMod) || 0;
+        }
+        const etagMatch = resp.responseHeaders.match(/etag:\s*(.*)/i);
+        if (etagMatch) {
+          cloudETag = etagMatch[1].trim();
+        }
+      }
+      cloudTime = headerTime || lastModTime || 0;
       if (isNaN(cloudTime)) cloudTime = 0;
     }
 
     const localTime = GM_getValue(LOCAL_LAST_MODIFIED_KEY, 0);
     const localRules = currentConfig.rules || [];
-    const mergedRules = [...new Map([...localRules, ...cloudRules].map(r => [stripRuleComment(r), r])).values()];
 
-    if (localTime > cloudTime) {
-      console.log('[自动 WebDAV] 本地规则较新，合并后上传...');
-      const uploadData = buildUploadContent(mergedRules.join('\n'));
-      await gmRequest('PUT', fullUrl, { headers, data: uploadData });
-    }
-
-    if (cloudConfig && GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)) {
-      const { syncedAt, subscriptions, bubbleState, bubbleSize, selectors, ...settings } = cloudConfig;
-      Object.assign(currentConfig, settings);
-      if (subscriptions) saveSubscriptions(subscriptions);
-      if (selectors && typeof selectors === 'object' && !Array.isArray(selectors) && GM_getValue(WEBDAV_SYNC_SELECTORS_KEY, false)) {
-        GM_setValue(SELECTORS_KEY, selectors);
-        _selectorStoreSignature = getSelectorStoreSignature();
-        resetSelectorCache();
-        refreshEngineSite();
+    if (cloudTime > localTime) {
+      if (cloudConfig) {
+        const { syncedAt, subscriptions, bubbleState, bubbleSize, selectors, ...settings } = cloudConfig;
+        Object.assign(currentConfig, settings);
+        if (subscriptions) applyCloudSubscriptions(subscriptions);
+        if (selectors && typeof selectors === 'object' && !Array.isArray(selectors) && GM_getValue(WEBDAV_SYNC_SELECTORS_KEY, false)) {
+          GM_setValue(SELECTORS_KEY, selectors);
+          _selectorStoreSignature = getSelectorStoreSignature();
+          resetSelectorCache();
+          refreshEngineSite();
+        }
+      }
+      currentConfig.rules = cloudRules;
+      persistConfig(false);
+      if (cloudTime > 0) {
+        GM_setValue(LOCAL_LAST_MODIFIED_KEY, cloudTime);
+      }
+    } else if (localTime > cloudTime || resp.status === 404) {
+      console.log('[自动 WebDAV] 本地配置较新，上传中...');
+      const uploadedTime = Date.now();
+      const uploadData = buildUploadContent(localRules.join('\n'), uploadedTime);
+      const putHeaders = { ...headers };
+      if (resp.status !== 404) {
+        if (cloudETag) putHeaders['If-Match'] = cloudETag;
+        else if (cloudLastMod) putHeaders['If-Unmodified-Since'] = cloudLastMod;
+      }
+      try {
+        await gmRequest('PUT', fullUrl, { headers: putHeaders, data: uploadData });
+        GM_setValue(LOCAL_LAST_MODIFIED_KEY, uploadedTime);
+      } catch (err) {
+        console.warn('[自动 WebDAV] 上传冲突或失败:', err.message);
+        return;
       }
     }
 
-    currentConfig.rules = mergedRules;
-    persistConfig(false);
     forceReprocessAll();
     GM_setValue(WEBDAV_LAST_SYNC_KEY, Date.now());
   }
@@ -5841,6 +6609,40 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
       _searchFormHandler = () => setTimeout(forceReprocessAll, 800);
       searchForm.addEventListener('submit', _searchFormHandler);
     }
+
+    // 切换感知
+    if (!_urlChangeHandler) {
+      let lastHref = location.href;
+      let lastCategory = getSearchCategory();
+      _urlChangeHandler = () => {
+        const currentHref = location.href;
+        const currentCat = getSearchCategory();
+        if (currentHref !== lastHref || currentCat !== lastCategory) {
+          lastHref = currentHref;
+          lastCategory = currentCat;
+          resetSelectorCache();
+          refreshEngineSite();
+        }
+      };
+      window.addEventListener('popstate', _urlChangeHandler);
+      window.addEventListener('hashchange', _urlChangeHandler);
+
+      const wrapHistoryMethod = (method) => {
+        const orig = history[method];
+        if (typeof orig === 'function') {
+          history[method] = function(...args) {
+            const ret = orig.apply(this, args);
+            try {
+              window.dispatchEvent(new Event('searchfilter:locationchange'));
+            } catch (e) {}
+            return ret;
+          };
+        }
+      };
+      wrapHistoryMethod('pushState');
+      wrapHistoryMethod('replaceState');
+      window.addEventListener('searchfilter:locationchange', _urlChangeHandler);
+    }
   }
 
   function teardownEngineSite() {
@@ -5859,6 +6661,8 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
     _searchForm = null;
     _searchFormHandler = null;
     document.querySelectorAll('.searchfilter-quick-block').forEach(btn => btn.remove());
+    const confirmPanel = document.getElementById('searchfilter-block-confirm-dialog');
+    if (confirmPanel) confirmPanel.remove();
     document.querySelectorAll('[data-blocker-yandex-parent]').forEach(el => {
       el.style.display = '';
       el.removeAttribute('data-blocker-yandex-parent');
@@ -5906,12 +6710,35 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
     return true;
   }
 
+  function adoptStoredConfigIfNewer() {
+    const stored = GM_getValue(CONFIG_KEY);
+    if (!stored || typeof stored !== 'object' || Array.isArray(stored)) return false;
+    try {
+      if (JSON.stringify(stored) === JSON.stringify(currentConfig)) return false;
+    } catch (e) {
+      return false;
+    }
+    currentConfig = stored;
+    return true;
+  }
+
+  // 多标签页感知
+  function checkExternalConfigChange() {
+    if (document.getElementById('searchfilter-panel')) return false;
+    if (!adoptStoredConfigIfNewer()) return false;
+    forceReprocessAll();
+    return true;
+  }
+
   function init() {
     migrateSubscriptions();
     pruneUserSelectors();
     _selectorStoreSignature = getSelectorStoreSignature();
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') checkExternalSelectorChange();
+      if (document.visibilityState === 'visible') {
+        checkExternalSelectorChange();
+        checkExternalConfigChange();
+      }
     });
 
     startBackgroundSync();
