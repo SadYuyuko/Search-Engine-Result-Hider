@@ -81,6 +81,7 @@ global.document = {
 const fns = ['normalizeSelectorList', 'getUserSelectors', 'getSelectors', 'resetSelectorCache', 'getSearchEngine', 'isEngineSite', 'getContainerSelector', 'isValidCssSelector', 'hasPseudoElement', 'validateUserSelectors', 'getInvalidRegexFlags', 'regexSourceToLiteralText', 'escapeJsString', 'matchDefToParts', 'serializeSelectors', 'parseSelectorText', 'sameSelectorDef', 'diffUserSelectors', 'pruneUserSelectors'].map((n) => extractFn(src, n));
 
 const body = `
+const WEBDAV_SYNC_SELECTORS_KEY = 'searchfilter_webdav_sync_selectors';
 const SELECTORS_KEY = 'searchfilter_selectors';
 const SUPPORTED_REGEX_FLAGS = 'imsu';
 const SELECTORS = ${selectorsObjectText};
