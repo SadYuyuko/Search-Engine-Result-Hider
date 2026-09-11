@@ -6,6 +6,13 @@
       snippets: ['.b_caption p', '.b_snippet', '.b_paractl p', '.b_lineclamp2'],
       links: 'a[href]',
     },
+    google_scholar: {
+      match: /(?:^|\.)scholar\.google\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})$/,
+      containers: 'div.gs_r.gs_or.gs_scl',
+      titles: ['h3.gs_rt a', 'h3.gs_rt', '.gs_rt'],
+      snippets: ['.gs_rs'],
+      links: ['h3.gs_rt a[href]', 'a[href]'],
+    },
     google: {
       match: /(?:^|\.)google\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})$/,
       containers: 'div.g, div.MjjYud',
@@ -43,5 +50,8 @@
     },
     other: {
       containers: '',
+      titles: [],
+      snippets: [],
+      links: 'a[href]',
     }
   };
