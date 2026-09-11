@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      8.0.0
+// @version      8.0.1
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -14,6 +14,8 @@
 // @license       GPL-3.0
 // @match        *://*/*
 // @connect      *
+// @connect      raw.githubusercontent.com
+// @connect      dav.jianguoyun.com
 // @noframes
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -52,6 +54,7 @@
   const LOCAL_LAST_MODIFIED_KEY = 'searchfilter_local_last_modified';
   const WEBDAV_AUTO_SYNC_KEY = 'searchfilter_webdav_auto_sync';
   const WEBDAV_SYNC_CONFIG_KEY = 'searchfilter_webdav_sync_config';
+  const WEBDAV_SYNC_SELECTORS_KEY = 'searchfilter_webdav_sync_selectors';
   const SELECTORS_KEY = 'searchfilter_selectors';
   const HL_STATS_REGEX = /^@\d+/;
   const MAX_SUBSCRIPTIONS = 100;
@@ -354,8 +357,8 @@
       condExprError: '@if 表达式语法错误: {part}',
       invalidUrlWildcard: 'URL 通配符格式无效: {rule}',
       menuCustomSelectors: '🖋️ 自定义选择器',
-      selectorPanelTitle: '自定义选择器',
-      selectorHint: '如果不知道有什么用，请勿修改',
+      selectorPanelTitle: '选择器',
+      selectorHint: '如果不知道有什么用，请勿修改。',
       selectorJsonError: '解析失败，请检查格式',
       selectorReservedKey: '保留键不可使用: {key}',
       selectorInvalidKey: '引擎ID仅允许字母/数字/_/-: {key}',
@@ -465,8 +468,8 @@
       condExprError: 'Syntax error in @if expression: {part}',
       invalidUrlWildcard: 'Invalid URL wildcard format: {rule}',
       menuCustomSelectors: '🖋️ Custom Selectors',
-      selectorPanelTitle: 'Custom Selectors',
-      selectorHint: 'If you don\'t know what it is for, do not modify it',
+      selectorPanelTitle: 'Selectors',
+      selectorHint: 'If you don\'t know what it is for, do not modify it.',
       selectorJsonError: 'Failed to parse, check the format',
       selectorReservedKey: 'Reserved key not allowed: {key}',
       selectorInvalidKey: 'Engine id allows letters/digits/_/- only: {key}',
@@ -2723,7 +2726,8 @@
         }
 
         #searchfilter-webdav-panel #searchfilter-toast-container,
-        #searchfilter-subscription-panel #searchfilter-toast-container {
+        #searchfilter-subscription-panel #searchfilter-toast-container,
+        #searchfilter-selector-panel #searchfilter-toast-container {
             max-width: none;
             width: auto;
             left: 0;
@@ -2810,7 +2814,6 @@
 
         #searchfilter-webdav-panel h3,
         #searchfilter-subscription-panel h3,
-        #searchfilter-selector-panel h3,
         #searchfilter-hlcolor-panel h3 {
             margin: 0 0 8px 0 !important;
             font-size: 14px !important;
@@ -2820,6 +2823,18 @@
             border: none !important;
             background: transparent !important;
             letter-spacing: normal !important;
+        }
+
+        #searchfilter-selector-panel h3 {
+            margin: 0 !important;
+            font-size: 14px !important;
+            color: inherit !important;
+            font-weight: 600 !important;
+            padding: 0 !important;
+            border: none !important;
+            background: transparent !important;
+            letter-spacing: normal !important;
+            line-height: 1.2 !important;
         }
 
         #searchfilter-webdav-panel .webdav-row {
@@ -4851,11 +4866,19 @@
     }
 
     const panel = createPanel('searchfilter-selector-panel', '320px', '15px');
+    const syncSelectorsEnabled = GM_getValue(WEBDAV_SYNC_SELECTORS_KEY, false);
 
     panel.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                <h3 style="margin:0;font-size:14px;">${t('selectorPanelTitle')}</h3>
-                <div style="display:flex;gap:4px;">
+                <h3 style="margin:0;font-size:14px;line-height:1.2;">${t('selectorPanelTitle')}</h3>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <label style="display:flex !important;align-items:center;font-size:12px;color:#4a5568;cursor:pointer;margin:0;white-space:nowrap;line-height:1;">
+                        <span class="searchfilter-switch">
+                            <input type="checkbox" id="searchfilter-selector-sync" ${syncSelectorsEnabled ? 'checked' : ''}>
+                            <span class="searchfilter-slider"></span>
+                        </span>
+                        <span style="line-height:1;">${t('syncScriptConfig')}</span>
+                    </label>
                     <button id="searchfilter-selector-import" class="searchfilter-button searchfilter-button-secondary" style="padding: 3px 8px; border: 1px solid transparent;">${t('import')}</button>
                     <button id="searchfilter-selector-export" class="searchfilter-button searchfilter-button-success" style="padding: 3px 8px; border: 1px solid transparent;">${t('export')}</button>
                 </div>
@@ -4864,10 +4887,7 @@
             <div class="rules-container" style="height:255px;">
                 <div id="searchfilter-sel-line-numbers"></div>
                 <textarea id="searchfilter-sel-rules" spellcheck="false" wrap="off">${escHtml(serializeSelectors())}</textarea>
-                <div id="searchfilter-sel-scroll-top" class="searchfilter-scroll-btn" style="top: 2px;">⬆️</div>
-                <div id="searchfilter-sel-scroll-bottom" class="searchfilter-scroll-btn" style="bottom: 1px;">⬇️</div>
             </div>
-            <div id="searchfilter-selector-errors" style="display:none;margin-top:6px;padding:6px 8px;background:#fff5f5;color:#c53030;font-size:11px;border-radius:4px;white-space:pre-wrap;word-break:break-all;max-height:80px;overflow-y:auto;"></div>
             <div style="display:flex;gap:6px;margin-top:8px;">
                 <button id="searchfilter-selector-save" class="searchfilter-button searchfilter-button-primary action-button" style="flex:2;">${t('save')}</button>
                 <button id="searchfilter-selector-reset" class="searchfilter-button searchfilter-button-danger action-button" style="flex:1;">${t('hlColorReset')}</button>
@@ -4896,15 +4916,6 @@
       lineNums.scrollTop = textarea.scrollTop;
     });
 
-    document.getElementById('searchfilter-sel-scroll-top').onclick = () => textarea.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
-    document.getElementById('searchfilter-sel-scroll-bottom').onclick = () => textarea.scrollTo({
-      top: textarea.scrollHeight,
-      behavior: 'smooth'
-    });
-
     const applyUserSelectors = (config) => {
       GM_setValue(SELECTORS_KEY, diffUserSelectors(config));
       _selectorStoreSignature = getSelectorStoreSignature();
@@ -4913,10 +4924,12 @@
     };
 
     const showError = (messages) => {
-      const box = document.getElementById('searchfilter-selector-errors');
-      if (!box) return;
-      box.textContent = messages.join('\n');
-      box.style.display = messages.length ? 'block' : 'none';
+      if (!messages || !messages.length) return;
+      showToast(messages.join('\n'), 'error', 5000);
+    };
+
+    document.getElementById('searchfilter-selector-sync').onchange = (e) => {
+      GM_setValue(WEBDAV_SYNC_SELECTORS_KEY, e.target.checked);
     };
 
     document.getElementById('searchfilter-selector-import').onclick = () => {
@@ -4936,7 +4949,7 @@
       }
       const now = new Date();
       const pad = (n) => String(n).padStart(2, '0');
-      const filename = `rules-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.js`;
+      const filename = `selectors-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.js`;
       const blob = new Blob([content], {
         type: 'application/json;charset=utf-8'
       });
@@ -5038,11 +5051,15 @@
   // 同步配置处理
   function buildSyncPayload() {
     const { rules, bubbleState, bubbleSize, ...settings } = currentConfig;
-    return {
+    const payload = {
       ...settings,
       subscriptions: getSubscriptions().map(s => ({ url: s.url, enabled: s.enabled, lastUpdate: s.lastUpdate })),
       syncedAt: Date.now()
     };
+    if (GM_getValue(WEBDAV_SYNC_SELECTORS_KEY, false)) {
+      payload.selectors = getUserSelectors();
+    }
+    return payload;
   }
 
   function parseSyncHeader(content) {
@@ -5503,10 +5520,16 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
     const content = resp.responseText;
     const parsedHeader = parseSyncHeader(content);
     if (parsedHeader.config && GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)) {
-      const { syncedAt, subscriptions, bubbleState, bubbleSize, ...settings } = parsedHeader.config;
+      const { syncedAt, subscriptions, bubbleState, bubbleSize, selectors, ...settings } = parsedHeader.config;
       Object.assign(currentConfig, settings);
       GM_setValue(CONFIG_KEY, currentConfig);
       if (subscriptions) saveSubscriptions(subscriptions);
+      if (selectors && typeof selectors === 'object' && !Array.isArray(selectors) && GM_getValue(WEBDAV_SYNC_SELECTORS_KEY, false)) {
+        GM_setValue(SELECTORS_KEY, selectors);
+        _selectorStoreSignature = getSelectorStoreSignature();
+        resetSelectorCache();
+        refreshEngineSite();
+      }
     }
     const newRules = parsedHeader.restLines.map(r => r.trim()).filter(r => r);
     const textarea = document.getElementById('searchfilter-rules');
@@ -5557,9 +5580,15 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
     }
 
     if (cloudConfig && GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)) {
-      const { syncedAt, subscriptions, bubbleState, bubbleSize, ...settings } = cloudConfig;
+      const { syncedAt, subscriptions, bubbleState, bubbleSize, selectors, ...settings } = cloudConfig;
       Object.assign(currentConfig, settings);
       if (subscriptions) saveSubscriptions(subscriptions);
+      if (selectors && typeof selectors === 'object' && !Array.isArray(selectors) && GM_getValue(WEBDAV_SYNC_SELECTORS_KEY, false)) {
+        GM_setValue(SELECTORS_KEY, selectors);
+        _selectorStoreSignature = getSelectorStoreSignature();
+        resetSelectorCache();
+        refreshEngineSite();
+      }
     }
 
     currentConfig.rules = mergedRules;
