@@ -39,6 +39,7 @@ const fns = [
   'safeRegexTest',
   'stripRuleComment',
   'parseRulesetContent',
+  'extractYamlRuleItems',
   'getInvalidRegexFlags',
   'parseConditionPart',
   'tokenizeCondExpr',
@@ -253,6 +254,10 @@ r = condExpr('url/x/g', 'google');
 r = condExpr('url/example/g', 'google');
 r = condExpr('title/x/g', 'google');
 assert('U15d: title简写非法flags', r.errors && r.errors[0].startsWith('flags:g'));
+r = condExpr('url =~ /[/]/', 'google');
+assert('U16c: url正则字符类内裸斜杠合法', !r.errors && ev(r, 't', 'https://example.com/a/b') === true);
+r = condExpr('url =~ /\\//', 'google');
+assert('U16b: url正则转义斜杠合法', !r.errors && ev(r, 't', 'https://example.com/a/b') === true);
 r = condExpr('url =~ /(/)', 'google');
 assert('U16: url正则无效', r.errors && r.errors[0].startsWith('regex'));
 r = condExpr('url ^= "https://ex" & url $= "/s/"', 'google');
@@ -285,7 +290,7 @@ assert('S7c: 多引擎或(yandex恒假)', r.const === false);
 r = condExpr('$site = "foo"', 'google');
 assert('S8: 未知站点值->静态假(不报错)', r.const === false && !r.errors);
 r = condExpr('$site = google', 'google');
-assert('S9: 值未加引号->unknown', r.errors && r.errors[0].startsWith('unknown'));
+assert('S9: 值未加引号正常识别为合法值', r.const === true);
 r = condExpr('!($site = "yandex")', 'google');
 assert('S10: $site取反', r.const === true);
 r = condExpr('$site = "bing" | $site = "yandex"', 'yandex');
@@ -323,6 +328,7 @@ assert('C14: 无注释原样', m.stripRuleComment('*://x.com/* @if(Google)') ===
 assert('C16: @if后带空格', m.stripRuleComment('*://x.com/* @if (title *= "a") # c') === '*://x.com/* @if (title *= "a")');
 assert('C17: 嵌套@if括号', m.stripRuleComment('*://x.com/* @if((title *= "a" | title *= "b") & !(url *= "c")) # x') === '*://x.com/* @if((title *= "a" | title *= "b") & !(url *= "c"))');
 assert('C18: 引号内转义引号', m.stripRuleComment('*://x.com/* @if(title *= "a\\"b # c") # x') === '*://x.com/* @if(title *= "a\\"b # c")');
+assert('C19: @if内部正则含空格和#不被截断', m.stripRuleComment('*://x.com/* @if(url =~ /foo # bar/) # note') === '*://x.com/* @if(url =~ /foo # bar/)');
 assert('C20: 高亮域名注释', m.stripRuleComment('@1 *://x.com/* # c') === '@1 *://x.com/*');
 
 // ---- host / path / scheme 变量 ----
@@ -429,6 +435,16 @@ const pc6 = m.parseRulesetContent('---\n---\n*://a.com/*\n');
 assert('R6: 空frontmatter', pc6.meta.name === undefined && stripEmpty(pc6.lines).length === 1);
 const pc7 = m.parseRulesetContent('---\nother: value\nname: Multi List\nversion: 2\n---\n*://a.com/*\n');
 assert('R7: name位于多键中间', pc7.meta.name === 'Multi List' && stripEmpty(pc7.lines).length === 1);
+const pc8 = m.parseRulesetContent('name: UB List\nrules:\n  - example.com\n  - \'*://*.example.com/*\'\n  - title/.*ad.*/i\n');
+assert('R8: YAML rules列表提取', pc8.meta.name === 'UB List' && pc8.lines.length === 3 && pc8.lines[0] === 'example.com' && pc8.lines[1] === '*://*.example.com/*' && pc8.lines[2] === 'title/.*ad.*/i');
+const pc9 = m.parseRulesetContent('rules:\n  - /a/i # trailing\n  # full comment\n  - example.com\n');
+assert('R9: YAML注释跳过', pc9.lines.length === 2 && pc9.lines[0] === '/a/i # trailing' && pc9.lines[1] === 'example.com');
+const pc10 = m.parseRulesetContent('blacklist:\n  - *.example.com\nsubscriptions:\n  - url: https://x\n    enabled: true\n');
+assert('R10: blacklist键+后续段截断', pc10.lines.length === 1 && pc10.lines[0] === '*.example.com');
+const pc11 = m.parseRulesetContent('*://a.com/*\nrules:\n');
+assert('R11: 无列表项不启用YAML模式', stripEmpty(pc11.lines).length === 2);
+const pc12 = m.parseRulesetContent('name: Q\nrules:\n  - "*://x.com/*"\n  - \'host $= ".x.com"\'\n');
+assert('R12: 双引号与单引号项', pc12.meta.name === 'Q' && pc12.lines[0] === '*://x.com/*' && pc12.lines[1] === 'host $= ".x.com"');
 
 // ---- uBlacklist 独立 i 修饰符兼容(默认仍忽略大小写)----
 r = condExpr('title *= "KW" i', 'google');
@@ -479,7 +495,7 @@ assert('CAT8: 取反(非图片页)', r.const === true);
 r = condExpr('$category = "foo"', 'google', 'www.google.com', 'web');
 assert('CAT9: 未知类型值->静态假(不报错)', r.const === false && !r.errors);
 r = condExpr('$category = images', 'google');
-assert('CAT10: 值未加引号->unknown', r.errors && r.errors[0].startsWith('unknown'));
+assert('CAT10: 值未加引号正常识别为合法值', r.const === false && !r.errors);
 r = condExpr('$site = "google" & $category = "images"', 'google', 'www.google.com', 'images');
 assert('CAT11: $site与$category同时命中', r.const === true);
 r = condExpr('$site = "google" & $category = "images"', 'google', 'www.google.com', 'web');
@@ -503,6 +519,9 @@ const condTrueCases = [
   '(host $= "a" | title *= "b")',
   'host $= ".example.com" & path *= "/download/"',
   'title *= "example" i | title *= "domain" i',
+  'host = example.com',
+  'scheme = https',
+  'title *= keyword',
 ];
 for (const rule of condTrueCases) {
   assert(`D: 条件表达式识别 ${rule}`, m.looksLikeCondExpr(rule) === true);
@@ -604,6 +623,10 @@ assert('Q3: 引号内 @if 规则校验通过', api.validateRule('*://x.com/* @if
 s = api.stripIfConditions('title/foo@if(bar)/');
 assert('Q5: title 正则体内 @if 不被剥离', s.coreRule === 'title/foo@if(bar)/');
 assert('Q6: title 正则体内 @if 规则校验通过', api.validateRule('title/foo@if(bar)/') === true);
+
+s = api.stripIfConditions('*://example.com/api/@if(test)/*');
+assert('Q5b: URL路径内 @if( 不被误判剥离', s.coreRule === '*://example.com/api/@if(test)/*');
+assert('Q6b: URL路径内 @if( 规则校验通过', api.validateRule('*://example.com/api/@if(test)/*') === true);
 
 s = api.stripIfConditions('*://x.com/* @if(title =~ /a@if(b)/)');
 assert('Q7: 条件正则体内 @if 不产生伪剥离', s.coreRule === '*://x.com/*');
@@ -867,6 +890,60 @@ assert('V14: 高亮越界仍无效', m.analyzeRule('@9 host $= ".example.com"').
 assert('V15: 复合旧写法仍有效', m.analyzeRule('*://*.example.com/* @if(title *= "kw")').valid === true);
 assert('V16: $category规则有效', m.analyzeRule('*://*.amazon.com/* @if($category = "images")').valid === true);
 assert('V17: $category独立表达式有效', m.analyzeRule('$category = "images"').valid === true);
+assert('V18: 高亮+白名单组合无效', m.analyzeRule('@1 @*://*.example.com/*').valid === false);
+assert('V19: 高亮+白名单表达式无效', m.analyzeRule('@1 @host $= ".example.com"').valid === false);
+assert('V20: 高亮+@if仍有效', m.analyzeRule('@1 path $= ".pdf" @if($site = "google")').valid === true);
+
+// ---- @if 检测范围扩大回归(regex/title/text 前缀同样校验) ----
+const exValidCases = [
+  ['E1', '/example\\.(com|net)/ @if(title *= "kw")'],
+  ['E2', '/example\\.com/i @if($site = "google")'],
+  ['E3', 'title/.*kw.*/ @if(title *= "x")'],
+  ['E4', 'title/.*kw.*/i @if($site = "google")'],
+  ['E5', 'text/.*ad.*/ @if($site = "google" | $site = "bing")'],
+  ['E6', '@1 title/.*demo.*/ @if(path *= "/download/")'],
+  ['E7', '@2 /example/ @if(title *= "x" & !(url *= "y"))'],
+  ['E8', '/foo@if(bar)/'],
+  ['E9', 'title/a@if(b)/i'],
+  ['E10', 'title/a[/@if(b)]c/ @if(title *= "x")'],
+  ['E11', 'title/a\\/b/ @if(title *= "x")'],
+  ['E12', 'title/x/i @if(url ^= "https")'],
+  ['E13', '@3 text/x/ @if($category = "images")'],
+  ['E14', '@title/.*kw.*/ @if(title *= "x")'],
+  ['E15', 'title/x/ @if($site = "bing")'],
+  ['E16', 'text/x/ @if(host $= ".example.com")'],
+];
+exValidCases.forEach(([name, rule]) => {
+  const a = m.analyzeRule(rule);
+  assert(name + ': 合法规则不误杀(' + rule + ')', a.valid === true, a.errors);
+});
+const pc1 = m.parseRuleWithConditions('/example\\.(com|net)/ @if(title *= "kw")');
+assert('E1b: 编译保留1个动态条件', pc1.staticPass === true && pc1.dynamicConditions.length === 1);
+const pc2 = m.parseRuleWithConditions('/example\\.com/i @if($site = "google")');
+assert('E2b: $site静态真折叠', pc2.staticPass === true && pc2.dynamicConditions.length === 0 && pc2.coreRule === '/example\\.com/i');
+const pc3 = m.parseRuleWithConditions('title/.*kw.*/ @if(title *= "x")');
+assert('E3b: title规则@if动态条件', pc3.staticPass === true && pc3.dynamicConditions.length === 1);
+const pc4 = m.parseRuleWithConditions('/foo@if(bar)/');
+assert('E8b: 正则体内@if不提取', pc4.staticPass === true && pc4.dynamicConditions.length === 0 && pc4.coreRule === '/foo@if(bar)/');
+const pc5 = m.parseRuleWithConditions('title/a@if(b)/i');
+assert('E9b: title正则体内@if不提取', pc5.staticPass === true && pc5.dynamicConditions.length === 0 && pc5.coreRule === 'title/a@if(b)/i');
+const pc6 = m.parseRuleWithConditions('title/x/ @if($site = "bing")');
+assert('E15b: 静态假$site编译丢弃', pc6.staticPass === false && pc6.dynamicConditions.length === 0);
+
+const exInvalidCases = [
+  ['F1', 'title/x/ @if(foo $= "bar")'],
+  ['F2', '/x/ @if(title *= "a" | )'],
+  ['F3', 'title/x/ @if(title =~ /bad(/)'],
+  ['F4', 'text/x/ @if()'],
+  ['F5', 'title/x/ @if(title *= "a" & )'],
+  ['F6', '@1 /x/ @if(unknownfield = "v")'],
+];
+exInvalidCases.forEach(([name, rule]) => {
+  const a = m.analyzeRule(rule);
+  assert(name + ': 损坏的@if报错(' + rule + ')', a.valid === false && a.errors.length > 0);
+  const pr = m.parseRuleWithConditions(rule);
+  assert(name + 'b: 编译路径同样丢弃', pr.staticPass === false);
+});
 
 m.setEngine('google', 'www.google.com', 'web');
 p = m.parseRuleWithConditions('*://*.amazon.com/* @if($category = "images")');

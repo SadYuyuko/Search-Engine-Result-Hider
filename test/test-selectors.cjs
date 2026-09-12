@@ -33,8 +33,6 @@ function check(name, cond, extra) {
 }
 function assert(name, cond, extra) { check(name, cond, extra); }
 
-// ==== 来源: test-selectors.cjs ====
-await (async () => {
 // SELECTORS 常量块(括号配对提取，不依赖注释)
 function extractObjectLiteral(text, openIdx) {
   let depth = 0, inSQ = false, inDQ = false, inRE = false, inReClass = false;
@@ -57,6 +55,9 @@ function extractObjectLiteral(text, openIdx) {
   }
   throw new Error('unbalanced SELECTORS object literal');
 }
+
+// ==== 来源: test-selectors.cjs ====
+await (async () => {
 const selectorsStart = src.indexOf('const SELECTORS = {');
 if (selectorsStart === -1) throw new Error('SELECTORS block not found');
 const selectorsOpen = src.indexOf('{', selectorsStart);
@@ -120,7 +121,7 @@ const CUSTOM = {
 
 // ---- 默认合并 ----
 check('D1 默认无用户配置时返回内置', api.getSelectors().google.containers === 'div.g, div.MjjYud');
-check('D2 内置键序在前', Object.keys(api.getSelectors()).slice(0, 7).join(',') === ['bing', 'google', 'duckduckgo', 'yandex', 'brave', 'yahoo', 'other'].join(','));
+check('D2 内置键序在前', Object.keys(api.getSelectors()).slice(0, 8).join(',') === ['bing', 'google_scholar', 'google', 'duckduckgo', 'yandex', 'brave', 'yahoo', 'other'].join(','));
 check('D3 getContainerSelector 内置', api.getContainerSelector('bing') === 'li.b_algo, div.b_algo');
 
 // ---- 覆盖内置 ----
@@ -215,6 +216,12 @@ check('U4 新增键与内置主机重叠时用户优先', api.getSearchEngine() 
 check('U5 新增键排在内置同名站点引擎之前', Object.keys(api.getSelectors()).indexOf('mybrave') < Object.keys(api.getSelectors()).indexOf('brave'));
 api.setHost('www.google.com');
 check('U6 未覆盖内置回退正常', api.getSearchEngine() === 'google');
+api.setStore({
+  google: { match: '(?:^|\\.)google\\.', containers: 'div.g' },
+  google_scholar: { match: '(?:^|\\.)scholar\\.google\\.', containers: 'div.gs_r' }
+});
+api.setHost('scholar.google.com');
+check('U7 用户同时配置google和google_scholar时学者优先', api.getSearchEngine() === 'google_scholar');
 
 // ---- href 回退: 内置与自定义hostname模式不参与, 仅自定义路径/URL模式回退 ----
 api.setStore({});
@@ -268,12 +275,40 @@ check('S11 disabled 往返解析无误且校验通过', !R10.errors.length && !!
 check('S12 disabled 往返后 diff 仍保留标记', api.diffUserSelectors(R10.config).yahoo && api.diffUserSelectors(R10.config).yahoo.disabled === true);
 const R11 = api.parseSelectorText('z1: { disabled: true }');
 check('S13 自定义禁用块解析且校验通过', !R11.errors.length && !!R11.config && R11.config.z1.disabled === true && api.validateUserSelectors(R11.config).length === 0);
-check('S14 disabled:false 仍按普通定义校验', api.validateUserSelectors({ z2: { disabled: false } }).some(m => m.includes('match')));
+check('S14 disabled:false 单独为显式恢复不报错, 完整定义仍按普通校验', api.validateUserSelectors({ z2: { disabled: false } }).length === 0 && api.validateUserSelectors({ z6: { disabled: false, containers: '.x' } }).some(m => m.includes('match')));
 api.setStore({});
 check('W5 sameSelectorDef 兼容字符串/RegExp/对象形态且flags参与比较',
   api.sameSelectorDef({ match: 'a.b', containers: '.x', titles: [], snippets: [], links: 'a[href]' }, { match: /a.b/, containers: '.x', titles: [], snippets: [], links: 'a[href]' }) &&
   api.sameSelectorDef({ match: { source: 'a.b', flags: '' }, containers: '.x', titles: [], snippets: [], links: 'a[href]' }, { match: /a.b/, containers: '.x', titles: [], snippets: [], links: 'a[href]' }) &&
   !api.sameSelectorDef({ match: { source: 'a.b', flags: 'i' }, containers: '.x', titles: [], snippets: [], links: 'a[href]' }, { match: /a.b/, containers: '.x', titles: [], snippets: [], links: 'a[href]' }));
+
+// ---- disable 别名字段 ----
+check('DIS-D1 disable:true 别名校验通过', api.validateUserSelectors({ z4: { disable: true } }).length === 0);
+check('DIS-D2 disable:false 单独视为显式恢复', api.validateUserSelectors({ z5: { disable: false } }).length === 0);
+{
+  const out = api.diffUserSelectors({ bing: { disable: true } });
+  check('DIS-D3 diff disable:true 归一为 disabled:true', out.bing && out.bing.disabled === true && out.bing.disable === undefined);
+}
+check('DIS-D4 diff disable:false 单独被丢弃', Object.keys(api.diffUserSelectors({ bing: { disable: false } })).length === 0);
+check('DIS-D5 diff disabled:false 单独被丢弃(恢复内置)', Object.keys(api.diffUserSelectors({ bing: { disabled: false } })).length === 0);
+check('DIS-D6 diff 完整定义+disable:false 与内置相同被丢弃', !('bing' in api.diffUserSelectors({ bing: Object.assign({ disable: false }, bingCopy) })));
+{
+  const out = api.diffUserSelectors({ bing: Object.assign({ disable: false }, bingCopy, { containers: '.x' }) });
+  check('DIS-D7 diff 完整定义+disable:false 改动被保留且别名剥离', out.bing && out.bing.containers === '.x' && out.bing.disable === undefined);
+}
+api.setStore({ bing: { disable: true } });
+api.setHost('www.bing.com');
+check('DIS-D8 disable:true 引擎被停用', api.getSearchEngine() === 'other');
+api.setStore({ bing: { disable: false } });
+api.setHost('www.bing.com');
+check('DIS-D9 disable:false 空覆盖不破坏内置引擎', api.getSearchEngine() === 'bing' && api.getContainerSelector('bing') === 'li.b_algo, div.b_algo');
+api.setStore({});
+api.setHost('www.bing.com');
+check('DIS-D10 清空后恢复', api.getSearchEngine() === 'bing');
+{
+  const R12 = api.parseSelectorText('z7: { disable: true }');
+  check('DIS-D11 解析器接受 disable 别名', !R12.errors.length && !!R12.config && R12.config.z7.disable === true && api.validateUserSelectors(R12.config).length === 0);
+}
 
 // ---- pruneUserSelectors 清理旧版固化的内置副本 ----
 storeRef.current = { bing: JSON.parse(JSON.stringify(bingCopy)), myse: { match: 'a', containers: '.x' } };
@@ -469,6 +504,9 @@ function createEnv() {
         delete this.attrs[k];
         if (k === 'data-observed') this.observed = false;
       },
+      contains(other) {
+        return false;
+      },
       querySelector(sel) {
         return sel === '.searchfilter-quick-block' ? this.quickBtn : null;
       },
@@ -509,6 +547,7 @@ function createEnv() {
     function getContainerSelector() { return currentSelector; }
     function resetResultStyles(el) { el.resetCount++; }
     ${extractFn(src, 'resetSelectorCache')}
+    ${extractFn(src, 'filterNestedContainers')}
     ${extractFn(src, 'clearStaleObserved')}
     ${extractFn(src, 'syncObservedSelector')}
     ${extractFn(src, 'queryUnobserved')}
@@ -543,26 +582,26 @@ function createEnv() {
 
   // ---- 初始扫描: 已观察集合按当前选择器保留 ----
   api.scanNewResults();
-  check('S1 初始扫描保留匹配的已观察元素', a1.unobserveCount === 0 && b1.unobserveCount === 0);
-  check('S2 初始扫描观察新元素', a2.observed && b2.observed && a2.observeCount === 1 && b2.observeCount === 1);
+  check('SCAN-S1 初始扫描保留匹配的已观察元素', a1.unobserveCount === 0 && b1.unobserveCount === 0);
+  check('SCAN-S2 初始扫描观察新元素', a2.observed && b2.observed && a2.observeCount === 1 && b2.observeCount === 1);
 
   // ---- 选择器收窄: 清理陈旧元素 ----
   api.resetSelectorCache();
   api.setSelector('.a');
   api.scanNewResults();
-  check('S3 收窄选择器清理不再匹配元素', b1.observed === false && b1.unobserveCount === 1 && b1.resetCount === 1);
-  check('S4 收窄选择器保留仍匹配元素', a1.observed === true && a1.unobserveCount === 0);
-  check('S5 清理后已观察集合全部匹配当前选择器', env.elements.filter((e) => e.observed).every((e) => e.matches('.a')));
+  check('SCAN-S3 收窄选择器清理不再匹配元素', b1.observed === false && b1.unobserveCount === 1 && b1.resetCount === 1);
+  check('SCAN-S4 收窄选择器保留仍匹配元素', a1.observed === true && a1.unobserveCount === 0);
+  check('SCAN-S5 清理后已观察集合全部匹配当前选择器', env.elements.filter((e) => e.observed).every((e) => e.matches('.a')));
 
   const before = { a1: a1.unobserveCount, b1: b1.unobserveCount, b2: b2.unobserveCount };
   api.scanNewResults();
-  check('S6 选择器未变化不重复清理', a1.unobserveCount === before.a1 && b1.unobserveCount === before.b1 && b2.unobserveCount === before.b2);
+  check('SCAN-S6 选择器未变化不重复清理', a1.unobserveCount === before.a1 && b1.unobserveCount === before.b1 && b2.unobserveCount === before.b2);
 
   // ---- 禁用时清空观察集合 ----
   api.setEnabled(false);
   api.scanNewResults();
-  check('S7 禁用时清空观察集合并重置记录', env.elements.every((e) => !e.observed) && api.getObservedSelector() === '');
-  check('S8 禁用时关闭隐藏结果显示', api.getShowHidden() === false);
+  check('SCAN-S7 禁用时清空观察集合并重置记录', env.elements.every((e) => !e.observed) && api.getObservedSelector() === '');
+  check('SCAN-S8 禁用时关闭隐藏结果显示', api.getShowHidden() === false);
 }
 
 // ---- clearStaleObserved 细节 ----
@@ -572,12 +611,12 @@ function createEnv() {
   const btn = { removed: 0, remove() { this.removed++; } };
   stale.quickBtn = btn;
   api.clearStaleObserved('.a');
-  check('C1 清理陈旧元素移除快捷屏蔽按钮', btn.removed === 1 && stale.observed === false && stale.resetCount === 1);
+  check('STALE-C1 清理陈旧元素移除快捷屏蔽按钮', btn.removed === 1 && stale.observed === false && stale.resetCount === 1);
 
   const bad = makeEl('div', 'y', true);
   bad.matches = () => { throw new Error('bad selector'); };
   api.clearStaleObserved('.a');
-  check('C2 matches 异常按陈旧处理且不崩溃', bad.observed === false && bad.unobserveCount === 1);
+  check('STALE-C2 matches 异常按陈旧处理且不崩溃', bad.observed === false && bad.unobserveCount === 1);
 }
 })();
 
@@ -717,6 +756,7 @@ function createEnsureEnv(engine) {
     let _observedSelector = '';
     let _searchForm = null;
     let _searchFormHandler = null;
+    let _urlChangeHandler = null;
     function isEngineSite() { return engine; }
     function injectGlobalStyles() { calls.inject++; }
     function buildRuleIndex() { calls.build++; }
@@ -724,6 +764,12 @@ function createEnsureEnv(engine) {
     function scanNewResults() { calls.scan++; }
     function startBackgroundSync() { calls.start++; }
     function forceReprocessAll() {}
+    function getSearchCategory() { return 'web'; }
+    function resetSelectorCache() {}
+    function refreshEngineSite() {}
+    const location = { href: 'https://www.google.com' };
+    const history = { pushState() {}, replaceState() {} };
+    const window = { addEventListener() {}, dispatchEvent() {} };
     const document = { body: {}, querySelector() { return null; } };
     class MutationObserver { observe() {} disconnect() {} }
     ${extractFn(src, 'ensureEngineSiteSetup')}
@@ -824,27 +870,6 @@ const header = src.slice(0, src.indexOf('==/UserScript=='));
 const matchLines = [...header.matchAll(/^\/\/\s*@match\s+(\S+)/gm)].map((m) => m[1]);
 
 // SELECTORS + getSearchEngine/getSearchCategory (括号配对提取，不依赖注释)
-function extractObjectLiteral(text, openIdx) {
-  let depth = 0, inSQ = false, inDQ = false, inRE = false, inReClass = false;
-  for (let i = openIdx; i < text.length; i++) {
-    const ch = text[i];
-    if (inSQ) { if (ch === '\\') i++; else if (ch === "'") inSQ = false; continue; }
-    if (inDQ) { if (ch === '\\') i++; else if (ch === '"') inDQ = false; continue; }
-    if (inRE) {
-      if (ch === '\\') { i++; continue; }
-      if (inReClass) { if (ch === ']') inReClass = false; continue; }
-      if (ch === '[') { inReClass = true; continue; }
-      if (ch === '/') inRE = false;
-      continue;
-    }
-    if (ch === "'") { inSQ = true; continue; }
-    if (ch === '"') { inDQ = true; continue; }
-    if (ch === '/') { inRE = true; continue; }
-    if (ch === '{') depth++;
-    else if (ch === '}') { depth--; if (depth === 0) return i; }
-  }
-  throw new Error('unbalanced SELECTORS object literal');
-}
 const selectorsStart = src.indexOf('const SELECTORS = {');
 if (selectorsStart === -1) throw new Error('SELECTORS block not found');
 const selectorsOpen = src.indexOf('{', selectorsStart);
@@ -901,6 +926,8 @@ const cases = [
   ['search.brave.com', 'brave'],
   ['search.yahoo.com', 'yahoo'],
   ['r.search.yahoo.com', 'yahoo'],
+  ['scholar.google.com', 'google_scholar'],
+  ['scholar.google.co.jp', 'google_scholar'],
   ['example.com', 'other'],
   ['bing.com.evil.com', 'other'],
   ['notgoogle.com', 'other'],
@@ -913,7 +940,7 @@ for (const [host, expected] of cases) {
   assert(`${host} -> ${expected}`, got === expected);
 }
 
-assert('SELECTORS键序为引擎检测顺序', JSON.stringify(Object.keys(selectors)) === JSON.stringify(['bing', 'google', 'duckduckgo', 'yandex', 'brave', 'yahoo', 'other']));
+assert('SELECTORS键序为引擎检测顺序', JSON.stringify(Object.keys(selectors)) === JSON.stringify(['bing', 'google_scholar', 'google', 'duckduckgo', 'yandex', 'brave', 'yahoo', 'other']));
 assert('缓存:同hostname二次调用返回相同结果', factory({ location: { hostname: 'www.google.com' } }, selectors).getSearchEngine() === 'google');
 assert('内置引擎不因URL尾部误判(google查询含.bing.com)', factory({ location: { hostname: 'www.google.com', href: 'https://www.google.com/search?q=x.bing.com' } }, selectors).getSearchEngine() === 'google');
 assert('内置引擎不因URL尾部误判(普通站查询含.bing.com)', factory({ location: { hostname: 'example.com', href: 'https://example.com/?ref=x.bing.com' } }, selectors).getSearchEngine() === 'other');
@@ -944,6 +971,7 @@ const hosts = [
   'www.bing.com', 'google.co.jp', 'duckduckgo.com', 'ddg.gg',
   'yandex.ru', 'ya.ru', 'www.yandex.com.tr',
   'search.brave.com', 'search.yahoo.co.jp',
+  'scholar.google.com',
   'example.com', 'bing.com.evil.com',
 ];
 

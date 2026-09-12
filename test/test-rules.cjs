@@ -89,6 +89,21 @@ assert('W30: *.无路径模式匹配裸域', match('*://*.example.com/*', 'https
 assert('W31: *.顶级域通配匹配裸域', match('*://*.example.*', 'https://example.com/'));
 assert('W32: 精确域名规则不匹配子域', !match('*://example.com/*', 'https://www.example.com/'));
 
+// 无scheme主机语义与无路径边界
+assert('W33: 无scheme *.域 匹配子域', match('*.example.com', 'https://foo.example.com/x'));
+assert('W34: 无scheme *.域 匹配裸域', match('*.example.com', 'https://example.com/'));
+assert('W35: 无scheme *.域 不匹配前缀域名', !match('*.example.com', 'https://notexample.com/'));
+assert('W36: 无scheme *.域 不匹配其他站路径', !match('*.example.com', 'https://evil.com/?u=example.com'));
+assert('W37: 无scheme *.域 直接匹配域名输入', match('*.example.com', 'sub.example.com'));
+assert('W38: 无路径规则匹配自身', match('*://example.com', 'https://example.com/'));
+assert('W39: 无路径规则匹配子路径', match('*://example.com', 'https://example.com/path/x'));
+assert('W40: 无路径规则不匹配后缀域名', !match('*://example.com', 'https://example.com.evil.com/'));
+assert('W41: 无路径规则匹配子域与端口', match('*://*.example.com', 'https://a.example.com:8080/'));
+assert('W42: 无scheme 路径规则按主机匹配首段', match('*.example.com/path/*', 'https://sub.example.com/path/x'));
+assert('W43: 无scheme 路径规则不匹配其他站路径', !match('*.example.com/path/*', 'https://evil.com/x/example.com/path/y'));
+assert('W44: 精确路径模式不误匹配同名前缀路径', !match('*://example.com/test', 'https://example.com/testing-other'));
+assert('W45: 精确路径模式匹配自身及子路径', match('*://example.com/test', 'https://example.com/test') && match('*://example.com/test', 'https://example.com/test/sub'));
+
 // ---- 正则 s 标志 ----
 assert('S1: title 转义点 + s 正常匹配', match('title/example\\.com/s', 'example.com'));
 assert('S2: text 转义点 + s 正常匹配', match('text/example\\.com/s', 'example.com'));
@@ -104,13 +119,37 @@ assert('S8: 多标志保留', (() => {
   const compiled = api.compileRuleRegex('title/foo/is');
   return compiled.regex.flags.includes('i') && compiled.regex.flags.includes('s');
 })());
+assert('S10: 尾部重复flag字符不被识别为flag', (() => {
+  const parsed = api.parsePrefixedRegexRule('title/path/ii', 6);
+  return parsed.flags === '' && parsed.pattern === 'path/ii';
+})());
+assert('S11: 尾部非flag斜杠路径保持完整', (() => {
+  const parsed = api.parsePrefixedRegexRule('title/something/is/other', 6);
+  return parsed.flags === '' && parsed.pattern === 'something/is/other';
+})());
+assert('S12: 转义斜杠不被误识别为flag分隔符', (() => {
+  const parsed = api.parsePrefixedRegexRule('title/https:\\/\\/foo\\/i', 6);
+  return parsed.flags === '' && parsed.pattern === 'https:\\/\\/foo\\/i';
+})());
+assert('S13: 正常末尾未转义斜杠正确提取flags', (() => {
+  const parsed = api.parsePrefixedRegexRule('title/https:\\/\\/foo/i', 6);
+  return parsed.flags === 'i' && parsed.pattern === 'https:\\/\\/foo';
+})());
+assert('S14: 偶数个反斜杠末尾斜杠正常剥离定界符', (() => {
+  const parsed = api.parsePrefixedRegexRule('title/foo\\\\/', 6);
+  return parsed.flags === '' && parsed.pattern === 'foo\\\\';
+})());
+assert('S15: 奇数个反斜杠末尾斜杠作为转义斜杠保留', (() => {
+  const parsed = api.parsePrefixedRegexRule('title/foo\\/', 6);
+  return parsed.flags === '' && parsed.pattern === 'foo\\/';
+})());
 assert('S9: 旧式 (?s) 前缀仍可用', match('title/(?s)foo.bar/', 'foo\nbar'));
 })();
 
 // ==== 来源: test-rule-filter.cjs ====
 await (async () => {
 const fns = [
-  'safeRegexTest', 'stripRuleComment', 'parseRulesetContent', 'getInvalidRegexFlags', 'parseConditionPart',
+  'safeRegexTest', 'stripRuleComment', 'parseRulesetContent', 'extractYamlRuleItems', 'getInvalidRegexFlags', 'parseConditionPart',
   'tokenizeCondExpr', 'parseCondExprTokens', 'analyzeCondExpr', 'foldCondExpr',
   'evalDynamicLeaf', 'evalCondAST', 'extractBalancedParens', 'findIfOccurrences',
   'stripIfConditions', 'isCondExprCore', 'looksLikeCondExpr', 'isScriptRuleLine', 'isElementRuleLine',
@@ -228,6 +267,11 @@ const { lines, meta } = api.parseRulesetContent(content);
 const collected = api.collectSubscriptionRules(lines.map((l) => l.trim()));
 assert('F1: frontmatter 剥离', meta.name === 'Test');
 assert('F2: 组合过滤结果', JSON.stringify(collected) === JSON.stringify(['!scheme="https"', '*://*.example.com/*']));
+
+// YAML 订阅端到端：提取+过滤
+const yParsed = api.parseRulesetContent('name: Y List\nrules:\n  - example.com\n  - \'*://*.example.com/*\'\n  - example.com##.ad\n  - @@||blocked.com^\n  - ||ubo.com^\n');
+const yCollected = api.collectSubscriptionRules(yParsed.lines.map((l) => l.trim()));
+assert('Y1: YAML订阅提取与过滤', yParsed.meta.name === 'Y List' && JSON.stringify(yCollected) === JSON.stringify(['example.com', '*://*.example.com/*']));
 })();
 
 // ==== 来源: test-rule-source.cjs ====
@@ -317,6 +361,13 @@ api.buildRuleIndex();
 cr = api.getCR();
 assert('R7: 禁用订阅不加载', !cr.domains.has('off.com'));
 assert('R8: 启用订阅保留原始序号标签', cr.domains.get('on.com')[0].source === '订阅2');
+
+// @N+白名单组合：编译期必须跳过（否则成为惰性规则）
+api.setState(['@1 @*://*.bad.com/*', '@2 @host $= ".bad2.com"', '@3 *://*.good.com/*'], []);
+api.buildRuleIndex();
+cr = api.getCR();
+assert('B1: 高亮+白名单组合不编译', cr.highlightUrls.length === 0 && cr.highlightConditionalRules.length === 0);
+assert('B2: 正常高亮域名规则不受影响', cr.highlightDomains.has('good.com'));
 })();
 
 // ==== 来源: test-priority.cjs ====
@@ -676,6 +727,85 @@ await (async () => {
   }
 
 })();
+
+// ==== 一键屏蔽规则选项构建(域名/精确/白名单) ====
+await (async () => {
+  const build = new Function(
+    extractFn(src, 'buildBlockRuleOptions') + '\nreturn buildBlockRuleOptions;'
+  )();
+
+  let o = build('abc.example.com');
+  assert('K1: 非www子域不回退主域', o.isIP === false && o.domainRule === '*://*.abc.example.com/*');
+  assert('K2: 精确选项为完整主机', o.exactRule === '*://abc.example.com/*');
+  assert('K3: 白名单选项为精确加@', o.whitelistRule === '@*://abc.example.com/*');
+
+  o = build('www.example.com');
+  assert('K4: www前缀回退主域', o.domainRule === '*://*.example.com/*' && o.exactRule === '*://www.example.com/*');
+
+  o = build('example.com');
+  assert('K5: 裸域域名选项', o.domainRule === '*://*.example.com/*' && o.exactRule === '*://example.com/*');
+
+  o = build('1.2.3.4');
+  assert('K6: IP精确与域名同规则', o.isIP === true && o.domainRule === '*://1.2.3.4/*' && o.exactRule === '*://1.2.3.4/*' && o.whitelistRule === '@*://1.2.3.4/*');
+
+  o = build('1.2.3.256');
+  assert('K7: 越界IP按域名处理', o.isIP === false);
+
+  o = build('01.02.03.04');
+  assert('K8: 前导零IP按域名处理', o.isIP === false);
+
+  o = build('');
+  assert('K9: 空域名不崩溃', !!o && o.isIP === false && typeof o.exactRule === 'string');
+
+  o = build('news.bbc.co.uk');
+  assert('K10: 多级子域不回退主域', o.domainRule === '*://*.news.bbc.co.uk/*');
+  o = build('example.co.uk');
+  assert('K11: 裸域域名选项不误剥', o.domainRule === '*://*.example.co.uk/*');
+  o = build('www.news.bbc.co.uk');
+  assert('K12: 仅剥离最外层www', o.domainRule === '*://*.news.bbc.co.uk/*');
+})();
+
+// ==== 校验空正则与 DDG 重定向解包测试 ====
+await (async () => {
+  const fnsToExtract = [
+    'safeRegexTest', 'stripRuleComment', 'getInvalidRegexFlags', 'parseConditionPart',
+    'tokenizeCondExpr', 'parseCondExprTokens', 'analyzeCondExpr', 'foldCondExpr',
+    'evalDynamicLeaf', 'evalCondAST', 'extractBalancedParens', 'findIfOccurrences', 'stripIfConditions',
+    'evaluateCondition', 'isCondExprCore', 'looksLikeCondExpr', 'absorbStandaloneExpr',
+    'parseRuleWithConditions', 'validateUrlWildcard', 'ruleToRegex', 'parsePrefixedRegexRule',
+    'escapeWildcardPart', 'wildcardToRegex', 'matchWildcardDomainPattern', 'extractSimpleWhitelistDomain',
+    'validateCondition', 'analyzeRule'
+  ];
+  const langMatch = src.match(/const LANG_TEXTS = \{[\s\S]*?\n  \};/)[0];
+  const consts = src.match(/const SUPPORTED_REGEX_FLAGS = 'imsu';/)[0];
+
+  const analyzeRule = new Function(
+    `${consts}\n${langMatch}\n` +
+    `function t(key, params = {}) {
+      const texts = LANG_TEXTS['zh-CN'] || {};
+      let text = texts[key] || key;
+      for (const [k, v] of Object.entries(params)) text = text.replaceAll('{' + k + '}', v);
+      return text;
+    }\n` +
+    fnsToExtract.map(n => extractFn(src, n)).join('\n') +
+    '\nreturn analyzeRule;'
+  )();
+
+  assert('R_EMPTY1: 空正则 // 判定无效', analyzeRule('//').valid === false);
+  assert('R_EMPTY2: 空正则 //i 判定无效', analyzeRule('//i').valid === false);
+  assert('R_EMPTY3: 空白正则 /   / 判定无效', analyzeRule('/   /').valid === false);
+  assert('R_VALID_RE: 正常正则 /abc/ 有有效结果', analyzeRule('/abc/').valid === true);
+
+  const getCleanUrlAndFixDOM = new Function(
+    extractFn(src, 'getCleanUrlAndFixDOM') + '\nreturn getCleanUrlAndFixDOM;'
+  )();
+
+  const ddgLink = { href: 'https://duckduckgo.com/l/?uddg=https%3A%2F%2Ftarget.example.com%2Fpath%3Fa%3D1&rut=xxx' };
+  const cleanUrl = getCleanUrlAndFixDOM(ddgLink, 'duckduckgo');
+  assert('DDG1: 解码 uddg 重定向', cleanUrl === 'https://target.example.com/path?a=1');
+  assert('DDG2: 同步修改 DOM link.href', ddgLink.href === 'https://target.example.com/path?a=1');
+})();
+
 })();
 
 console.log(`\n${pass} passed, ${fail} failed`);
