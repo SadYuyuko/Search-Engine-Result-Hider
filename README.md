@@ -6,7 +6,7 @@
 
 在仅支持安装脚本的浏览器上实现复杂规则屏蔽搜索结果功能  
 支持包括ublacklist基础规则在内的URL匹配、正则匹配、标题匹配、白名单匹配、高亮目标结果以及结果摘要(snippet)匹配  
-当前支持搜索引擎：Bing、Google、DuckDuckGo、Yandex、Brave、Yahoo、Google Scholar
+当前支持搜索引擎：Bing、Google、Google Scholar、DuckDuckGo、Yandex、Brave、Yahoo
 
 安装源 [Github](https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js) | [Greasy Fork](https://update.greasyfork.org/scripts/552394/%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8E%E7%BB%93%E6%9E%9C%E5%B1%8F%E8%94%BD%E5%99%A8.user.js)
 
@@ -41,7 +41,7 @@
 
 ### 1.4 关于订阅：
 
-1. 订阅更新频率为每天一次，只支持`.txt`或`.yaml`远程链接，例如`https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Other/rules.txt`；`.yaml`支持uBlacklist列表格式（`name`/`rules`键下的`- `列表项），也兼容`blacklist`键
+1. 订阅更新频率为每天一次，只支持`.txt`或`.yaml`远程链接，例如`https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Other/rules.txt`；`.yaml`支持uBlacklist列表格式（`name`/`rules`键`- `列表项）
 2. 订阅规则在本地规则后追加应用，由于脚本可分配性能有限，规则总数建议不超过5w条避免手机爆炸🤳💥
 3. 脚本扩展有限不支持`##`DOM元素等规则，通过订阅导入会自动过滤
 4. 订阅更新同样后台运行，多标签页时每个订阅仅由一个标签页拉取
@@ -156,7 +156,7 @@ URL通配规则按匹配模式语义从URL开头匹配，`*://`仅匹配`http/ht
 | --- | --- |
 | `*://*.example.com/* @if(title *= "关键词")` | 屏蔽`example.com`的标题中含有`关键词`的结果 |
 | `*://*.example.com/* @if(title *= "关键词1" \| title *= "关键词2")` | 屏蔽`example.com`的标题中含`关键词1`或`关键词2`的结果 |
-| `*://*.example.com/* @if(title =~ /关键词1\|关键词2/)` | 上条规则的正则写法，结尾需加`i`才会忽略大小写 |
+| `*://*.example.com/* @if(title =~ /关键词1\|关键词2/i)` | 上条规则的正则写法，结尾需加`i`才会忽略大小写 |
 | `*://*.example.com/* @if(url *= "test")` | 屏蔽`example.com`的URL中含`test`的结果，如`example.com/*/test/*` |
 | `*://*.example.com/* @if(title *= "关键词" & !(url *= "test"))` | 屏蔽`example.com`的标题含`关键词`且URL中不含`test`的结果 |
 | `*://*.example.com/* @if(site = "google.com.hk")` | 仅在Google HK中屏蔽`example.com` |
