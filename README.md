@@ -6,7 +6,7 @@
 
 在仅支持安装脚本的浏览器上实现复杂规则屏蔽搜索结果功能  
 支持包括ublacklist基础规则在内的URL匹配、正则匹配、标题匹配、白名单匹配、高亮目标结果以及结果摘要(snippet)匹配  
-当前支持搜索引擎：Bing、Google、DuckDuckGo、Yandex、Brave，Yahoo
+当前支持搜索引擎：Bing、Google、DuckDuckGo、Yandex、Brave、Yahoo、Google Scholar
 
 安装源 [Github](https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js) | [Greasy Fork](https://update.greasyfork.org/scripts/552394/%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8E%E7%BB%93%E6%9E%9C%E5%B1%8F%E8%94%BD%E5%99%A8.user.js)
 
@@ -15,7 +15,7 @@
 ### 1.2 当前功能：
 
 - 基础/高级语法匹配结果
-- 一键屏蔽域名
+- 一键屏蔽
 - 统计命中规则和调试输出
 - 导入/导出规则到TXT
 - 规则错误检测
@@ -30,8 +30,8 @@
 ┣ 开关悬浮球显示  
 ┣ 开关面板居中：默认居中，切换后根据悬浮球位置显示在屏幕四角  
 ┗ 切换悬浮球功能：  
-　┗ 🟢点击展开面板  
-　┗ 🔵点击显示被屏蔽结果，长按悬浮球打开配置面板，被屏蔽结果的屏蔽按钮再次点击则取消屏蔽
+　┗ 🟢点击打开面板  
+　┗ 🔵点击展开被屏蔽结果，长按打开面板，被屏蔽结果的屏蔽按钮再次点击则取消屏蔽
 
 ### 1.3 关于Webdav：
 
@@ -41,17 +41,18 @@
 
 ### 1.4 关于订阅：
 
-1. 订阅同步频率为每天一次，只支持`.txt`或`.yaml`远程链接，例如`https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Other/rules.txt`
+1. 订阅更新频率为每天一次，只支持`.txt`或`.yaml`远程链接，例如`https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Other/rules.txt`；`.yaml`支持uBlacklist列表格式（`name`/`rules`键下的`- `列表项），也兼容`blacklist`键
 2. 订阅规则在本地规则后追加应用，由于脚本可分配性能有限，规则总数建议不超过5w条避免手机爆炸🤳💥
 3. 脚本扩展有限不支持`##`DOM元素等规则，通过订阅导入会自动过滤
-4. 订阅自动更新同样后台运行，多标签页时每个订阅仅由一个标签页拉取
+4. 订阅更新同样后台运行，多标签页时每个订阅仅由一个标签页拉取
 
-### 1.5 注意：
+### 1.5 其他：
 
-1. 一键屏蔽逻辑：点击屏蔽`example.com`同时加入规则`*://example.com/*`（开启屏蔽域名为`*://*.example.com/*`），取消屏蔽不删除源规则而是新增白名单`@*://example.com/*`（开启屏蔽域名为`@*://*.example.com/*`）
+1. 一键屏蔽逻辑：开启二次确认时弹出面板，可选域名屏蔽/精确屏蔽/添加白名单，关闭二次确认时按屏蔽域名开关添加`*://example.com/*`或`*://*.example.com/*`。取消屏蔽不删除源规则而是新增白名单`@*://example.com/*`
 2. 订阅和webdav都依赖跨域请求权限，若有权限申请弹窗选`总是允许`
 3. 规则优先级：本地白名单 > 本地黑名单 > 订阅白名单 > 订阅黑名单
 4. 脚本通过`@match *://*/*`全站注入，悬浮球与屏蔽过滤仅在搜索引擎站点生效
+5. 注释行格式`#+空格+其他字符`，⬆️/⬇️功能为移动到上一个/下一个注释行，在第一行或第一个注释行时按⬆️会跳到最后一行
 
 ## 规则说明
 
@@ -85,15 +86,14 @@ URL通配规则按匹配模式语义从URL开头匹配，`*://`仅匹配`http/ht
 | `title/^示例.*/` | 匹配标题以`示例`开头的搜索结果 |
 | `title/.*示例(A\|B).*/` | 匹配标题包含`示例A`或`示例B`的结果 |
 | `title/.*示例(A\|B).*/i` | 忽略大小写，匹配除上条结果外还包含`示例a`或`示例b`的结果 |
-| `title/.*示例AbC.*/i` | 忽略大小写，匹配除`示例AbC`外还包含`示例ABC`等结果 |
 | `title/^(?=.*示例1)(?=.*(?:示例2)).*/i` | 忽略大小写和前后顺序，匹配同时出现`示例1`和`示例2`的结果 |
-| `title/^(?=.*示例1)(?=.*(?:示例2\|示例3)).*/i` | 同上，但匹配同时出现`示例1和示例2`或`示例1和示例3`的结果 |
+| `title/^(?=.*示例1)(?=.*(?:示例2\|示例3)).*/i` | 忽略大小写和前后顺序，匹配同时出现`示例1和示例2`或`示例1和示例3`的结果 |
 
 ### 2.4 摘要匹配：
 
 | 规则 | 说明 |
 | --- | --- |
-| `text/.*示例.*/` | 匹配结果的网页描述内容(snippet)中包含`示例`的搜索结果，此规则不会匹配标题 |
+| `text/.*示例.*/` | 匹配结果的网页描述内容(snippet)中包含`示例`的搜索结果 |
 | `text/.*示例abc.*/i` | 同上，加i忽略大小写 |
 
 ### 2.5 白名单匹配：
@@ -102,9 +102,9 @@ URL通配规则按匹配模式语义从URL开头匹配，`*://`仅匹配`http/ht
 | --- | --- |
 | `@*://*.com/*` | 放行所有以`.com`结尾域名页面 |
 | `@*://example.com/*` | 放行`example.com`主站 |
+| `@*://example.com/abc/*` | 放行`example.com`特定路径 |
 | `@*://*.example.com/*` | 放行`example.com`及其所有子域名 |
-| `@*://example.com/abc/*` | 只放行`example.com`特定路径 |
-| `@*://*.example.com/abc/*` | 只放行`example.com`子域名特定路径 |
+| `@*://*.example.com/abc/*` | 放行`example.com`子域名特定路径 |
 
 ### 2.6 高亮规则：
 
@@ -120,30 +120,31 @@ URL通配规则按匹配模式语义从URL开头匹配，`*://`仅匹配`http/ht
 
 **说明：**
 1. 在规则后添加 `@if(...)` 作为附加条件，多个 `@if` 条件同时生效(逻辑与`&`，可转换为单个`@if`)，复合规则匹配默认忽略大小写
-2. 条件表达式也可单独使用不需要套 `@if(...)`，如 `host $= ".example.com"`、`path *= "/download/"`，对所有搜索结果生效
-3. 单个 `@if` 内支持逻辑运算：`|` 或、`&` 与、`!` 非，可用 `( )` 括号嵌套分组，优先级 `!` > `&` > `|`
+2. 条件表达式可单独使用，如 `host $= ".example.com"`、`path *= "/download/"`，对所有搜索结果生效
+3. 单个 `@if` 内支持逻辑运算：`|` 或、`&` 与、`!` 非，用 `( )` 括号嵌套分组，优先级 `!` > `&` > `|`
 4. `!` 取反的是条件本身。当结果缺少标题等被比较内容时，该条件视为不成立，取反后即为成立，如 `!(title *= "关键词")` 会命中无标题的结果
+5. 属性值支持省略引号，如 `@if($site=google)`、`@if(site=google.com)`、`@if(scheme=https)` 等无空格值可直接裸写，兼容 uBlacklist 语法风格
 
 **`@if` 支持条件：**
 
 | 条件类型 | 语法 | 说明 |
 | --- | --- | --- |
-| 搜索引擎 | `$site = "google"` | 仅在指定搜索引擎中生效，可写`google`、`bing`、`duckduckgo`(`ddg`)、`yandex`、`brave`、`yahoo`(`yahoo-japan`)，忽略大小写，分隔符可用`=`或`:` |
-| 搜索类型 | `$category = "web"` | 仅在指定搜索类型中生效，可写`web`、`images`、`videos`、`news`，由当前页 URL 推断，网页搜索默认为`web` |
-| 搜索站点 | `site = "google.com.hk"` | 仅在指定搜索引擎地区站点中生效 |
+| 搜索引擎 | `$site = "google"` | 仅在指定搜索引擎中生效，可写`google`、`google_scholar`、`bing`、`duckduckgo`(`ddg`)、`yandex`、`brave`、`yahoo`(`yahoo-japan`)，忽略大小写，分隔符可用`=`或`:`，值支持省略引号（如`$site=google`） |
+| 搜索类型 | `$category = "web"` | 仅在指定搜索类型中生效，可写`web`、`images`、`videos`、`news`，由当前页 URL 推断，网页搜索默认为`web`，值支持省略引号（如`$category=images`） |
+| 搜索站点 | `site = "google.com.hk"` | 仅在指定搜索引擎地区站点中生效，值支持省略引号（如`site=google.com.hk`） |
 | 标题包含 | `title *= "关键词"` | 标题中包含指定字符串`关键词` |
 | 标题精确 | `title = "关键词"` | 标题精确匹配指定字符串`关键词` |
 | 标题前缀 | `title ^= "关键词"` | 标题以指定字符串`关键词`开头 |
 | 标题后缀 | `title $= "关键词"` | 标题以指定字符串`关键词`结尾 |
-| 标题正则 | `title =~ /正则/`(或简写 `title/正则/`) | 标题匹配正则表达式，`=~` 可省略，结尾加`i`忽略大小写 |
+| 标题正则 | `title =~ /正则/`(或简写 `title/正则/`) | 标题匹配正则表达式，`=~` 可省略，字符集`[...]`内支持裸斜杠，结尾加`i`忽略大小写 |
 | URL精确 | `url = "https://example.com/"` | URL与指定字符串完全一致 |
 | URL前缀 | `url ^= "https://abc.example.com"` | URL以指定字符串开头 |
 | URL后缀 | `url $= ".pdf"` | URL以指定字符串结尾 |
 | URL包含 | `url *= "example"` | URL中包含指定字符串`example` |
-| URL正则 | `url =~ /正则/`(或简写 `url/正则/`) | URL匹配正则表达式，`=~` 可省略，结尾加`i`忽略大小写 |
+| URL正则 | `url =~ /正则/`(或简写 `url/正则/`) | URL匹配正则表达式，`=~` 可省略，字符集`[...]`内支持裸斜杠，结尾加`i`忽略大小写 |
 | URL主机 | `host $= ".example.com"` | 结果URL的主机名(hostname)匹配；`$=`兼容裸域，即`host $= ".example.com"`同时命中`example.com`与`www.example.com` |
 | URL路径 | `path *= "/download/"` | 结果URL的路径+查询串(pathname+search)匹配 |
-| URL协议 | `scheme = "https"` | 结果URL的协议匹配，如`https`/`http` |
+| URL协议 | `scheme = "https"` | 结果URL的协议匹配，如`https`/`http`，值支持省略引号（如`scheme=https`） |
 | 逻辑运算 | `\|` 或、`&` 与、`!` 非 | 组合任意条件 |
 | 括号分组 | `( )` | 嵌套组合子条件 |
 
@@ -175,16 +176,16 @@ URL通配规则按匹配模式语义从URL开头匹配，`*://`仅匹配`http/ht
 
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
-| `match` | regex | 必填，hostname 匹配正则字面量，如 `/(?:^\|\\.)searx\.example\.com$/`（仅支持并保留 `imsu` flags） |
+| `match` | regex | 必填，hostname 匹配正则字面量 |
 | `containers` | string | 必填，结果容器的 CSS 选择器（不支持伪元素，如 `::after`） |
-| `links` | string \| string\[\] | 必填，链接选择器，默认 `a[href]` |
+| `links` | string \| string\[\] | 可选，链接选择器，默认 `a[href]` |
 | `titles` | string \| string\[\] | 可选，标题选择器列表 |
 | `snippets` | string \| string\[\] | 可选，摘要选择器列表 |
-| `disabled` | boolean | 可选，`true` 时停用该引擎，内置引擎同样适用 |
+| `disabled` | boolean | 可选，`true` 停用该引擎，内置引擎同样适用；别名 `disable`，单独写 `disabled: false`（或 `disable: false`）恢复内置 |
 
 **示例：**
 
-```
+```javascript
 example: {
   match: /(?:^|\.)searx\.example\.com$/,
   containers: '.result',
@@ -192,14 +193,16 @@ example: {
   snippets: ['.content'],
   links: 'a[href]',
 },
+bing: {disabled: true},
 ```
 
 **说明：**
 
 1. 优先级：自定义选择器 > 内置选择器，把覆盖改回内置值或使用“重置”可恢复跟随脚本更新
 2. 自定义引擎支持 `$site = "引擎ID"` 条件以及屏蔽/高亮/白名单规则，`titles`/`snippets` 可省略
-3. 引擎ID仅允许字母/数字/`_`/`-`，`other` 为保留键，与内置引擎同ID（`google`/`bing`/`duckduckgo(ddg)`/`yandex`/`brave`/`yahoo(yahoo-japan)`）或站点重叠时会覆盖内置选择器，如匹配 `cn.bing.com` 时将优先于内置 `bing` 命中
-4. 保存时仅存储与内置有差异的键，未改动的内置不会写入存储
+3. 引擎ID仅允许字母/数字/`_`/`-`，`other` 为保留键不可写，与内置引擎同ID或站点重叠时会覆盖内置选择器，如匹配 `cn.bing.com` 时将优先于内置 `bing` 命中
+4. 内置引擎标准ID：`google`、`google_scholar`、`bing`、`duckduckgo`、`yandex`、`brave`、`yahoo`（注：`ddg` 与 `yahoo-japan` 仅作为 `@if($site=...)` 条件规则中的简写别名，在选择器配置中覆盖内置引擎时请使用标准 ID `duckduckgo` 与 `yahoo`）
+5. 保存时仅存储与内置有差异的键，未改动的内置不会写入存储
 
 ## 测试
 
