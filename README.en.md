@@ -35,7 +35,7 @@ Open with a browser that supports script installation to install directly.
 
 ### 1.3 About WebDAV:
 
-1. Auto-sync performs deduplication and merge synchronization once per hour; manual upload/download performs overwrite synchronization. Sync configuration takes effect after page refresh.
+1. Auto-sync overwrite upload/download once per hour. Sync configuration takes effect after page refresh.
 2. Address only supports HTTPS and full paths, e.g., Nutstore `https://dav.jianguoyun.com/dav/your_folder/`.
 3. Auto-sync runs in the background. When multiple tabs are open, a cross-tab lock ensures only one tab initiates requests.
 
