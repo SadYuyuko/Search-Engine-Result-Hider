@@ -41,14 +41,14 @@ Open with a browser that supports script installation to install directly.
 
 ### 1.4 About Subscriptions:
 
-1. Subscription update frequency is once per day. Only `.txt` or `.yaml` remote links are supported, e.g. `https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Other/rules.txt`. For `.yaml`, the uBlacklist list format (`name`/`rules` keys with `- ` items) is supported, and the `blacklist` key is also compatible.
+1. Subscription update frequency is once per day. Only `.txt` or `.yaml` remote links are supported, e.g. `https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Other/rules.txt`. For `.yaml`, the uBlacklist list format (`name`/`rules` keys with `- ` items) is supported.
 2. Subscription rules are appended after local rules. Due to limited allocatable script performance, it is recommended that the total number of rules does not exceed 50k to avoid performance issues on mobile devices.
 3. Script extensions are limited and do not support `##` DOM element rules; they are automatically filtered out when imported via subscriptions.
 4. Subscription updates also run in the background. When multiple tabs are open, each subscription is pulled by only one tab.
 
 ### 1.5 Other:
 
-1. One-click blocking logic: When secondary confirmation is enabled, a panel pops up offering Domain block / Exact block / Add whitelist; when secondary confirmation is disabled, adds `*://example.com/*` or `*://*.example.com/*` according to the domain blocking switch. Unblocking does not delete source rules, but adds a new whitelist `@*://example.com/*`.
+1. One-click blocking logic: When secondary confirmation is enabled, a panel pops up offering Domain block / Exact block / Add whitelist; when secondary confirmation is disabled, adds `*://example.com/*`/`*://*.example.com/*` according to the domain blocking switch. Unblocking does not delete source rules, but adds a new whitelist `@*://example.com/*`/`*://*.example.com/*`.
 2. Both subscriptions and WebDAV rely on cross-origin request permissions. If a permission request prompt appears, select `Always allow`.
 3. Rule priority: Local whitelist > Local blacklist > Subscription whitelist > Subscription blacklist.
 4. The script is injected globally via `@match *://*/*`. Floating bubble and blocking filters only take effect on search engine sites.
@@ -156,7 +156,7 @@ Note: `@N` only supports 5 colors, i.e., `@1` to `@5`. Open the custom color pan
 | --- | --- |
 | `*://*.example.com/* @if(title *= "keyword")` | Block results from `example.com` whose title contains `keyword` |
 | `*://*.example.com/* @if(title *= "keyword1" \| title *= "keyword2")` | Block results from `example.com` whose title contains `keyword1` or `keyword2` |
-| `*://*.example.com/* @if(title =~ /keyword1\|keyword2/)` | Regex format for the above rule, add `i` at the end for case-insensitive |
+| `*://*.example.com/* @if(title =~ /keyword1\|keyword2/i)` | Regex format for the above rule, add `i` at the end for case-insensitive |
 | `*://*.example.com/* @if(url *= "test")` | Block results from `example.com` whose URL contains `test`, e.g., `example.com/*/test/*` |
 | `*://*.example.com/* @if(title *= "keyword" & !(url *= "test"))` | Block results from `example.com` whose title contains `keyword` and URL does not contain `test` |
 | `*://*.example.com/* @if(site = "google.com.hk")` | Block `example.com` only on Google HK |
