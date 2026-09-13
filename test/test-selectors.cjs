@@ -763,6 +763,7 @@ function createEnsureEnv(engine) {
     function updateStatus() { calls.status++; }
     function scanNewResults() { calls.scan++; }
     function startBackgroundSync() { calls.start++; }
+    function exposeDebugApi() {}
     function forceReprocessAll() {}
     function getSearchCategory() { return 'web'; }
     function resetSelectorCache() {}

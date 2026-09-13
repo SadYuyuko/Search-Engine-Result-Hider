@@ -144,6 +144,15 @@ assert('S15: 奇数个反斜杠末尾斜杠作为转义斜杠保留', (() => {
   return parsed.flags === '' && parsed.pattern === 'foo\\/';
 })());
 assert('S9: 旧式 (?s) 前缀仍可用', match('title/(?s)foo.bar/', 'foo\nbar'));
+assert('S16: 大写I当作i', (() => {
+  const parsed = api.parsePrefixedRegexRule('title/foo/I', 6);
+  return parsed.flags === 'i' && parsed.pattern === 'foo';
+})());
+assert('S17: 大写I可编译且忽略大小写', match('title/FOO/I', 'foo'));
+assert('S18: /pattern/I 编译不抛错', (() => {
+  const compiled = api.compileRuleRegex('/FOO/I');
+  return compiled.regex.flags.includes('i') && compiled.regex.test('foo');
+})());
 })();
 
 // ==== 来源: test-rule-filter.cjs ====
@@ -272,6 +281,10 @@ assert('F2: 组合过滤结果', JSON.stringify(collected) === JSON.stringify(['
 const yParsed = api.parseRulesetContent('name: Y List\nrules:\n  - example.com\n  - \'*://*.example.com/*\'\n  - example.com##.ad\n  - @@||blocked.com^\n  - ||ubo.com^\n');
 const yCollected = api.collectSubscriptionRules(yParsed.lines.map((l) => l.trim()));
 assert('Y1: YAML订阅提取与过滤', yParsed.meta.name === 'Y List' && JSON.stringify(yCollected) === JSON.stringify(['example.com', '*://*.example.com/*']));
+const yWl = api.parseRulesetContent('name: Mix\nblacklist:\n  - ads.com\nrules:\n  - extra.com\nwhitelist:\n  - good.com\n  - "*://ok.com/*"\n');
+const yWlCollected = api.collectSubscriptionRules(yWl.lines.map((l) => l.trim()));
+assert('Y2: YAML多段+whitelist加@', JSON.stringify(yWlCollected) === JSON.stringify(['ads.com', 'extra.com', '@good.com', '@*://ok.com/*']));
+assert('Y3: 无引号中文@if可订阅', api.collectSubscriptionRules(['*://*.example.com/* @if(title *= 广告)']).length === 1);
 })();
 
 // ==== 来源: test-rule-source.cjs ====
@@ -592,6 +605,17 @@ cr = makeCR();
 cr.highlightDomains.set('example.com', [{N: 3, type: 'wildcard'}]);
 r = doCheck(cr, url, host, 'title', null, sl);
 assert('T22:仅高亮无屏蔽', r && r.highlight === 3 && !r.blocked);
+
+cr = makeCR();
+cr.conditionalRules.push({
+  type: 'expr',
+  originalRule: 'host $= ".example.com"',
+  source: env.t('localRule'),
+  isLocal: false,
+  conditions: [],
+});
+r = doCheck(cr, url, host, 'title', null, sl);
+assert('T23:订阅条件黑名单用isLocal不看语言文案', isBlocked(r) && r.source === env.t('localRule'));
 })();
 
 // ==== 来源: test-import-cancel.cjs ====
@@ -797,13 +821,28 @@ await (async () => {
   assert('R_VALID_RE: 正常正则 /abc/ 有有效结果', analyzeRule('/abc/').valid === true);
 
   const getCleanUrlAndFixDOM = new Function(
+    extractFn(src, 'decodeRedirectTarget') + '\n' +
+    extractFn(src, 'decodeBingCkTarget') + '\n' +
+    extractFn(src, 'unwrapRedirectUrl') + '\n' +
     extractFn(src, 'getCleanUrlAndFixDOM') + '\nreturn getCleanUrlAndFixDOM;'
   )();
 
   const ddgLink = { href: 'https://duckduckgo.com/l/?uddg=https%3A%2F%2Ftarget.example.com%2Fpath%3Fa%3D1&rut=xxx' };
-  const cleanUrl = getCleanUrlAndFixDOM(ddgLink, 'duckduckgo');
+  const cleanUrl = getCleanUrlAndFixDOM(ddgLink);
   assert('DDG1: 解码 uddg 重定向', cleanUrl === 'https://target.example.com/path?a=1');
   assert('DDG2: 同步修改 DOM link.href', ddgLink.href === 'https://target.example.com/path?a=1');
+  const ddgNoSlash = { href: 'https://duckduckgo.com/l?uddg=https%3A%2F%2Ftarget.example.com%2Fx' };
+  assert('DDG3: /l 无尾斜杠也解包', getCleanUrlAndFixDOM(ddgNoSlash) === 'https://target.example.com/x');
+  const scholarLink = { href: 'https://scholar.google.com/scholar_url?url=https%3A%2F%2Farxiv.org%2Fabs%2F1234&hl=en' };
+  assert('SCH1: scholar_url 解包', getCleanUrlAndFixDOM(scholarLink) === 'https://arxiv.org/abs/1234');
+  const scholarJp = { href: 'https://scholar.google.co.jp/scholar_url?url=https%3A%2F%2Fexample.com%2Fpaper' };
+  assert('SCH2: scholar 地区站解包', getCleanUrlAndFixDOM(scholarJp) === 'https://example.com/paper');
+  const gUrl = { href: 'https://www.google.com/url?q=https%3A%2F%2Fexample.com%2Fa' };
+  assert('G1: google /url 解包', getCleanUrlAndFixDOM(gUrl) === 'https://example.com/a');
+  const yahooTw = { href: 'https://tw.search.yahoo.com/r/RU=https%3A%2F%2Fexample.com%2Fy/RK=2' };
+  assert('Y1: yahoo 地区站 RU= 解包', getCleanUrlAndFixDOM(yahooTw) === 'https://example.com/y');
+  const customEngineLink = { href: 'https://scholar.google.com/scholar_url?url=https%3A%2F%2Fpapers.example.com%2Fx' };
+  assert('C1: 不依赖引擎ID仍解包', getCleanUrlAndFixDOM(customEngineLink) === 'https://papers.example.com/x');
 })();
 
 })();

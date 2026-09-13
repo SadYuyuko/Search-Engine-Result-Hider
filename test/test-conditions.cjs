@@ -85,6 +85,13 @@ r = condExpr('Google', 'google');
 assert('旧2c: 裸引擎名已移除->unknown', r.errors && r.errors[0].startsWith('unknown'));
 r = condExpr('Bing', 'bing');
 
+r = condExpr('title *= 关键词', 'google');
+assert('旧2d: 无引号中文title包含', !r.errors && ev(r, '含关键词的标题', 'https://x.com/') === true && ev(r, 'other', 'https://x.com/') === false);
+r = condExpr('title*=关键词', 'google');
+assert('旧2e: 无空格无引号中文', !r.errors && ev(r, '关键词', 'https://x.com/') === true);
+r = condExpr('path *= /a%20b/', 'google');
+assert('旧2f: 无引号含百分号路径', !r.errors && ev(r, 't', 'https://x.com/a%20b/c') === true);
+
 r = condExpr('title *= "kw1" | title *= "kw2"', 'google');
 assert('旧3: 纯或->动态AST', !r.errors && !r.const && r.ast.type === 'or');
 assert('旧3a: kw1命中', ev(r, 'has kw1 here', 'https://x.com/') === true);
@@ -407,6 +414,10 @@ assert('M4: 非法url->假', ev(r, 't', 'not a url') === false);
 
 r = condExpr('host =~ /x/g', 'google');
 assert('M5: host正则非法flags', r.errors && r.errors[0].startsWith('flags:g'));
+r = condExpr('title =~ /x/I', 'google');
+assert('M5b: 大写I当作i不报错', !r.errors && ev(r, 'X', 'https://x/') === true && ev(r, 'y', 'https://x/') === false);
+r = condExpr('host =~ /WWW/I', 'google');
+assert('M5c: host大写I可编译', !r.errors && ev(r, 't', 'https://www.example.com/') === true);
 r = condExpr('path/x/g', 'google');
 
 r = condExpr('scheme = "https" | host $= ".org"', 'google');
@@ -445,6 +456,10 @@ const pc11 = m.parseRulesetContent('*://a.com/*\nrules:\n');
 assert('R11: 无列表项不启用YAML模式', stripEmpty(pc11.lines).length === 2);
 const pc12 = m.parseRulesetContent('name: Q\nrules:\n  - "*://x.com/*"\n  - \'host $= ".x.com"\'\n');
 assert('R12: 双引号与单引号项', pc12.meta.name === 'Q' && pc12.lines[0] === '*://x.com/*' && pc12.lines[1] === 'host $= ".x.com"');
+const pc13 = m.parseRulesetContent('name: WL\nblacklist:\n  - ads.example.com\nwhitelist:\n  - good.example.com\n  - "@*://keep.example.com/*"\n');
+assert('R13: whitelist段导入并自动加@', pc13.meta.name === 'WL' && pc13.lines.length === 3 && pc13.lines[0] === 'ads.example.com' && pc13.lines[1] === '@good.example.com' && pc13.lines[2] === '@*://keep.example.com/*');
+const pc14 = m.parseRulesetContent('blacklist:\n  - a.com\nrules:\n  - b.com\n');
+assert('R14: 连续两个list键均提取', pc14.lines.length === 2 && pc14.lines[0] === 'a.com' && pc14.lines[1] === 'b.com');
 
 // ---- uBlacklist 独立 i 修饰符兼容(默认仍忽略大小写)----
 r = condExpr('title *= "KW" i', 'google');
@@ -522,6 +537,8 @@ const condTrueCases = [
   'host = example.com',
   'scheme = https',
   'title *= keyword',
+  'title *= 关键词',
+  'title*=关键词',
 ];
 for (const rule of condTrueCases) {
   assert(`D: 条件表达式识别 ${rule}`, m.looksLikeCondExpr(rule) === true);

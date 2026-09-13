@@ -55,7 +55,7 @@ const KEYS = {
 };
 
 const syncFns = [
-  'stripRuleComment', 'getWebDAVRequest', 'parseSyncHeader', 'buildUploadContent',
+  'stripRuleComment', 'getWebDAVRequest', 'isHtmlResponse', 'parseSyncHeader', 'buildUploadContent',
   'buildSyncPayload', 'applyCloudSubscriptions', 'adoptStoredConfigIfNewer',
   'checkExternalConfigChange', 'performAutoWebDAVSync',
 ].map((n) => extractFn(src, n));
@@ -71,7 +71,7 @@ function makeSyncEnv({ cloudStatus = 200, cloudText = '', localRules = [], local
   const calls = [];
   const state = { reprocess: 0 };
   const factory = new Function('store', 'calls', 'state', 'mockResponse', `
-    const console = { log: () => {} };
+    const console = { log: () => {}, warn: () => {} };
     const CONFIG_KEY = ${JSON.stringify(KEYS.CONFIG_KEY)};
     const WEBDAV_SYNC_CONFIG_KEY = ${JSON.stringify(KEYS.WEBDAV_SYNC_CONFIG_KEY)};
     const WEBDAV_SYNC_SELECTORS_KEY = ${JSON.stringify(KEYS.WEBDAV_SYNC_SELECTORS_KEY)};
@@ -163,6 +163,19 @@ const syncCfg = { url: 'https://dav.example.com/dav/', username: '', password: '
   await env.run(syncCfg);
   const put = env.calls.find((c) => c.method === 'PUT');
   assert('T4: 云端404时上传本地规则', !!put && put.data.includes('*://a.example.com/*') && put.data.includes('*://b.example.com/*'));
+}
+
+{
+  const env = makeSyncEnv({
+    cloudText: '<!DOCTYPE html><html><body>login</body></html>',
+    localRules: ['*://keep.example.com/*'],
+    localTime: 1000,
+  });
+  env.setCurrent({ rules: ['*://keep.example.com/*'], enabled: true });
+  await env.run(syncCfg);
+  const cur = env.getCurrent();
+  assert('T5: HTML响应不覆盖本地规则', cur.rules[0] === '*://keep.example.com/*');
+  assert('T5b: HTML响应不上传', env.calls.filter((c) => c.method === 'PUT').length === 0);
 }
 
 // T6: 多标签页感知 checkExternalConfigChange
