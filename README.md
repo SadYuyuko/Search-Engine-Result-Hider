@@ -6,7 +6,8 @@
 
 在仅支持安装脚本的浏览器上实现复杂规则屏蔽搜索结果功能  
 支持包括ublacklist基础规则在内的URL匹配、正则匹配、标题匹配、白名单匹配、高亮目标结果以及结果摘要(snippet)匹配  
-当前支持搜索引擎：Bing、Google、Google Scholar、DuckDuckGo、Yandex、Brave、Yahoo
+当前支持搜索引擎：Bing、Google、Google Scholar、DuckDuckGo、Yandex、Brave、Yahoo  
+自动去除重定向：按结果链接 URL 解包（Bing `/ck/a`、Google `/url`、Google Scholar `scholar_url`、DuckDuckGo `/l`、Yahoo `RU=`）
 
 安装源 [Github](https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js) | [Greasy Fork](https://update.greasyfork.org/scripts/552394/%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8E%E7%BB%93%E6%9E%9C%E5%B1%8F%E8%94%BD%E5%99%A8.user.js)
 
@@ -35,24 +36,26 @@
 
 ### 1.3 关于Webdav：
 
-1. 自动同步根据配置时间戳每小时覆盖上传/下载一次，同步配置在刷新后生效
+1. 自动同步根据配置时间戳每小时覆盖上传/下载一次
 2. 地址只支持https和完整路径，如坚果云`https://dav.jianguoyun.com/dav/your_folder/`
 3. 自动同步后台运行，多标签页时由跨页锁确保仅一个标签页发起请求
 
 ### 1.4 关于订阅：
 
-1. 订阅更新频率为每天一次，只支持`.txt`或`.yaml`远程链接，例如`https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Other/rules.txt`；`.yaml`支持uBlacklist列表格式（`name`/`rules`键`- `列表项）
+1. 自动更新频率为每天一次，支持纯文本远程链接，例如`https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Other/rules.txt`；兼容`.yaml`uBlacklist列表格式（`name`/`rules`/`blacklist`/`whitelist`项，白名单项导入时自动加`@`前缀）
 2. 订阅规则在本地规则后追加应用，由于脚本可分配性能有限，规则总数建议不超过5w条避免手机爆炸🤳💥
 3. 脚本扩展有限不支持`##`DOM元素等规则，通过订阅导入会自动过滤
 4. 订阅更新同样后台运行，多标签页时每个订阅仅由一个标签页拉取
 
 ### 1.5 其他：
 
-1. 一键屏蔽逻辑：开启二次确认时弹出面板，可选域名屏蔽/精确屏蔽/添加白名单，关闭二次确认时按屏蔽域名开关添加`*://example.com/*`/`*://*.example.com/*`。取消屏蔽不删除源规则而是新增白名单`@*://example.com/*`/`*://*.example.com/*`
+1. 一键屏蔽逻辑：  
+开启二次确认时弹出面板可选屏蔽或添加白名单，关闭时按屏蔽域名开关添加`*://example.com/*`或`*://*.example.com/*`；  
+取消屏蔽在开启二次确认时弹出面板可选删除源规则或添加白名单，关闭时默认新增白名单。
 2. 订阅和webdav都依赖跨域请求权限，若有权限申请弹窗选`总是允许`
 3. 规则优先级：本地白名单 > 本地黑名单 > 订阅白名单 > 订阅黑名单
-4. 脚本通过`@match *://*/*`全站注入，悬浮球与屏蔽过滤仅在搜索引擎站点生效
-5. 注释行格式`#+空格+其他字符`，⬆️/⬇️功能为移动到上一个/下一个注释行，在第一行或第一个注释行时按⬆️会跳到最后一行
+4. 脚本通过`@match *://*/*`全站注入，悬浮球与屏蔽过滤仅在匹配搜索引擎hostname时生效
+5. 注释行格式`#+空格+内容`，⬆️/⬇️功能为移动到上一个/下一个注释行，在第一行或第一个注释行时⬆️会跳到最后一行
 
 ## 规则说明
 
@@ -60,7 +63,7 @@
 
 | 规则 | 说明 |
 | --- | --- |
-| `*://www.example.com/*` | 匹配`example.com` |
+| `*://abc.example.com/*` | 匹配`abc.example.com` |
 | `*://*.example.com/*` | 匹配`example.com`及其所有子域名 |
 | `*://*.example.com/path/*` | 匹配`example.com`特定路径 |
 | `*://*.example.*` | 匹配`example.com`所有顶级域名 |
@@ -114,7 +117,7 @@ URL通配规则按匹配模式语义从URL开头匹配，`*://`仅匹配`http/ht
 | `@N title/.*示例.*/` | 给匹配到标题带有`示例`的结果加上颜色边框 |
 
 优先级：屏蔽 > 高亮；白名单结果不会被屏蔽，但仍可显示高亮  
-注意：`@N` 只支持5种颜色，即`@1`～`@5`，通过脚本菜单打开自定义颜色面板
+注意：只支持5种颜色，即`@N`为`@1`～`@5`，通过脚本菜单打开自定义颜色面板
 
 ### 2.7 复合规则：
 
@@ -213,7 +216,7 @@ bing: {disabled: true},
 
 ### 3.2 运行测试
 
-将test文件夹和脚本放至同一目录运行，测试会自动读取上一级目录的 `.js` 脚本，按功能域分为：条件表达式、规则、选择器与引擎、跨域权限
+将test文件夹和脚本放至同一目录运行，测试会自动读取上一级目录 `.js` 脚本，按功能域分为：条件表达式、规则、选择器与引擎、跨域权限
 
 ```bash
 # 运行所有测试
@@ -230,26 +233,26 @@ node test/test-conditions.cjs 2>&1 | grep "FAIL"
 
 ### 3.3 调试模式
 
-使用[网页调试](https://greasyfork.org/zh-CN/scripts/475228)脚本或桌面端浏览器F12开发者工具 → Console标签查看输出
+使用[网页调试](https://greasyfork.org/zh-CN/scripts/475228)脚本或浏览器F12开发者工具Console标签`window.__SERH_DEBUG__`查看输出
 
-输入命令查看对应输出
+```javascript
+const d = window.__SERH_DEBUG__;
 
-```bash
 // 查看当前配置
-console.log('当前配置:', GM_getValue('searchfilter_blocker'));
+console.log('当前配置:', d.config);
 
 // 查看编译后的规则
-console.log('编译规则:', compiledRules);
+console.log('编译规则:', d.compiledRules);
 
 // 查看搜索引擎识别
-console.log('搜索引擎:', getSearchEngine());
+console.log('搜索引擎:', d.getSearchEngine());
 
 // 查看当前页面结果数量
 console.log('结果数量:', document.querySelectorAll('div.g').length);
 
 // 监控规则匹配性能
 console.time('规则匹配');
-checkRuleMatchOptimized(url, domain, title, snippet, subdomainLevels);
+d.checkRuleMatchOptimized(url, domain, title, snippet, subdomainLevels);
 console.timeEnd('规则匹配');
 
 // 监控DOM查询性能

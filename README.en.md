@@ -2,11 +2,12 @@
 
 ### 1.1 Introduction
 
-[中文](README.md) | [English](README.en.md) | Discussion Group [TG](https://t.me/+qBqMTqjc4Xk5M2Jh)
+[中文](README.md) | [English](README.en.md)
 
 Implements complex-rule search result blocking on browsers that only support user script installation.  
 Supports URL matching including uBlacklist basic rules, regex matching, title matching, whitelist matching, target result highlighting, and result snippet matching.  
-Currently supported search engines: Bing, Google, DuckDuckGo, Yandex, Brave, Yahoo, Google Scholar
+Currently supported search engines: Bing, Google, Google Scholar, DuckDuckGo, Yandex, Brave, Yahoo  
+Automatic redirect removal: Unpacks result links by target URL (Bing `/ck/a`, Google `/url`, Google Scholar `scholar_url`, DuckDuckGo `/l`, Yahoo `RU=`)
 
 Install sources [Github](https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Search-Engine-Result-Hider_autoupdate.user.js) | [Greasy Fork](https://update.greasyfork.org/scripts/552394/%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8E%E7%BB%93%E6%9E%9C%E5%B1%8F%E8%94%BD%E5%99%A8.user.js)
 
@@ -35,24 +36,26 @@ Open with a browser that supports script installation to install directly.
 
 ### 1.3 About WebDAV:
 
-1. Auto-sync overwrite upload/download once per hour. Sync configuration takes effect after page refresh.
+1. Auto-sync performs an overwrite upload/download once per hour based on configuration timestamp.
 2. Address only supports HTTPS and full paths, e.g., Nutstore `https://dav.jianguoyun.com/dav/your_folder/`.
 3. Auto-sync runs in the background. When multiple tabs are open, a cross-tab lock ensures only one tab initiates requests.
 
 ### 1.4 About Subscriptions:
 
-1. Subscription update frequency is once per day. Only `.txt` or `.yaml` remote links are supported, e.g. `https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Other/rules.txt`. For `.yaml`, the uBlacklist list format (`name`/`rules` keys with `- ` items) is supported.
-2. Subscription rules are appended after local rules. Due to limited allocatable script performance, it is recommended that the total number of rules does not exceed 50k to avoid performance issues on mobile devices.
-3. Script extensions are limited and do not support `##` DOM element rules; they are automatically filtered out when imported via subscriptions.
-4. Subscription updates also run in the background. When multiple tabs are open, each subscription is pulled by only one tab.
+1. Auto-update frequency is once per day. Supports plain text remote links, e.g., `https://raw.githubusercontent.com/SadYuyuko/Search-Engine-Result-Hider/main/Other/rules.txt`; compatible with `.yaml` uBlacklist list format (`name`/`rules`/`blacklist`/`whitelist` entries; whitelist entries are automatically prepended with `@` upon import).
+2. Subscription rules are appended after local rules. Due to limited allocatable script performance, it is recommended that the total number of rules does not exceed 50k to avoid mobile device performance issues 🤳💥
+3. Script extension capabilities are limited and do not support `##` DOM element rules; they are automatically filtered out when imported via subscriptions.
+4. Subscription updates also run in the background. When multiple tabs are open, each subscription is fetched by only one tab.
 
 ### 1.5 Other:
 
-1. One-click blocking logic: When secondary confirmation is enabled, a panel pops up offering Domain block / Exact block / Add whitelist; when secondary confirmation is disabled, adds `*://example.com/*`/`*://*.example.com/*` according to the domain blocking switch. Unblocking does not delete source rules, but adds a new whitelist `@*://example.com/*`/`*://*.example.com/*`.
+1. One-click blocking logic:  
+When secondary confirmation is enabled, a panel pops up offering options to block or add to whitelist; when secondary confirmation is disabled, adds `*://example.com/*` or `*://*.example.com/*` based on the domain blocking switch;  
+For unblocking, when secondary confirmation is enabled, a panel pops up offering options to delete source rules or add to whitelist; when secondary confirmation is disabled, adds a new whitelist entry by default.
 2. Both subscriptions and WebDAV rely on cross-origin request permissions. If a permission request prompt appears, select `Always allow`.
-3. Rule priority: Local whitelist > Local blacklist > Subscription whitelist > Subscription blacklist.
-4. The script is injected globally via `@match *://*/*`. Floating bubble and blocking filters only take effect on search engine sites.
-5. Comment line format: `# + [space] + other characters`. The ⬆️/⬇️ buttons navigate to the previous/next comment line. Pressing ⬆️ on the first line or first comment line jumps to the last line.
+3. Rule priority: Local whitelist > Local blacklist > Subscription whitelist > Subscription blacklist
+4. The script is injected globally via `@match *://*/*`. The floating bubble and blocking filters only take effect when matching search engine hostnames.
+5. Comment line format: `# + space + content`. The ⬆️/⬇️ buttons navigate to the previous/next comment line. Pressing ⬆️ on the first line or first comment line jumps to the last line.
 
 ## Rule Description
 
@@ -60,7 +63,7 @@ Open with a browser that supports script installation to install directly.
 
 | Rule | Description |
 | --- | --- |
-| `*://www.example.com/*` | Matches `example.com` |
+| `*://abc.example.com/*` | Matches `abc.example.com` |
 | `*://*.example.com/*` | Matches `example.com` and all its subdomains |
 | `*://*.example.com/path/*` | Matches specific path on `example.com` |
 | `*://*.example.*` | Matches all top-level domains of `example.com` |
@@ -85,9 +88,9 @@ Standard regular expressions use JavaScript `RegExp` flags supported by browsers
 | `title/.*example.*/` | Matches results containing `example` in the title |
 | `title/^example.*/` | Matches search results whose title starts with `example` |
 | `title/.*example(A\|B).*/` | Matches results whose title contains `exampleA` or `exampleB` |
-| `title/.*example(A\|B).*/i` | Case-insensitive; in addition to the above, matches results containing `examplea` or `exampleb`. |
-| `title/^(?=.*example1)(?=.*(?:example2)).*/i` | Case-insensitive and order-independent; matches results containing both `example1` and `example2` simultaneously. |
-| `title/^(?=.*example1)(?=.*(?:example2\|example3)).*/i` | Case-insensitive and order-independent; matches results containing both `example1 and example2` or `example1 and example3` simultaneously. |
+| `title/.*example(A\|B).*/i` | Case-insensitive; in addition to the above, matches results containing `examplea` or `exampleb` |
+| `title/^(?=.*example1)(?=.*(?:example2)).*/i` | Case-insensitive and order-independent; matches results containing both `example1` and `example2` |
+| `title/^(?=.*example1)(?=.*(?:example2\|example3)).*/i` | Case-insensitive and order-independent; matches results containing both `example1 and example2` or `example1 and example3` |
 
 ### 2.4 Snippet Matching:
 
@@ -114,7 +117,7 @@ Standard regular expressions use JavaScript `RegExp` flags supported by browsers
 | `@N title/.*example.*/` | Adds a colored border to results matching titles containing `example` |
 
 Priority: Block > Highlight; Whitelisted results will not be blocked, but can still be highlighted.  
-Note: `@N` only supports 5 colors, i.e., `@1` to `@5`. Open the custom color panel via the script menu.
+Note: Only supports 5 colors, meaning `@N` is `@1` to `@5`. Open the custom color panel via the script menu.
 
 ### 2.7 Composite Rules:
 
@@ -123,7 +126,7 @@ Note: `@N` only supports 5 colors, i.e., `@1` to `@5`. Open the custom color pan
 2. Condition expressions can be used standalone, e.g., `host $= ".example.com"`, `path *= "/download/"`, taking effect across all search results.
 3. Logical operations supported within a single `@if`: `|` OR, `&` AND, `!` NOT, nested and grouped using `( )` parentheses, priority `!` > `&` > `|`.
 4. `!` negates the condition itself. When a result lacks the compared content (such as missing a title), the condition is considered not met, and after negation it evaluates to met. For example, `!(title *= "keyword")` matches results without a title.
-5. Attribute values support omitting quotes, e.g. `@if($site=google)`, `@if(site=google.com)`, `@if(scheme=https)` for unquoted values, compatible with uBlacklist syntax.
+5. Attribute values support omitting quotes, e.g. `@if($site=google)`, `@if(site=google.com)`, `@if(scheme=https)` for unquoted values, compatible with uBlacklist syntax style.
 
 **Conditions supported by `@if`:**
 
@@ -143,7 +146,7 @@ Note: `@N` only supports 5 colors, i.e., `@1` to `@5`. Open the custom color pan
 | URL Contains | `url *= "example"` | URL contains specified string `example` |
 | URL Regex | `url =~ /regex/` (or shorthand `url/regex/`) | URL matches regular expression, `=~` can be omitted, character class `[...]` supports unescaped slashes, add `i` at the end for case-insensitive |
 | URL Host | `host $= ".example.com"` | Matches hostname of result URL; `$=` is compatible with bare domains, i.e., `host $= ".example.com"` matches both `example.com` and `www.example.com` |
-| URL Path | `path *= "/download/"` | Matches pathname + search query of result URL |
+| URL Path | `path *= "/download/"` | Matches pathname + search query (pathname+search) of result URL |
 | URL Protocol | `scheme = "https"` | Matches protocol of result URL, e.g., `https`/`http`, quotes can be omitted (e.g. `scheme=https`) |
 | Logical Operation | `\|` OR, `&` AND, `!` NOT | Combine arbitrary conditions |
 | Parentheses Grouping | `( )` | Nest and combine sub-conditions |
@@ -201,7 +204,7 @@ bing: {disabled: true},
 1. Priority: Custom selectors > Built-in selectors. Changing overrides back to built-in values or using "Reset" will restore following script updates.
 2. Custom engines support `$site = "Engine ID"` condition as well as block/highlight/whitelist rules; `titles`/`snippets` can be omitted.
 3. Engine ID only allows letters/numbers/`_`/`-`, `other` is a reserved key and cannot be used. Overlapping with built-in engine IDs or sites will override built-in selectors, e.g., matching `cn.bing.com` will take priority over built-in `bing`.
-4. Built-in engine standard IDs: `google`, `google_scholar`, `bing`, `duckduckgo`, `yandex`, `brave`, `yahoo` (Note: `ddg` and `yahoo-japan` are aliases only supported in `@if($site=...)` conditions; use `duckduckgo` and `yahoo` when overriding built-in engines)
+4. Built-in engine standard IDs: `google`, `google_scholar`, `bing`, `duckduckgo`, `yandex`, `brave`, `yahoo` (Note: `ddg` and `yahoo-japan` are aliases only supported in `@if($site=...)` conditions; use `duckduckgo` and `yahoo` when overriding built-in engines in selector configuration)
 5. When saving, only keys differing from built-ins are stored; unmodified built-ins are not written to storage.
 
 ## Testing
@@ -230,32 +233,32 @@ Successful output example: `10 passed, 0 failed`
 
 ### 3.3 Debug Mode
 
-Use the [Web Debug](https://greasyfork.org/zh-CN/scripts/475228) script or desktop browser F12 developer tools → Console tab to view output.
+Use the [Web Debug](https://greasyfork.org/zh-CN/scripts/475228) script or browser F12 developer tools Console tab `window.__SERH_DEBUG__` to view output.
 
-Enter commands to view corresponding output.
+```javascript
+const d = window.__SERH_DEBUG__;
 
-```bash
 // View current configuration
-console.log('当前配置:', GM_getValue('searchfilter_blocker'));
+console.log('Current config:', d.config);
 
 // View compiled rules
-console.log('编译规则:', compiledRules);
+console.log('Compiled rules:', d.compiledRules);
 
 // View search engine identification
-console.log('搜索引擎:', getSearchEngine());
+console.log('Search engine:', d.getSearchEngine());
 
 // View result count on current page
-console.log('结果数量:', document.querySelectorAll('div.g').length);
+console.log('Result count:', document.querySelectorAll('div.g').length);
 
 // Monitor rule matching performance
-console.time('规则匹配');
-checkRuleMatchOptimized(url, domain, title, snippet, subdomainLevels);
-console.timeEnd('规则匹配');
+console.time('Rule matching');
+d.checkRuleMatchOptimized(url, domain, title, snippet, subdomainLevels);
+console.timeEnd('Rule matching');
 
 // Monitor DOM query performance
-console.time('结果查询');
+console.time('Result query');
 document.querySelectorAll(selector);
-console.timeEnd('结果查询');
+console.timeEnd('Result query');
 ```
 
 Normal output
