@@ -3,7 +3,7 @@
 // @name:zh-CN   搜索引擎结果屏蔽器
 // @name:en      Search Engine Result Hider
 // @namespace    https://github.com/SadYuyuko
-// @version      8.1.0
+// @version      8.2.0
 // @description        支持正则的搜索结果屏蔽工具。
 // @description:zh-CN  支持正则的搜索结果屏蔽工具。
 // @description:en     A search result blocking tool that supports regular expressions.
@@ -343,6 +343,7 @@
       bcDomain: '域名',
       bcExact: '精确',
       bcWhitelist: '白名单',
+      bcDelete: '删除',
       bcConfirm: '确认',
       cannotBlockCurrentSite: '无法屏蔽当前搜索引擎自身域名: {domain}',
       statsErrors: '发现 {count} 个规则错误: ',
@@ -457,6 +458,7 @@
       bcDomain: 'Domain',
       bcExact: 'Exact',
       bcWhitelist: 'Whitelist',
+      bcDelete: 'Delete',
       bcConfirm: 'Confirm',
       cannotBlockCurrentSite: 'Cannot block search engine own domain: {domain}',
       statsErrors: 'Found {count} rule errors:',
@@ -628,7 +630,7 @@
       if (ch === '"') { inDQ = true; continue; }
       if (ch === '/' && !inRE) {
         const prev = line.slice(0, i).trimEnd();
-        if (ifDepth > 0 || /(?:=~|~)$/.test(prev) || /(?:title|url|host|path|scheme)$/i.test(prev)) {
+        if (/(?:=~|~)$/.test(prev) || (/(?:^|[\s(&|!])(?:title|url|host|path|scheme)$/i.test(prev) && !prev.includes('://'))) {
           inRE = true;
           continue;
         }
@@ -637,11 +639,13 @@
       if (ch === '(' && ifDepth > 0) { ifDepth++; continue; }
       if (ch === ')' && ifDepth > 0) { ifDepth--; continue; }
       if (ch === '#') {
-        const prev = line[i - 1];
-        if (prev === undefined || /\s/.test(prev)) {
-          let end = i;
-          while (end > 0 && /\s/.test(line[end - 1])) end--;
-          return line.slice(0, end);
+        if (ifDepth === 0) {
+          const prev = line[i - 1];
+          if (prev === undefined || /\s/.test(prev)) {
+            let end = i;
+            while (end > 0 && /\s/.test(line[end - 1])) end--;
+            return line.slice(0, end);
+          }
         }
       }
     }
@@ -714,8 +718,13 @@
       if (ch === ' ' || ch === '\t' || ch === '\r' || ch === '\n') { pushChar(ch); i++; continue; }
 
       if (ch === '&' || ch === '|') {
-        flushLeaf();
-        tokens.push(ch);
+        if (leafParens === 0) {
+          flushLeaf();
+          tokens.push(ch);
+          i++;
+          continue;
+        }
+        pushChar(ch);
         i++;
         continue;
       }
@@ -966,27 +975,28 @@
       return { matched: true, static: (currentCategory || 'web') === target };
     }
 
-    let siteMatch = trimmed.match(/^site\s*[=:]\s*(?:['"](.*?)['"]|([^\s\)]+))\s*i?\s*$/i);
-    if (!siteMatch) siteMatch = trimmed.match(/^site\s*\(\s*(?:['"](.*?)['"]|([^\s\)]+))\s*\)\s*i?\s*$/i);
+    let siteMatch = trimmed.match(/^site\s*[=:]\s*(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'|([^\s\)]+))\s*i?\s*$/i);
+    if (!siteMatch) siteMatch = trimmed.match(/^site\s*\(\s*(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'|([^\s\)]+))\s*\)\s*i?\s*$/i);
     if (siteMatch) {
-      const rawVal = (siteMatch[1] !== undefined ? siteMatch[1] : siteMatch[2]);
+      const rawVal = (siteMatch[1] !== undefined ? siteMatch[1] : (siteMatch[2] !== undefined ? siteMatch[2] : siteMatch[3]));
       const target = rawVal.trim().toLowerCase().replace(/^\.+|\.+$/g, '');
       const curSite = String(currentSite || '').toLowerCase();
       return { matched: true, static: curSite === target || curSite.endsWith(`.${target}`) };
     }
 
-    const strMatch = trimmed.match(/^(title|url|host|path|scheme)\s*(\^=|\$=|\*=|=|:)\s*(?:['"](.*?)['"]|([a-z0-9_.~:/?#@!$&'()*+,;=-]+))\s*i?\s*$/i);
+    const strMatch = trimmed.match(/^(title|url|host|path|scheme)\s*(\^=|\$=|\*=|=|:)\s*(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'|([^\s"']+))\s*i?\s*$/i);
     if (strMatch) {
       const op = strMatch[2] === ':' ? '=' : strMatch[2];
-      const val = (strMatch[3] !== undefined ? strMatch[3] : strMatch[4]).toLowerCase();
+      const rawVal = (strMatch[3] !== undefined ? strMatch[3] : (strMatch[4] !== undefined ? strMatch[4] : strMatch[5]));
+      const val = rawVal.replace(/\\(["'])/g, '$1').toLowerCase();
       return { matched: true, dynamic: { type: strMatch[1].toLowerCase(), op, val } };
     }
 
     const reMatch = trimmed.match(/^(title|url|host|path|scheme)\s*(?:=\~\s*)?\/((?:[^/\\\[]|\\.|\[(?:[^\]\\]|\\.)*\])*)\/([a-z]*)$/i);
     if (reMatch) {
-      if (getInvalidRegexFlags(reMatch[3])) return { matched: false };
       const condType = reMatch[1].toLowerCase();
-      let flags = reMatch[3];
+      let flags = String(reMatch[3] || '').toLowerCase();
+      if (getInvalidRegexFlags(flags)) return { matched: false };
       if ((condType === 'host' || condType === 'scheme') && !flags.includes('i')) {
         flags += 'i';
       }
@@ -1057,7 +1067,13 @@
       if (ch === '\\') { i++; continue; }
       if (ch === "'") { inSQ = true; continue; }
       if (ch === '"') { inDQ = true; continue; }
-      if (ch === '/') { inRE = true; continue; }
+      if (ch === '/') {
+        const prev = str.slice(0, i).trimEnd();
+        if (/(?:=~|~)$/.test(prev) || (/(?:^|[\s(&|!])(?:title|url|host|path|scheme)$/i.test(prev) && !prev.includes('://'))) {
+          inRE = true;
+          continue;
+        }
+      }
       if (ch === '(') depth++;
       else if (ch === ')') {
         depth--;
@@ -1184,7 +1200,7 @@
 
   function looksLikeCondExpr(str) {
     if (!isCondExprCore(str)) return false;
-    return /(?:^|[\s(&|!])(?:\$site|\$category|site|title|url|host|path|scheme)\s*(?:(?:=~|\^=|\$=|\*=|=|:)\s*(?:["'/]|[a-z0-9_.~:/?#@!$&'()*+,;=-])|\/)/i.test(str)
+    return /(?:^|[\s(&|!])(?:\$site|\$category|site|title|url|host|path|scheme)\s*(?:(?:=~|\^=|\$=|\*=|=|:)\s*\S|\/)/i.test(str)
       || /^\s*!\s*(?:(?:\$site|\$category|site|title|url|host|path|scheme)\b|\()/i.test(str);
   }
 
@@ -1352,7 +1368,7 @@
           errors.push(t('invalidRegexFlags', { flags: invalidFlags }));
           return { valid: false, errors, warnings };
         }
-        new RegExp(pattern, flags);
+        new RegExp(pattern, String(flags || '').toLowerCase());
       } else if (ruleToCheck.startsWith('text/') || ruleToCheck.startsWith('title/')) {
         const prefixLen = ruleToCheck.startsWith('title/') ? 6 : 5;
         const { pattern, flags } = parsePrefixedRegexRule(ruleToCheck, prefixLen);
@@ -1365,7 +1381,7 @@
           errors.push(t('invalidRegexFlags', { flags: invalidFlags }));
           return { valid: false, errors, warnings };
         }
-        new RegExp(pattern, flags);
+        new RegExp(pattern, String(flags || '').toLowerCase());
       } else {
         if (!validateUrlWildcard(ruleToCheck)) {
           errors.push(t('invalidUrlWildcard', { rule: ruleToCheck }));
@@ -1430,13 +1446,13 @@
       }
     }
     if (!flags) {
-      const oldFlagMatch = pattern.match(/^\(\?([ims]+)\)/);
+      const oldFlagMatch = pattern.match(/^\(\?([imsu]+)\)/i);
       if (oldFlagMatch) {
-        flags = oldFlagMatch[1];
+        flags = oldFlagMatch[1].toLowerCase();
         pattern = pattern.substring(oldFlagMatch[0].length);
       }
     }
-    return { pattern, flags };
+    return { pattern, flags: String(flags || '').toLowerCase() };
   }
 
   // 通配符片段转正则
@@ -1493,7 +1509,7 @@
   function ruleToRegex(rule) {
     if (!rule.startsWith('/') && !rule.startsWith('title/') && !rule.startsWith('text/') &&
       !rule.includes('*') && !rule.includes('://') && !rule.startsWith('.')) {
-      if (rule.includes('.') && !/\s/.test(rule)) {
+      if (rule.includes('.') && !rule.includes('/') && !/\s/.test(rule)) {
         rule = '*://*.' + rule + '/*';
       }
     }
@@ -1501,7 +1517,7 @@
     if (rule.startsWith('/') && rule.lastIndexOf('/') > 0) {
       const lastSlash = rule.lastIndexOf('/');
       const pattern = rule.slice(1, lastSlash);
-      const flags = rule.slice(lastSlash + 1);
+      const flags = rule.slice(lastSlash + 1).toLowerCase();
       return {
         pattern,
         flags
@@ -1525,19 +1541,20 @@
 
   // 域名检查
   function matchWildcardDomainPattern(pattern) {
-    const bareWildcard = pattern.match(/^\*\.([^\/\*\s]+)$/);
+    if (pattern.includes(':') && !pattern.startsWith('*://')) return null;
+    const bareWildcard = pattern.match(/^\*\.([^\/\*\s:]+)$/);
     if (bareWildcard && bareWildcard[1].includes('.')) {
       return { domain: bareWildcard[1].toLowerCase(), domainType: 'wildcard' };
     }
     if (!pattern.startsWith('/') && !pattern.startsWith('title/') && !pattern.startsWith('text/') &&
       !pattern.includes('*') && !pattern.includes('://') && !pattern.startsWith('.')) {
-      if (pattern.includes('.') && !/\s/.test(pattern) && !pattern.includes('/')) {
+      if (pattern.includes('.') && !/\s/.test(pattern) && !pattern.includes('/') && !pattern.includes(':')) {
         return { domain: pattern.toLowerCase(), domainType: 'wildcard' };
       }
     }
-    const wildcardMatch = pattern.match(/^\*:\/\/\*\.([^\/\*]+)\/\*$/);
-    if (wildcardMatch) return { domain: wildcardMatch[1].toLowerCase(), domainType: 'wildcard' };
-    const exactMatch = pattern.match(/^\*:\/\/([^\/\*]+)\/\*$/);
+    const wildcardMatch = pattern.match(/^\*:\/\/\*\.([^\/\*:]+)\/\*$/);
+    if (wildcardMatch && wildcardMatch[1].includes('.')) return { domain: wildcardMatch[1].toLowerCase(), domainType: 'wildcard' };
+    const exactMatch = pattern.match(/^\*:\/\/([^\/\*:]+)\/\*$/);
     if (exactMatch) return { domain: exactMatch[1].toLowerCase(), domainType: 'exact' };
     return null;
   }
@@ -1554,20 +1571,40 @@
 
   // 辅助分类正则
   function compileRuleRegex(coreRule) {
+    let type = 'url';
+    let pattern = '';
+    let flags = '';
     if (coreRule.startsWith('/') && coreRule.lastIndexOf('/') > 0) {
-      const {pattern, flags} = ruleToRegex(coreRule);
-        return {type: 'regex', regex: new RegExp(pattern, flags)};
+      type = 'regex';
+      const r = ruleToRegex(coreRule);
+      pattern = r.pattern;
+      flags = r.flags;
+    } else if (coreRule.startsWith('title/')) {
+      type = 'title';
+      const r = ruleToRegex(coreRule);
+      pattern = r.pattern;
+      flags = r.flags;
+    } else if (coreRule.startsWith('text/')) {
+      type = 'text';
+      const r = parsePrefixedRegexRule(coreRule, 5);
+      pattern = r.pattern;
+      flags = r.flags;
+    } else {
+      type = 'url';
+      const r = ruleToRegex(coreRule);
+      pattern = r.pattern;
+      flags = r.flags;
     }
-    if (coreRule.startsWith('title/')) {
-      const {pattern, flags} = ruleToRegex(coreRule);
-      return {type: 'title', regex: new RegExp(pattern, flags)};
+    if (!pattern || !pattern.trim()) {
+      throw new Error('Empty regex pattern');
     }
-    if (coreRule.startsWith('text/')) {
-      const {pattern, flags} = parsePrefixedRegexRule(coreRule, 5);
-      return {type: 'text', regex: new RegExp(pattern, flags)};
-    }
-    const {pattern, flags} = ruleToRegex(coreRule);
-    return {type: 'url', regex: new RegExp(pattern, flags)};
+    return { type, regex: new RegExp(pattern, String(flags || '').toLowerCase()) };
+  }
+
+  function isLocalEntry(entry) {
+    if (!entry) return false;
+    if (entry.isLocal !== undefined) return entry.isLocal;
+    return entry.source === t('localRule') || entry.source === '本地规则' || entry.source === 'Local Rule';
   }
 
   // 预编译规则索引
@@ -1671,7 +1708,8 @@
 
       if (!rule || rule.trim() === '' || rule.startsWith('#')) return;
 
-      const source = ruleIndex < localRuleCount
+      const isLocal = ruleIndex < localRuleCount;
+      const source = isLocal
         ? t('localRule')
         : (subscriptionSources[ruleIndex - localRuleCount] || t('localRule'));
 
@@ -1694,17 +1732,17 @@
           if (!hasDynamic) {
             if (!compiledRules.whitelistDomains.has(simpleDomain.domain))
               compiledRules.whitelistDomains.set(simpleDomain.domain, []);
-            compiledRules.whitelistDomains.get(simpleDomain.domain).push({type: simpleDomain.type, source});
+            compiledRules.whitelistDomains.get(simpleDomain.domain).push({type: simpleDomain.type, source, isLocal});
           } else {
             if (!compiledRules.whitelistConditionalDomains.has(simpleDomain.domain))
               compiledRules.whitelistConditionalDomains.set(simpleDomain.domain, []);
-            compiledRules.whitelistConditionalDomains.get(simpleDomain.domain).push({type: simpleDomain.type, conditions: parsed.dynamicConditions, source});
+            compiledRules.whitelistConditionalDomains.get(simpleDomain.domain).push({type: simpleDomain.type, conditions: parsed.dynamicConditions, source, isLocal});
           }
         } else {
           const whitelistRule = coreRule.substring(1).trim();
           if (!whitelistRule) {
             if (parsed.standaloneExpr || hasDynamic) {
-              compiledRules.whitelistConditionalRules.push({type: 'expr', conditions: parsed.dynamicConditions, source});
+              compiledRules.whitelistConditionalRules.push({type: 'expr', conditions: parsed.dynamicConditions, source, isLocal});
             }
             return;
           }
@@ -1712,14 +1750,14 @@
             const compiled = compileRuleRegex(whitelistRule);
             if (!hasDynamic) {
               if (compiled.type === 'title') {
-                compiledRules.whitelistTitlePatterns.push({regex: compiled.regex, source});
+                compiledRules.whitelistTitlePatterns.push({regex: compiled.regex, source, isLocal});
               } else if (compiled.type === 'text') {
-                compiledRules.whitelistTextPatterns.push({regex: compiled.regex, source});
+                compiledRules.whitelistTextPatterns.push({regex: compiled.regex, source, isLocal});
               } else {
-                compiledRules.whitelistUrlPatterns.push({regex: compiled.regex, source});
+                compiledRules.whitelistUrlPatterns.push({regex: compiled.regex, source, isLocal});
               }
             } else {
-              compiledRules.whitelistConditionalRules.push({type: compiled.type, regex: compiled.regex, conditions: parsed.dynamicConditions, source});
+              compiledRules.whitelistConditionalRules.push({type: compiled.type, regex: compiled.regex, conditions: parsed.dynamicConditions, source, isLocal});
             }
           } catch (e) {
             if (currentConfig.debug) console.warn('白名单规则预编译失败:', rule, e);
@@ -1731,6 +1769,7 @@
       let ruleObj = {
         originalRule: rule,
         source: source,
+        isLocal: isLocal,
         conditions: parsed.dynamicConditions
       };
 
@@ -1752,7 +1791,7 @@
           if (!hasDynamic) {
             if (!compiledRules.domains.has(dm.domain))
               compiledRules.domains.set(dm.domain, []);
-            compiledRules.domains.get(dm.domain).push({type: dm.domainType, originalRule: rule, source});
+            compiledRules.domains.get(dm.domain).push({type: dm.domainType, originalRule: rule, source, isLocal});
           } else {
             if (!compiledRules.conditionalDomains.has(dm.domain))
               compiledRules.conditionalDomains.set(dm.domain, []);
@@ -1768,9 +1807,9 @@
         ruleObj.type = compiled.type;
         ruleObj.regex = compiled.regex;
         if (!hasDynamic) {
-          if (compiled.type === 'text') compiledRules.texts.push({regex: compiled.regex, originalRule: rule, source});
-          else if (compiled.type === 'title') compiledRules.titles.push({regex: compiled.regex, originalRule: rule, source});
-          else compiledRules.urls.push({regex: compiled.regex, originalRule: rule, source});
+          if (compiled.type === 'text') compiledRules.texts.push({regex: compiled.regex, originalRule: rule, source, isLocal});
+          else if (compiled.type === 'title') compiledRules.titles.push({regex: compiled.regex, originalRule: rule, source, isLocal});
+          else compiledRules.urls.push({regex: compiled.regex, originalRule: rule, source, isLocal});
         } else {
           compiledRules.conditionalRules.push(ruleObj);
         }
@@ -1817,6 +1856,11 @@
 
   // 规则优先级
   function checkRuleMatchOptimized(url, domain, title, snippet, subdomainLevels) {
+    const isLocalEntry = (entry) => {
+      if (!entry) return false;
+      if (entry.isLocal !== undefined) return entry.isLocal;
+      return entry.source === t('localRule') || entry.source === '本地规则' || entry.source === 'Local Rule';
+    };
     const lowerDomain = domain.toLowerCase();
     let whitelisted = false;
     let highlightN = 0;
@@ -1879,7 +1923,7 @@
       const types = compiledRules.whitelistDomains.get(level);
       if (types) {
         for (const entry of types) {
-          if (entry.source === t('localRule') && matchDomainEntryType(entry.type, level, lowerDomain)) { whitelisted = true; break; }
+          if (isLocalEntry(entry) && matchDomainEntryType(entry.type, level, lowerDomain)) { whitelisted = true; break; }
         }
         if (whitelisted) break;
       }
@@ -1887,21 +1931,21 @@
     if (!whitelisted) {
       for (let i = 0; i < compiledRules.whitelistUrlPatterns.length; i++) {
         const entry = compiledRules.whitelistUrlPatterns[i];
-        if (entry.source !== t('localRule')) continue;
+        if (!isLocalEntry(entry)) continue;
         if (safeRegexTest(entry.regex, url) || safeRegexTest(entry.regex, domain)) { whitelisted = true; break; }
       }
     }
     if (!whitelisted && title) {
       for (let i = 0; i < compiledRules.whitelistTitlePatterns.length; i++) {
         const entry = compiledRules.whitelistTitlePatterns[i];
-        if (entry.source !== t('localRule')) continue;
+        if (!isLocalEntry(entry)) continue;
         if (safeRegexTest(entry.regex, title)) { whitelisted = true; break; }
       }
     }
     if (!whitelisted && snippet) {
       for (let i = 0; i < compiledRules.whitelistTextPatterns.length; i++) {
         const entry = compiledRules.whitelistTextPatterns[i];
-        if (entry.source !== t('localRule')) continue;
+        if (!isLocalEntry(entry)) continue;
         if (safeRegexTest(entry.regex, snippet)) { whitelisted = true; break; }
       }
     }
@@ -1910,7 +1954,7 @@
         const wlRules = compiledRules.whitelistConditionalDomains.get(level);
         if (wlRules) {
           for (const item of wlRules) {
-            if (item.source === t('localRule') && matchDomainEntryType(item.type, level, lowerDomain) && checkDynamicConditions(item.conditions, title, url)) { whitelisted = true; break; }
+            if (isLocalEntry(item) && matchDomainEntryType(item.type, level, lowerDomain) && checkDynamicConditions(item.conditions, title, url)) { whitelisted = true; break; }
           }
           if (whitelisted) break;
         }
@@ -1919,7 +1963,7 @@
     if (!whitelisted) {
       for (let i = 0; i < compiledRules.whitelistConditionalRules.length; i++) {
         const item = compiledRules.whitelistConditionalRules[i];
-        if (item.source !== t('localRule')) continue;
+        if (!isLocalEntry(item)) continue;
         if (!checkDynamicConditions(item.conditions, title, url)) continue;
         if (item.type === 'expr') { whitelisted = true; break; }
         if (item.type === 'url' || item.type === 'regex') {
@@ -1937,7 +1981,7 @@
         const entries = compiledRules.domains.get(level);
         if (entries) {
           for (const dm of entries) {
-            if (dm.source !== t('localRule')) continue;
+            if (!isLocalEntry(dm)) continue;
             if (matchDomainEntryType(dm.type, level, lowerDomain)) { blockedInfo = {rule: dm.originalRule, source: dm.source}; break; }
           }
           if (blockedInfo) break;
@@ -1946,21 +1990,21 @@
       if (!blockedInfo) {
         for (let i = 0; i < compiledRules.urls.length; i++) {
           const item = compiledRules.urls[i];
-          if (item.source !== t('localRule')) continue;
+          if (!isLocalEntry(item)) continue;
           if (safeRegexTest(item.regex, url) || safeRegexTest(item.regex, domain)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
         }
       }
       if (!blockedInfo && title) {
         for (let i = 0; i < compiledRules.titles.length; i++) {
           const item = compiledRules.titles[i];
-          if (item.source !== t('localRule')) continue;
+          if (!isLocalEntry(item)) continue;
           if (safeRegexTest(item.regex, title)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
         }
       }
       if (!blockedInfo && snippet) {
         for (let i = 0; i < compiledRules.texts.length; i++) {
           const item = compiledRules.texts[i];
-          if (item.source !== t('localRule')) continue;
+          if (!isLocalEntry(item)) continue;
           if (safeRegexTest(item.regex, snippet)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
         }
       }
@@ -1969,7 +2013,7 @@
           const rules = compiledRules.conditionalDomains.get(level);
           if (rules) {
             for (const item of rules) {
-              if (item.source !== t('localRule')) continue;
+              if (!isLocalEntry(item)) continue;
               if (matchDomainEntryType(item.domainType, level, lowerDomain) && checkDynamicConditions(item.conditions, title, url)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
             }
             if (blockedInfo) break;
@@ -1979,7 +2023,7 @@
       if (!blockedInfo) {
         for (let i = 0; i < compiledRules.conditionalRules.length; i++) {
           const item = compiledRules.conditionalRules[i];
-          if (item.source !== t('localRule')) continue;
+          if (!isLocalEntry(item)) continue;
           if (!checkDynamicConditions(item.conditions, title, url)) continue;
           if (item.type === 'expr') { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
           if (item.type === 'url' || item.type === 'regex') {
@@ -1993,53 +2037,53 @@
       }
     }
 
-    if (!whitelisted) {
+    if (!whitelisted && !blockedInfo) {
       for (const level of subdomainLevels) {
         const types = compiledRules.whitelistDomains.get(level);
         if (types) {
           for (const entry of types) {
-            if (entry.source !== t('localRule') && matchDomainEntryType(entry.type, level, lowerDomain)) { whitelisted = true; break; }
+            if (!isLocalEntry(entry) && matchDomainEntryType(entry.type, level, lowerDomain)) { whitelisted = true; break; }
           }
           if (whitelisted) break;
         }
       }
     }
-    if (!whitelisted) {
+    if (!whitelisted && !blockedInfo) {
       for (let i = 0; i < compiledRules.whitelistUrlPatterns.length; i++) {
         const entry = compiledRules.whitelistUrlPatterns[i];
-        if (entry.source === t('localRule')) continue;
+        if (isLocalEntry(entry)) continue;
         if (safeRegexTest(entry.regex, url) || safeRegexTest(entry.regex, domain)) { whitelisted = true; break; }
       }
     }
-    if (!whitelisted && title) {
+    if (!whitelisted && !blockedInfo && title) {
       for (let i = 0; i < compiledRules.whitelistTitlePatterns.length; i++) {
         const entry = compiledRules.whitelistTitlePatterns[i];
-        if (entry.source === t('localRule')) continue;
+        if (isLocalEntry(entry)) continue;
         if (safeRegexTest(entry.regex, title)) { whitelisted = true; break; }
       }
     }
-    if (!whitelisted && snippet) {
+    if (!whitelisted && !blockedInfo && snippet) {
       for (let i = 0; i < compiledRules.whitelistTextPatterns.length; i++) {
         const entry = compiledRules.whitelistTextPatterns[i];
-        if (entry.source === t('localRule')) continue;
+        if (isLocalEntry(entry)) continue;
         if (safeRegexTest(entry.regex, snippet)) { whitelisted = true; break; }
       }
     }
-    if (!whitelisted) {
+    if (!whitelisted && !blockedInfo) {
       for (const level of subdomainLevels) {
         const wlRules = compiledRules.whitelistConditionalDomains.get(level);
         if (wlRules) {
           for (const item of wlRules) {
-            if (item.source !== t('localRule') && matchDomainEntryType(item.type, level, lowerDomain) && checkDynamicConditions(item.conditions, title, url)) { whitelisted = true; break; }
+            if (!isLocalEntry(item) && matchDomainEntryType(item.type, level, lowerDomain) && checkDynamicConditions(item.conditions, title, url)) { whitelisted = true; break; }
           }
           if (whitelisted) break;
         }
       }
     }
-    if (!whitelisted) {
+    if (!whitelisted && !blockedInfo) {
       for (let i = 0; i < compiledRules.whitelistConditionalRules.length; i++) {
         const item = compiledRules.whitelistConditionalRules[i];
-        if (item.source === t('localRule')) continue;
+        if (isLocalEntry(item)) continue;
         if (!checkDynamicConditions(item.conditions, title, url)) continue;
         if (item.type === 'expr') { whitelisted = true; break; }
         if (item.type === 'url' || item.type === 'regex') {
@@ -2057,7 +2101,7 @@
         const entries = compiledRules.domains.get(level);
         if (entries) {
           for (const dm of entries) {
-            if (dm.source === t('localRule')) continue;
+            if (isLocalEntry(dm)) continue;
             if (matchDomainEntryType(dm.type, level, lowerDomain)) { blockedInfo = {rule: dm.originalRule, source: dm.source}; break; }
           }
           if (blockedInfo) break;
@@ -2066,21 +2110,21 @@
       if (!blockedInfo) {
         for (let i = 0; i < compiledRules.urls.length; i++) {
           const item = compiledRules.urls[i];
-          if (item.source === t('localRule')) continue;
+          if (isLocalEntry(item)) continue;
           if (safeRegexTest(item.regex, url) || safeRegexTest(item.regex, domain)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
         }
       }
       if (!blockedInfo && title) {
         for (let i = 0; i < compiledRules.titles.length; i++) {
           const item = compiledRules.titles[i];
-          if (item.source === t('localRule')) continue;
+          if (isLocalEntry(item)) continue;
           if (safeRegexTest(item.regex, title)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
         }
       }
       if (!blockedInfo && snippet) {
         for (let i = 0; i < compiledRules.texts.length; i++) {
           const item = compiledRules.texts[i];
-          if (item.source === t('localRule')) continue;
+          if (isLocalEntry(item)) continue;
           if (safeRegexTest(item.regex, snippet)) { blockedInfo = {rule: item.originalRule, source: item.source}; break; }
         }
       }
@@ -2089,7 +2133,7 @@
           const rules = compiledRules.conditionalDomains.get(level);
           if (rules) {
             for (const ruleObj of rules) {
-              if (ruleObj.source === t('localRule')) continue;
+              if (isLocalEntry(ruleObj)) continue;
               if (matchDomainEntryType(ruleObj.domainType, level, lowerDomain) && checkDynamicConditions(ruleObj.conditions, title, url)) {
                 blockedInfo = {rule: ruleObj.originalRule, source: ruleObj.source}; break;
               }
@@ -2101,7 +2145,7 @@
       if (!blockedInfo) {
         for (let i = 0; i < compiledRules.conditionalRules.length; i++) {
           const ruleObj = compiledRules.conditionalRules[i];
-          if (ruleObj.source === t('localRule')) continue;
+          if (isLocalEntry(ruleObj)) continue;
           if (!checkDynamicConditions(ruleObj.conditions, title, url)) continue;
           if (ruleObj.type === 'expr') { blockedInfo = {rule: ruleObj.originalRule, source: ruleObj.source}; break; }
           if (ruleObj.type === 'url' || ruleObj.type === 'regex') {
@@ -2121,64 +2165,80 @@
     return false;
   }
 
+  function decodeRedirectTarget(raw) {
+    if (!raw) return '';
+    let value = String(raw);
+    try { value = decodeURIComponent(value); } catch (_) {}
+    return /^https?:\/\//i.test(value) ? value : '';
+  }
+
+  function decodeBingCkTarget(u) {
+    if (!u || !u.startsWith('a1')) return '';
+    let base64 = u.slice(2).replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) base64 += '=';
+    let realUrl = '';
+    try {
+      if (typeof atob === 'function') {
+        const bin = atob(base64);
+        if (typeof TextDecoder !== 'undefined') {
+          const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+          realUrl = new TextDecoder('utf-8').decode(bytes);
+        } else {
+          realUrl = decodeURIComponent(escape(bin));
+        }
+      } else {
+        realUrl = Buffer.from(base64, 'base64').toString('utf8');
+      }
+    } catch (_) { return ''; }
+    return /^https?:\/\//i.test(realUrl) ? realUrl : '';
+  }
+
   // 去除重定向
-  function getCleanUrlAndFixDOM(link, engine) {
-    if (!link || !link.href) return '';
-    let url = link.href;
-    if (engine === 'google') {
-      try {
-        const urlObj = new URL(url);
-        if (urlObj.hostname.includes('google.') && urlObj.pathname === '/url') {
-          const realUrl = urlObj.searchParams.get('q') || urlObj.searchParams.get('url');
-          if (realUrl && /^https?:\/\//i.test(realUrl)) {
-            url = realUrl;
-            link.href = realUrl;
+  function unwrapRedirectUrl(url) {
+    if (!url) return '';
+    try {
+      const urlObj = new URL(url);
+      const host = urlObj.hostname;
+      const path = urlObj.pathname;
+      if (/(?:^|\.)bing\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)$/i.test(host) && path.startsWith('/ck/a')) {
+        const realUrl = decodeBingCkTarget(urlObj.searchParams.get('u'));
+        if (realUrl) return realUrl;
+      }
+      if (/(?:^|\.)scholar\.google\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})$/i.test(host) && /\/scholar_url\/?$/i.test(path)) {
+        const realUrl = decodeRedirectTarget(urlObj.searchParams.get('url'));
+        if (realUrl) return realUrl;
+      }
+      if (/(?:^|\.)google\.(?:[a-z]{2,3}(?:\.[a-z]{2})?|[a-z]{4,})$/i.test(host) && path === '/url') {
+        const realUrl = decodeRedirectTarget(urlObj.searchParams.get('q') || urlObj.searchParams.get('url'));
+        if (realUrl) return realUrl;
+      }
+      if (/(?:^|\.)(?:duckduckgo\.com|ddg\.gg)$/i.test(host) && /^\/l\/?$/i.test(path)) {
+        const realUrl = decodeRedirectTarget(urlObj.searchParams.get('uddg'));
+        if (realUrl) return realUrl;
+      }
+      if (/(?:^|\.)(?:[a-z]{2}\.)?(?:r\.)?search\.yahoo\.(?:com|[a-z]{2}(?:\.[a-z]{2})?)$/i.test(host)) {
+        for (const part of path.split('/')) {
+          if (part.startsWith('RU=')) {
+            const realUrl = decodeRedirectTarget(part.substring(3));
+            if (realUrl) return realUrl;
+            break;
           }
         }
-      } catch (e) {}
-    }
-    if (engine === 'duckduckgo') {
-      try {
-        const urlObj = new URL(url);
-        if (/(?:^|\.)(?:duckduckgo\.com|ddg\.gg)$/.test(urlObj.hostname) && (urlObj.pathname === '/l/' || urlObj.pathname.startsWith('/l/'))) {
-          const uddg = urlObj.searchParams.get('uddg');
-          if (uddg) {
-            const realUrl = decodeURIComponent(uddg);
-            if (realUrl && /^https?:\/\//i.test(realUrl)) {
-              url = realUrl;
-              link.href = realUrl;
-            }
-          }
-        }
-      } catch (e) {}
-    }
-    if (engine === 'yahoo') {
-      try {
-        const urlObj = new URL(url);
-        if (/^(?:r\.)?search\.yahoo\./.test(urlObj.hostname)) {
-          const pathParts = urlObj.pathname.split('/');
-          for (const part of pathParts) {
-            if (part.startsWith('RU=')) {
-              const encodedUrl = part.substring(3);
-              try {
-                const realUrl = decodeURIComponent(encodedUrl);
-                if (realUrl && /^https?:\/\//i.test(realUrl)) {
-                  url = realUrl;
-                  link.href = realUrl;
-                }
-              } catch (_) {}
-              break;
-            }
-          }
-        }
-      } catch (_) {}
-    }
+      }
+    } catch (_) {}
     return url;
   }
 
+  function getCleanUrlAndFixDOM(link) {
+    if (!link || !link.href) return '';
+    const realUrl = unwrapRedirectUrl(link.href);
+    if (realUrl && realUrl !== link.href) link.href = realUrl;
+    return realUrl || link.href;
+  }
+
   // 提取链接
-  function resolveUrlDomain(link, engine) {
-    const url = getCleanUrlAndFixDOM(link, engine);
+  function resolveUrlDomain(link) {
+    const url = getCleanUrlAndFixDOM(link);
     let domain = '';
     try {
       domain = new URL(url).hostname;
@@ -2259,7 +2319,7 @@
 
   // 二次确认面板
   let _blockConfirmOutsideHandler = null;
-  function showBlockConfirmPanel(anchor, domain, onConfirm) {
+  function showBlockConfirmPanel(anchor, domain, onConfirm, customOptions = null) {
     injectWidgetStyles();
     if (_blockConfirmOutsideHandler) {
       document.removeEventListener('click', _blockConfirmOutsideHandler, true);
@@ -2269,7 +2329,7 @@
     if (existing) existing.remove();
 
     const opts = buildBlockRuleOptions(domain);
-    const options = opts.isIP
+    const options = customOptions || (opts.isIP
       ? [
           { label: t('bcExact'), rule: opts.exactRule },
           { label: t('bcWhitelist'), rule: opts.whitelistRule }
@@ -2278,7 +2338,7 @@
           { label: t('bcDomain'), rule: opts.domainRule },
           { label: t('bcExact'), rule: opts.exactRule },
           { label: t('bcWhitelist'), rule: opts.whitelistRule }
-        ];
+        ]);
 
     const panel = document.createElement('div');
     panel.id = 'searchfilter-block-confirm-dialog';
@@ -2338,7 +2398,7 @@
     panel.querySelector('#sfb-confirm-ok').onclick = (e) => {
       e.stopPropagation();
       const checked = panel.querySelector('input[type="radio"]:checked');
-      const idx = checked ? checked.value : '0';
+      const idx = checked ? parseInt(checked.value, 10) : 0;
       const ruleInput = panel.querySelector(`.sfb-confirm-rule[data-idx="${idx}"]`);
       const rule = (ruleInput ? ruleInput.value : '').trim();
       if (!rule) { close(); return; }
@@ -2346,8 +2406,9 @@
         showToast(t('invalidRule'), 'error');
         return;
       }
+      const selectedOption = options[idx];
       close();
-      onConfirm(rule);
+      onConfirm(rule, selectedOption);
     };
   }
 
@@ -2409,6 +2470,31 @@
       if (isBlocked) {
         const opts = buildBlockRuleOptions(domain);
         const whitelistRule = '@' + (currentConfig.blockDomain ? opts.domainRule : opts.exactRule);
+        const matchedRule = (result.dataset.matchedRule || '').trim();
+
+        if (currentConfig.blockConfirm) {
+          const unblockOptions = [];
+          if (matchedRule) {
+            unblockOptions.push({ label: t('bcDelete'), rule: matchedRule, action: 'delete' });
+          }
+          unblockOptions.push({ label: t('bcWhitelist'), rule: whitelistRule, action: 'whitelist' });
+
+          showBlockConfirmPanel(btn, domain, (chosenRule, selectedOption) => {
+            const action = (selectedOption && selectedOption.action) || 'whitelist';
+            if (action === 'delete') {
+              const cleanTarget = stripRuleComment(chosenRule.trim());
+              currentConfig.rules = currentConfig.rules.filter(rule => stripRuleComment(rule.trim()) !== cleanTarget);
+            } else {
+              if (!currentConfig.rules.some(rule => stripRuleComment(rule.trim()) === chosenRule)) {
+                currentConfig.rules.push(chosenRule);
+              }
+            }
+            persistConfig();
+            syncRulesTextarea();
+            forceReprocessAll();
+          }, unblockOptions);
+          return;
+        }
 
         if (!currentConfig.rules.some(rule => stripRuleComment(rule.trim()) === whitelistRule)) {
           currentConfig.rules.push(whitelistRule);
@@ -2486,7 +2572,7 @@
       return false;
     }
 
-    const { url, domain } = resolveUrlDomain(link, engine);
+    const { url, domain } = resolveUrlDomain(link);
 
     const title = getResultTitle(result, engine);
     const snippet = getResultSnippet(result, engine);
@@ -2683,11 +2769,30 @@
     });
   }
 
+  function exposeDebugApi() {
+    try {
+      if (currentConfig.debug) {
+        window.__SERH_DEBUG__ = {
+          get config() { return currentConfig; },
+          get compiledRules() { return compiledRules; },
+          getSearchEngine,
+          getSearchCategory,
+          getContainerSelector,
+          checkRuleMatchOptimized,
+          forceReprocessAll
+        };
+      } else if (window.__SERH_DEBUG__) {
+        delete window.__SERH_DEBUG__;
+      }
+    } catch (_) {}
+  }
+
   function forceReprocessAll() {
     if (!isEngineSite()) return;
     yandexParentTimeouts.forEach(id => clearTimeout(id));
     yandexParentTimeouts.clear();
     buildRuleIndex();
+    exposeDebugApi();
 
     const engine = getSearchEngine();
     const selector = getContainerSelector(engine);
@@ -4083,7 +4188,7 @@
         const engine = getSearchEngine();
         const link = getResultLink(el, engine);
         if (link && link.href && currentConfig.showBlockBtn) {
-          const { url, domain } = resolveUrlDomain(link, engine);
+          const { url, domain } = resolveUrlDomain(link);
           if (!el.querySelector('.searchfilter-quick-block')) {
             injectBlockButton(el, engine, url, domain);
           }
@@ -4834,7 +4939,7 @@
     const switchDefs = [
       { id: 'searchfilter-enabled', key: 'enabled', apply: () => { forceReprocessAll(); } },
       { id: 'searchfilter-show-count', key: 'showCount', apply: () => { const s = document.getElementById('searchfilter-status'); if (s) updateBubbleContent(s, parseInt(s.dataset.blockedCount || 0)); } },
-      { id: 'searchfilter-debug', key: 'debug', apply: null },
+      { id: 'searchfilter-debug', key: 'debug', apply: () => { exposeDebugApi(); } },
       { id: 'searchfilter-show-block-btn', key: 'showBlockBtn', apply: () => { forceReprocessAll(); } },
       { id: 'searchfilter-block-domain', key: 'blockDomain', apply: null },
       { id: 'searchfilter-block-confirm', key: 'blockConfirm', apply: null },
@@ -5731,6 +5836,10 @@
     return payload;
   }
 
+  function isHtmlResponse(content) {
+    return /^\s*<!DOCTYPE\s+html|^\s*<html[\s>]/i.test(String(content || ''));
+  }
+
   function parseSyncHeader(content) {
     const lines = content.split('\n');
     if (lines.length > 0 && lines[0].startsWith('# ScriptConfig:')) {
@@ -5779,6 +5888,7 @@
   function extractYamlRuleItems(lines) {
     let hasSection = false;
     let inSection = false;
+    let sectionKind = '';
     let name;
     const items = [];
     const stripQ = (raw) => {
@@ -5789,12 +5899,20 @@
       }
       return s;
     };
+    const listKeyOf = (line) => {
+      const m = line.match(/^\s*(rules|blacklist|whitelist)\s*:\s*(?:#.*)?$/i);
+      return m ? m[1].toLowerCase() : '';
+    };
     for (const line of lines) {
+      const listKey = listKeyOf(line);
+      if (listKey) {
+        hasSection = true;
+        inSection = true;
+        sectionKind = listKey;
+        continue;
+      }
       if (!inSection) {
-        if (/^\s*(?:rules|blacklist)\s*:\s*(?:#.*)?$/.test(line)) {
-          hasSection = true;
-          inSection = true;
-        } else if (name === undefined) {
+        if (name === undefined) {
           const nm = line.match(/^\s*name\s*:\s*(.+?)\s*$/);
           if (nm) name = stripQ(nm[1]);
         }
@@ -5803,12 +5921,23 @@
       const s = line.trim();
       if (!s || s.startsWith('#')) continue;
       if (/^-\s+/.test(s)) {
-        const item = stripQ(s.replace(/^-\s+/, ''));
+        let rawItem = s.replace(/^-\s+/, '').trim();
+        const qMatch = rawItem.match(/^((?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'))(?:\s*#.*)?$/);
+        if (qMatch) {
+          rawItem = qMatch[1].slice(1, -1);
+        } else if ((rawItem.startsWith('"') && rawItem.endsWith('"')) || (rawItem.startsWith("'") && rawItem.endsWith("'"))) {
+          rawItem = rawItem.slice(1, -1);
+        }
+        let item = rawItem.trim();
+        if (sectionKind === 'whitelist' && item && !item.startsWith('@')) item = '@' + item;
         if (item) items.push(item);
         continue;
       }
       if (s === '-') continue;
-      if (!/^\s/.test(line)) inSection = false;
+      if (!/^\s/.test(line)) {
+        inSection = false;
+        sectionKind = '';
+      }
     }
     if (!hasSection || !items.length) return null;
     return { items, name };
@@ -5870,8 +5999,7 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
   const subs = getSubscriptions();
   const existing = subs.find(s => s.url === url);
 
-  const isHtmlResponse = /^\s*<!DOCTYPE\s+html|^\s*<html[\s>]/i.test(content);
-  if (isHtmlResponse || (validRules.length === 0 && (!content.trim() || /<[a-z][\s\S]*>/i.test(content)))) {
+  if (isHtmlResponse(content) || validRules.length === 0) {
     throw new Error(t('subImportFailed'));
   }
 
@@ -6212,12 +6340,19 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
       const config = getValidatedWebDAVConfig();
       if (!config) return;
       const textarea = document.getElementById('searchfilter-rules');
+      if (textarea) {
+        currentConfig.rules = filterValidRuleLines(textarea.value.split('\n'));
+        persistConfig(false);
+      }
       let content = textarea ? textarea.value : currentConfig.rules.join('\n');
       content = buildUploadContent(content);
       const loadingToast = showToast(t('webdavUploading'), 'info', 10000);
       try {
         const { fullUrl, headers } = getWebDAVRequest(config);
+        const uploadedTime = Date.now();
         await gmRequest('PUT', fullUrl, { headers, data: content });
+        GM_setValue(LOCAL_LAST_MODIFIED_KEY, uploadedTime);
+        GM_setValue(WEBDAV_LAST_SYNC_KEY, uploadedTime);
         loadingToast.dismiss();
         showToast(t('uploadSuccess'), 'success');
       } catch (err) {
@@ -6259,6 +6394,7 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
     const { fullUrl, headers } = getWebDAVRequest(config);
     const resp = await gmRequest('GET', fullUrl, { headers });
     const content = resp.responseText;
+    if (isHtmlResponse(content)) throw new Error(t('subImportFailed'));
     const parsedHeader = parseSyncHeader(content);
     if (parsedHeader.config && GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)) {
       const { syncedAt, subscriptions, bubbleState, bubbleSize, selectors, ...settings } = parsedHeader.config;
@@ -6274,7 +6410,20 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
     }
     const newRules = parsedHeader.restLines.map(r => r.trim()).filter(r => r);
     currentConfig.rules = newRules;
-    persistConfig();
+    persistConfig(false);
+    let cloudTime = 0;
+    if (parsedHeader.config && typeof parsedHeader.config.syncedAt === 'number') {
+      cloudTime = parsedHeader.config.syncedAt;
+    } else {
+      const lastModHeader = resp.responseHeaders && resp.responseHeaders.match(/last-modified:\s*(.+)$/im);
+      if (lastModHeader) {
+        const parsed = Date.parse(lastModHeader[1].trim());
+        if (!isNaN(parsed)) cloudTime = parsed;
+      }
+    }
+    if (cloudTime > 0) {
+      GM_setValue(LOCAL_LAST_MODIFIED_KEY, cloudTime);
+    }
     const textarea = document.getElementById('searchfilter-rules');
     if (textarea) {
       textarea.value = newRules.join('\n');
@@ -6284,7 +6433,7 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
     GM_setValue(WEBDAV_LAST_SYNC_KEY, Date.now());
   }
 
-  // 去重合并同步
+  // 同步逻辑
   async function performAutoWebDAVSync(config) {
     adoptStoredConfigIfNewer();
     const { fullUrl, headers } = getWebDAVRequest(config);
@@ -6298,6 +6447,10 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
     let cloudLastMod = '';
     if (resp.status !== 404) {
       const content = resp.responseText;
+      if (isHtmlResponse(content)) {
+        console.warn('[自动 WebDAV] 云端返回 HTML，已跳过');
+        return;
+      }
       const parsedHeader = parseSyncHeader(content);
       if (parsedHeader.config && GM_getValue(WEBDAV_SYNC_CONFIG_KEY, false)) {
         cloudConfig = parsedHeader.config;
@@ -6345,11 +6498,11 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
       }
     } else if (localTime > cloudTime || resp.status === 404) {
       console.log('[自动 WebDAV] 本地配置较新，上传中...');
-      const uploadedTime = Date.now();
+      const uploadedTime = Math.max(Date.now(), cloudTime + 1);
       const uploadData = buildUploadContent(localRules.join('\n'), uploadedTime);
       const putHeaders = { ...headers };
       if (resp.status !== 404) {
-        if (cloudETag) putHeaders['If-Match'] = cloudETag;
+        if (cloudETag && !cloudETag.startsWith('W/')) putHeaders['If-Match'] = cloudETag;
         else if (cloudLastMod) putHeaders['If-Unmodified-Since'] = cloudLastMod;
       }
       try {
@@ -6584,6 +6737,7 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
     _engineSiteSetup = true;
     injectGlobalStyles();
     buildRuleIndex();
+    exposeDebugApi();
     updateStatus(0);
     scanNewResults();
 
@@ -6746,6 +6900,7 @@ async function performSubscriptionForUrl(url, showAlerts = true) {
     if (isEngineSite()) {
       ensureEngineSiteSetup();
     }
+    exposeDebugApi();
 
     registerMenu();
     GM_registerMenuCommand(t('menuCustomSelectors'), showSelectorPanel);
