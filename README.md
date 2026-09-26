@@ -62,4 +62,4 @@
 
 <img width="400" height="250" alt="01" src="https://github.com/user-attachments/assets/a8297817-1856-434e-a329-b98adbfbad91" />
 <br/>
-<img width="250" height="123" alt="02" src="https://github.com/user-attachments/assets/4f7927c2-9340-4276-b253-b8a6e2523eb1" />
+<img width="250" height="83" alt="02" src="https://github.com/user-attachments/assets/e6e60879-f296-492f-aa6a-fa84d1adbed0" />
